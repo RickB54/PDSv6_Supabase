@@ -6,7 +6,7 @@ import {
     Folder, FileText, Plus, Grid, List, MoreVertical, 
     ChevronRight, Upload, Search, Filter, Trash2, Download, Eye, Sparkles, Clock, User, File,
     Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft,
-    RefreshCw, Camera, ArrowUpDown, Bell
+    RefreshCw, Camera, ArrowUpDown, Bell, ChevronsUpDown
 } from "lucide-react";
 import { 
     DropdownMenu, 
@@ -199,6 +199,7 @@ export default function BusinessDrive() {
     const [employeeRows, setEmployeeRows] = useState<{name: string, training: string, jobsToday: string, hours: string}[]>([]);
     
     const latestAlerts = useAlertsStore(s => s.latest);
+    const rawAlerts = useAlertsStore(s => s.alerts);
     const refreshAlerts = useAlertsStore(s => s.refresh);
 
     useEffect(() => {
@@ -823,9 +824,15 @@ export default function BusinessDrive() {
 
     const fileHasAlert = (file: DriveFile) => {
         if (!file.metadata || !file.metadata.recordType) return false;
-        return latestAlerts.some(a => {
-            const t = (a.title || "").toLowerCase();
-            return t.includes(file.id.toLowerCase()) || (file.metadata?.recordId && t.includes(file.metadata.recordId.toLowerCase()));
+        return rawAlerts.some(a => {
+            if (a.read) return false;
+            // First check payload exactly
+            if (a.payload?.id === file.id || (file.metadata?.recordId && a.payload?.recordId === file.metadata.recordId)) {
+                return true;
+            }
+            // Fallback to title checking
+            const t = (a.message || "").toLowerCase();
+            return t.includes(file.id.toLowerCase()) || (file.metadata?.recordId && t.includes(file.metadata.recordId.toLowerCase())) || t.includes(file.name.toLowerCase());
         });
     };
 
@@ -1048,6 +1055,17 @@ export default function BusinessDrive() {
         );
     };
 
+    const handleToggleExpandAll = () => {
+        const isAnyExpanded = Object.values(expandedFolders).some(v => v);
+        if (isAnyExpanded) {
+            setExpandedFolders({});
+        } else {
+            const next: Record<string, boolean> = {};
+            folders.forEach(f => next[f.id] = true);
+            setExpandedFolders(next);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in p-1">
             {/* Header / Actions */}
@@ -1126,150 +1144,114 @@ export default function BusinessDrive() {
                             </SelectContent>
                         </Select>
 
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className={cn("h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800", isSyncing && "text-blue-500")}
-                            onClick={() => handleSync(true)}
-                            title="Cloud Sync"
-                        >
-                            <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
-                        </Button>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800" title="Sort Items">
-                                    <ArrowUpDown className="w-5 h-5" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="bg-[#161b22] border-zinc-800 text-white w-48 z-[9999]">
-                                <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 mb-1">Sort by</div>
-                                <DropdownMenuItem 
-                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'upload' && "text-blue-400 font-bold")}
-                                    onClick={() => setSortType('upload')}
-                                >
-                                    Upload Time
-                                    {sortType === 'upload' && <span className="text-xs">✓</span>}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'modified' && "text-blue-400 font-bold")}
-                                    onClick={() => setSortType('modified')}
-                                >
-                                    Modified Time
-                                    {sortType === 'modified' && <span className="text-xs">✓</span>}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'name' && "text-blue-400 font-bold")}
-                                    onClick={() => setSortType('name')}
-                                >
-                                    Name
-                                    {sortType === 'name' && <span className="text-xs">✓</span>}
-                                </DropdownMenuItem>
-                                
-                                <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-t border-zinc-800 mt-2 mb-1">Direction</div>
-                                <DropdownMenuItem 
-                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'desc' && "text-blue-400 font-bold")}
-                                    onClick={() => setSortDirection('desc')}
-                                >
-                                    Newest / Z-A
-                                    {sortDirection === 'desc' && <span className="text-xs">✓</span>}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                    className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'asc' && "text-blue-400 font-bold")}
-                                    onClick={() => setSortDirection('asc')}
-                                >
-                                    Oldest / A-Z
-                                    {sortDirection === 'asc' && <span className="text-xs">✓</span>}
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
                     </div>
 
                     {/* Row 2 */}
                     <div className="flex items-center justify-between w-full mt-2">
                         <div className="flex items-center gap-3">
-                            <div className="flex bg-[#161b22] p-1 rounded-lg border border-zinc-800">
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className={cn("h-8 px-2", viewMode === 'grid' && "bg-zinc-800 text-white")}
-                                    onClick={() => setViewMode('grid')}
-                                >
-                                    <Grid className="w-4 h-4" />
-                                </Button>
-                                <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className={cn("h-8 px-2", viewMode === 'list' && "bg-zinc-800 text-white")}
-                                    onClick={() => setViewMode('list')}
-                                >
-                                    <List className="w-4 h-4" />
-                                </Button>
-                            </div>
-                            
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className={cn("h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800", isSyncing && "text-blue-500")}
+                                onClick={() => handleSync(true)}
+                                title="Cloud Sync"
+                            >
+                                <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800" title="Sort Items">
+                                        <ArrowUpDown className="w-5 h-5" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="bg-[#161b22] border-zinc-800 text-white w-48 z-[9999]">
+                                    <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-800 mb-1">Sort by</div>
+                                    <DropdownMenuItem 
+                                        className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'upload' && "text-blue-400 font-bold")}
+                                        onClick={() => setSortType('upload')}
+                                    >
+                                        Upload Time
+                                        {sortType === 'upload' && <span className="text-xs">✓</span>}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'modified' && "text-blue-400 font-bold")}
+                                        onClick={() => setSortType('modified')}
+                                    >
+                                        Modified Time
+                                        {sortType === 'modified' && <span className="text-xs">✓</span>}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortType === 'name' && "text-blue-400 font-bold")}
+                                        onClick={() => setSortType('name')}
+                                    >
+                                        Name
+                                        {sortType === 'name' && <span className="text-xs">✓</span>}
+                                    </DropdownMenuItem>
+                                    
+                                    <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-t border-zinc-800 mt-2 mb-1">Direction</div>
+                                    <DropdownMenuItem 
+                                        className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'desc' && "text-blue-400 font-bold")}
+                                        onClick={() => setSortDirection('desc')}
+                                    >
+                                        Newest / Z-A
+                                        {sortDirection === 'desc' && <span className="text-xs">✓</span>}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        className={cn("hover:bg-zinc-800 cursor-pointer flex items-center justify-between", sortDirection === 'asc' && "text-blue-400 font-bold")}
+                                        onClick={() => setSortDirection('asc')}
+                                    >
+                                        Oldest / A-Z
+                                        {sortDirection === 'asc' && <span className="text-xs">✓</span>}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
                             {folders.some(f => f.name === 'System Archives') && (
                                 <Button 
                                     className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 hover:text-purple-300 font-bold h-10 px-3 md:px-4 border border-purple-500/20 shrink-0" 
                                     onClick={() => setAdminModalOpen(true)}
                                 >
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    Admin Update PDF
+                                    <FileText className="w-4 h-4 md:mr-2" />
+                                    <span className="hidden md:inline">Admin Update PDF</span>
+                                    <span className="md:hidden">Update PDF</span>
                                 </Button>
                             )}
                         </div>
 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10">
-                                    <Plus className="w-4 h-4 mr-2" />
-                                    New
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
-                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
-                                    <FolderPlus className="w-4 h-4 mr-2" /> New Folder
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-camera')?.click()}>
-                                    <Camera className="w-4 h-4 mr-2" /> Take Photo
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-upload')?.click()}>
-                                    <Upload className="w-4 h-4 mr-2" /> Upload Files
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                        <input type="file" id="drive-upload" className="hidden" multiple onChange={(e) => handleUpload(e, false)} />
-                        <input type="file" id="drive-camera" className="hidden" accept="image/*" capture="environment" onChange={(e) => handleUpload(e, true)} />
-                    </div>
-                </div>
-            </div>
-
-            {/* Gemini Summary Bar (Aesthetic) */}
-            <div 
-                className="bg-gradient-to-r from-blue-600/20 via-purple-600/10 to-transparent p-5 rounded-2xl border border-blue-500/20 flex items-center justify-between shadow-lg relative overflow-hidden group cursor-pointer"
-                onClick={handleAnalyzeFolder}
-            >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex items-center gap-4 relative z-10">
-                    <div className={cn(
-                        "w-12 h-12 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20 transition-all",
-                        isAnalyzing && "animate-pulse scale-110"
-                    )}>
-                        <Sparkles className={cn("w-6 h-6 text-white", isAnalyzing && "animate-spin")} />
-                    </div>
-                    <div>
-                        <div className="text-base font-black text-white flex items-center gap-2">
-                            Ask Gemini
-                            {isAnalyzing && <span className="text-[10px] bg-blue-500 px-2 py-0.5 rounded-full animate-bounce">Analyzing...</span>}
+                        <div className="flex items-center gap-3">
+                            <Button 
+                                variant="outline" 
+                                className="border-blue-500/30 text-blue-400 bg-transparent hover:bg-blue-600 hover:text-white transition-all font-bold h-10"
+                                onClick={handleAnalyzeFolder}
+                                disabled={isAnalyzing}
+                            >
+                                <Sparkles className={cn("w-4 h-4 md:mr-2", isAnalyzing && "animate-spin")} />
+                                <span className="hidden md:inline">{isAnalyzing ? "Processing..." : "Ask Gemini"}</span>
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10">
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        New
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
+                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setIsNewFolderOpen(true)}>
+                                        <FolderPlus className="w-4 h-4 mr-2" /> New Folder
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-camera')?.click()}>
+                                        <Camera className="w-4 h-4 mr-2" /> Take Photo
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => document.getElementById('drive-upload')?.click()}>
+                                        <Upload className="w-4 h-4 mr-2" /> Upload Files
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                            <input type="file" id="drive-upload" className="hidden" multiple onChange={(e) => handleUpload(e, false)} />
+                            <input type="file" id="drive-camera" className="hidden" accept="image/*" capture="environment" onChange={(e) => handleUpload(e, true)} />
                         </div>
-                        <div className="text-sm text-zinc-400">Summarize, analyze, and get up to speed with files in this folder.</div>
                     </div>
                 </div>
-                <Button 
-                    variant="outline" 
-                    className="border-zinc-700 hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest hidden sm:flex relative z-10"
-                    disabled={isAnalyzing}
-                >
-                    {isAnalyzing ? "Processing..." : "Analyze Folder"}
-                </Button>
             </div>
 
             {/* Gemini Analysis Dialog */}
@@ -1372,43 +1354,77 @@ export default function BusinessDrive() {
             </div>
 
             {/* Breadcrumbs Navigation - Moved directly above files */}
-            <div className="flex items-center gap-3 text-sm text-zinc-400 px-2 mt-4 overflow-x-auto scrollbar-none pb-1">
-                {currentPath.length > 0 && currentPath[0] === 'System Archives' && (
-                    <Button variant="outline" size="sm" className="border-red-500/50 text-red-500 hover:bg-red-500/10 shrink-0 mr-4" onClick={() => setDeleteAllOpen(true)}>
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete All
-                    </Button>
-                )}
-                {(currentPath.length > 0 || selectedTypeFilter !== null) && (
+            <div className="flex items-center justify-between px-2 mt-4 overflow-x-auto scrollbar-none pb-1 w-full">
+                <div className="flex items-center gap-3 text-sm text-zinc-400 shrink-0">
+                    {(currentPath.length > 0 || selectedTypeFilter !== null) && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 hover:bg-zinc-800 text-white shrink-0" 
+                            onClick={handleBack}
+                            title="Go Back"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                        </Button>
+                    )}
+                    <button 
+                        onClick={() => setCurrentPath([])}
+                        className={cn("hover:text-white transition-colors whitespace-nowrap shrink-0", currentPath.length === 0 && "text-white font-black")}
+                    >
+                        My Drive
+                    </button>
+                    {currentPath.map((segment, idx) => (
+                        <React.Fragment key={idx}>
+                            <ChevronRight className="w-4 h-4 shrink-0" />
+                            <button 
+                                onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
+                                className={cn(
+                                    "hover:text-white transition-colors whitespace-nowrap shrink-0",
+                                    idx === currentPath.length - 1 && "text-white font-black"
+                                )}
+                            >
+                                {segment}
+                            </button>
+                        </React.Fragment>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                    {currentPath.length > 0 && currentPath[0] === 'System Archives' && (
+                        <Button variant="outline" size="icon" className="h-8 w-8 border-red-500/50 text-red-500 hover:bg-red-500/10 shrink-0" onClick={() => setDeleteAllOpen(true)} title="Delete All">
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                    )}
+                    
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-8 w-8 hover:bg-zinc-800 text-white shrink-0" 
-                        onClick={handleBack}
-                        title="Go Back"
+                        className="h-8 w-8 text-zinc-400 hover:text-white shrink-0"
+                        onClick={handleToggleExpandAll}
+                        title={Object.values(expandedFolders).some(v => v) ? "Collapse All" : "Expand All"}
                     >
-                        <ArrowLeft className="w-4 h-4" />
+                        <ChevronsUpDown className="w-4 h-4" />
                     </Button>
-                )}
-                <button 
-                    onClick={() => setCurrentPath([])}
-                    className={cn("hover:text-white transition-colors whitespace-nowrap shrink-0", currentPath.length === 0 && "text-white font-black")}
-                >
-                    My Drive
-                </button>
-                {currentPath.map((segment, idx) => (
-                    <React.Fragment key={idx}>
-                        <ChevronRight className="w-4 h-4 shrink-0" />
-                        <button 
-                            onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
-                            className={cn(
-                                "hover:text-white transition-colors whitespace-nowrap shrink-0",
-                                idx === currentPath.length - 1 && "text-white font-black"
-                            )}
+
+                    <div className="flex bg-[#161b22] p-1 rounded-lg border border-zinc-800 shrink-0 ml-2">
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={cn("h-8 px-2", viewMode === 'grid' && "bg-zinc-800 text-white")}
+                            onClick={() => setViewMode('grid')}
                         >
-                            {segment}
-                        </button>
-                    </React.Fragment>
-                ))}
+                            <Grid className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className={cn("h-8 px-2", viewMode === 'list' && "bg-zinc-800 text-white")}
+                            onClick={() => setViewMode('list')}
+                        >
+                            <List className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
             </div>
 
             {/* Content Section */}
@@ -1992,6 +2008,15 @@ export default function BusinessDrive() {
                                         });
                                         return updated;
                                     });
+                                    
+                                    pushAdminAlert('pdf_saved', `Attention requested for ${fileName}`, 'System', {
+                                        id: newFile.id,
+                                        recordId: 'admin_updates',
+                                        recordType: 'Admin Updates',
+                                        customerName: 'Admin',
+                                        fileName: fileName
+                                    });
+                                    refreshAlerts();
 
                                     toast({ title: 'Saved', description: 'Admin Update PDF created.' });
                                     setAdminModalOpen(false);
