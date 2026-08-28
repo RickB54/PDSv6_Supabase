@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import localforage from "localforage";
 import { useNavigate } from "react-router-dom";
 import { getCurrentUser } from "@/lib/auth";
 import { PageHeader } from "@/components/PageHeader";
@@ -85,6 +86,79 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+// ─────────────────────────────────────────────────────────
+// Document & Business Drive Types
+// ─────────────────────────────────────────────────────────
+export interface ShopDocItem {
+  id: string;
+  name: string;
+  folder: string; // "Operating Procedures" | "Inventory" | "Pricing" | "Business Docs" | "System Archives"
+  type: "pdf" | "image" | "gdoc" | "text";
+  url: string;
+  size?: string;
+  modified?: string;
+  source?: "drive" | "setup";
+}
+
+const SAMPLE_PDF_BASE64 = "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nDPQM1Qo5ypUMFAwALJMLU31jBQsTAz1LBSKChQOtwL5AIFuBh4KZW5kc3RyZWFtCmVuZG9iagozIDAgb2JqCjQ2CmVuZG9iago4IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveCBbMCAwIDYxMiA3OTJdL1Jlc291cmNlcyA8PC9Gb250IDw8L0YxIDUgMCBSPj4+Pi9Db250ZW50cyAyIDAgUi9QYXJlbnQgNiAwIFI+PgplbmRvYmoKNSAwIG9iago8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PgplbmRvYmoKNiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkcyBbNCAwIFJdPj4KZW5kb2JqCjcgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDYgMCBSPj4KZW5kb2JqCnhyZWYKMCA4CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwMCAwMDAwMCBuIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAxMzIgMDAwMDAgbiAKMDAwMDAwMDE1MSAwMDAwMCBuIAowMDAwMDAwMjc1IDAwMDAwIG4gCjAwMDAwMDAzNjMgMDAwMDAgbiAKMDAwMDAwMDQyMiAwMDAwMCBuIAp0cmFpbGVyCjw8L1NpemUgOC9Sb290IDcgMCBSPj4Kc3RhcnR4cmVmCjQ3MQolJUVPRgo=";
+
+const DEFAULT_BUSINESS_DOCS: ShopDocItem[] = [
+  {
+    id: "doc-sop-1",
+    name: "Standard_Operating_Procedure_Detailing_v6.pdf",
+    folder: "Operating Procedures",
+    type: "pdf",
+    url: SAMPLE_PDF_BASE64,
+    size: "1.2 MB",
+    modified: new Date().toISOString(),
+  },
+  {
+    id: "doc-inv-1",
+    name: "Chemical_MSDS_Safety_Data_Sheet.pdf",
+    folder: "Inventory",
+    type: "pdf",
+    url: SAMPLE_PDF_BASE64,
+    size: "850 KB",
+    modified: new Date().toISOString(),
+  },
+  {
+    id: "doc-prc-1",
+    name: "Detailing_Packages_and_Pricing_Guide_2026.pdf",
+    folder: "Pricing",
+    type: "pdf",
+    url: SAMPLE_PDF_BASE64,
+    size: "450 KB",
+    modified: new Date().toISOString(),
+  },
+  {
+    id: "doc-biz-1",
+    name: "Employee_Safety_and_Operations_Handbook.pdf",
+    folder: "Business Docs",
+    type: "pdf",
+    url: SAMPLE_PDF_BASE64,
+    size: "2.1 MB",
+    modified: new Date().toISOString(),
+  },
+  {
+    id: "doc-sop-2",
+    name: "Shop_Floor_Layout_and_Equipment_Blueprint.png",
+    folder: "Operating Procedures",
+    type: "image",
+    url: "/shop.jpg",
+    size: "1.5 MB",
+    modified: new Date().toISOString(),
+  },
+  {
+    id: "doc-arc-1",
+    name: "Archived_Daily_Checklist_Report_2026.pdf",
+    folder: "System Archives",
+    type: "pdf",
+    url: SAMPLE_PDF_BASE64,
+    size: "320 KB",
+    modified: new Date().toISOString(),
+  }
+];
 
 // ─────────────────────────────────────────────────────────
 // Main Component
@@ -174,28 +248,76 @@ const ShopSetup = () => {
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docUrl, setDocUrl] = useState("");
   const [isUrlMode, setIsUrlMode] = useState(false);
-  const [viewingDoc, setViewingDoc] = useState<SetupMedia | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<ShopDocItem | null>(null);
   const [docSearch, setDocSearch] = useState("");
+  const [docFolderFilter, setDocFolderFilter] = useState<string>("all");
+  const [selectedUploadFolder, setSelectedUploadFolder] = useState<string>("Operating Procedures");
+  const [shopDocs, setShopDocs] = useState<ShopDocItem[]>([]);
 
   // ─── Load ─────────────────────────────────────────────
   const loadData = async () => {
     try {
-      const [c, m, t, savedMedia, savedCats] = await Promise.all([
+      const [c, m, t, savedMedia, savedCats, driveFiles] = await Promise.all([
         getChemicals(),
         getMaterials(),
         getTools(),
         getSetupMedia(CONTEXT_KEY),
         getSetupCategories(CONTEXT_KEY),
+        localforage.getItem<any[]>('business_drive_files_v3')
       ]);
       setChemicals(c);
       setMaterials(m);
       setTools(t);
       setMedia(savedMedia || []);
       setCategories(savedCats || []);
-      // Default to "all" to show the full list in natural order
       if (selectedCategoryForUpload === "none") {
         setSelectedCategoryForUpload("all");
       }
+
+      // Map Business Drive files
+      const mappedDriveDocs: ShopDocItem[] = (driveFiles || []).map((df) => {
+        const folderName = df.path && df.path.length > 0 ? df.path[0] : "Business Docs";
+        const url = df.data || df.url || "";
+        const isImage = df.type?.startsWith("image/") || /\.(png|jpg|jpeg|webp|svg)$/i.test(df.name);
+        const isGdoc = url.includes("docs.google.com");
+        const isPdf = df.type === "application/pdf" || df.name?.toLowerCase().endsWith(".pdf");
+
+        return {
+          id: df.id || crypto.randomUUID(),
+          name: df.name || "Untitled Document",
+          folder: folderName,
+          type: isImage ? "image" : isGdoc ? "gdoc" : isPdf ? "pdf" : "text",
+          url: url,
+          size: df.size || "Document",
+          modified: df.modified || new Date().toISOString(),
+          source: "drive"
+        };
+      });
+
+      // Map Setup Media docs
+      const mappedMediaDocs: ShopDocItem[] = (savedMedia || [])
+        .filter((sm) => sm.type === "pdf" || sm.url?.includes("docs.google.com"))
+        .map((sm) => ({
+          id: sm.id,
+          name: sm.caption || "Shop Document",
+          folder: sm.category ? (savedCats?.find(c => c.id === sm.category)?.name || "Business Docs") : "Business Docs",
+          type: sm.url?.includes("docs.google.com") ? "gdoc" : "pdf",
+          url: sm.url,
+          size: "PDF Document",
+          modified: sm.createdAt || new Date().toISOString(),
+          source: "setup"
+        }));
+
+      // Combine & Deduplicate
+      let combined = [...mappedDriveDocs, ...mappedMediaDocs];
+      const existingNames = new Set(combined.map(d => d.name.toLowerCase()));
+      DEFAULT_BUSINESS_DOCS.forEach(defDoc => {
+        if (!existingNames.has(defDoc.name.toLowerCase())) {
+          combined.push(defDoc);
+        }
+      });
+
+      setShopDocs(combined);
     } catch (err) {
       console.error("Failed to load shop setup data", err);
     } finally {
@@ -270,15 +392,16 @@ const ShopSetup = () => {
     setUploading(true);
     try {
       let finalUrl = docUrl;
-      let type: "pdf" | "image" | "video" = "pdf";
+      let docType: "pdf" | "image" | "gdoc" | "text" = "pdf";
 
       if (!isUrlMode && docFile) {
         const publicUrl = await uploadSetupMedia(docFile);
         if (!publicUrl) throw new Error("Upload failed");
         finalUrl = publicUrl;
+        if (docFile.type.startsWith("image/")) docType = "image";
       } else {
-        // If it's a Google Doc, ensure it's in preview mode for embedding
         if (finalUrl.includes('docs.google.com')) {
+          docType = "gdoc";
           if (finalUrl.includes('/edit')) {
             finalUrl = finalUrl.replace(/\/edit.*$/, '/preview');
           } else if (!finalUrl.endsWith('/preview')) {
@@ -287,28 +410,74 @@ const ShopSetup = () => {
         }
       }
 
+      const newId = crypto.randomUUID();
+      const newDocItem: ShopDocItem = {
+        id: newId,
+        name: docName.trim(),
+        folder: selectedUploadFolder,
+        type: docType,
+        url: finalUrl,
+        size: docFile ? (docFile.size / 1024 > 1024 ? `${(docFile.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(docFile.size / 1024)} KB`) : "Web Link",
+        modified: new Date().toISOString(),
+        source: "drive"
+      };
+
+      // Save to setup media
       const newMedia: SetupMedia = {
-        id: crypto.randomUUID(),
-        type: "pdf", // Treat all docs as pdf/document for categorization
+        id: newId,
+        type: docType === "image" ? "image" : "pdf",
         url: finalUrl,
         caption: docName.trim(),
         createdAt: new Date().toISOString()
       };
-
       await saveSetupMedia(newMedia, CONTEXT_KEY);
-      const updated = await getSetupMedia(CONTEXT_KEY);
-      setMedia(updated || []);
+
+      // Save to localforage business drive
+      const existingDrive = (await localforage.getItem<any[]>('business_drive_files_v3')) || [];
+      const driveFileRecord = {
+        id: newId,
+        name: docName.trim() + (docType === "pdf" && !docName.toLowerCase().endsWith(".pdf") ? ".pdf" : ""),
+        type: docType === "pdf" ? "application/pdf" : docType === "image" ? "image/png" : "text/plain",
+        size: newDocItem.size,
+        modified: newDocItem.modified,
+        path: [selectedUploadFolder],
+        data: finalUrl
+      };
+      await localforage.setItem('business_drive_files_v3', [driveFileRecord, ...existingDrive]);
+
+      setShopDocs((prev) => [newDocItem, ...prev]);
+      setMedia((prev) => [newMedia, ...prev]);
       
       setDocUploadOpen(false);
       setDocName("");
       setDocFile(null);
       setDocUrl("");
       setActiveTab("paperwork");
-      toast({ title: "Document Saved", description: "Added to Business Documents." });
+      toast({ title: "Document Saved", description: `Added to ${selectedUploadFolder} in Business Drive.` });
     } catch (err: any) {
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const removeDoc = async (id: string) => {
+    if (isDemoMode) {
+      toast({ title: "Permission Denied", description: "Read-only mode active.", variant: "destructive" });
+      return;
+    }
+    try {
+      if (!confirm("Are you sure you want to delete this document from Business Documents?")) return;
+      await deleteSetupMedia(id, CONTEXT_KEY);
+      const existingDrive = (await localforage.getItem<any[]>('business_drive_files_v3')) || [];
+      const updatedDrive = existingDrive.filter(f => f.id !== id);
+      await localforage.setItem('business_drive_files_v3', updatedDrive);
+
+      setShopDocs((prev) => prev.filter((d) => d.id !== id));
+      setMedia((prev) => prev.filter((m) => m.id !== id));
+      toast({ title: "Document Removed", description: "Deleted successfully." });
+    } catch {
+      toast({ title: "Delete Failed", variant: "destructive" });
     }
   };
 
@@ -779,6 +948,7 @@ const ShopSetup = () => {
               </Card>
             </div>
           </TabsContent>
+          {/* ── BUSINESS DOCUMENTS TAB ──────────────────────────── */}
           <TabsContent value="paperwork" className="mt-0 space-y-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-zinc-900/60 border border-zinc-800 p-8 rounded-3xl relative z-10 shadow-xl overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] -mr-32 -mt-32 rounded-full" />
@@ -788,7 +958,7 @@ const ShopSetup = () => {
                 </div>
                 <div>
                   <h3 className="text-xl md:text-2xl font-black uppercase tracking-widest text-white italic">Business Documents</h3>
-                  <p className="text-zinc-400 text-sm font-medium">Digital repository for MSDS sheets, shop procedures, and equipment manuals.</p>
+                  <p className="text-zinc-400 text-sm font-medium">Digital repository with visual previews for SOPs, manuals, MSDS, and shop reference guides.</p>
                 </div>
               </div>
               {isAdmin && (
@@ -802,108 +972,195 @@ const ShopSetup = () => {
               )}
             </div>
 
-            {/* Document Search Bar */}
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800">
-              <div className="relative flex-1 w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-                <Input
-                  value={docSearch}
-                  onChange={(e) => setDocSearch(e.target.value)}
-                  placeholder="Search SOPs, manuals, procedures, reference sheets..."
-                  className="bg-zinc-950 border-zinc-800 text-white pl-10 h-10 font-medium text-xs focus:border-indigo-500"
-                />
-                {docSearch && (
-                  <button onClick={() => setDocSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
+            {/* Document Search Bar & Folder Filter Pills */}
+            <div className="flex flex-col gap-4 bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800">
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <Input
+                    value={docSearch}
+                    onChange={(e) => setDocSearch(e.target.value)}
+                    placeholder="Search SOPs, manuals, procedures, reference sheets..."
+                    className="bg-zinc-950 border-zinc-800 text-white pl-10 h-10 font-medium text-xs focus:border-indigo-500"
+                  />
+                  {docSearch && (
+                    <button onClick={() => setDocSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 shrink-0">
+                  {shopDocs.filter(d => 
+                    (docFolderFilter === "all" || d.folder === docFolderFilter) &&
+                    (!docSearch || d.name.toLowerCase().includes(docSearch.toLowerCase()) || d.folder.toLowerCase().includes(docSearch.toLowerCase()))
+                  ).length} Documents Found
+                </span>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 shrink-0">
-                {media.filter(m => m.type === 'pdf' && (!docSearch || (m.caption || '').toLowerCase().includes(docSearch.toLowerCase()))).length} Documents Filtered
-              </span>
+
+              {/* Folder Filter Pill Buttons */}
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-zinc-800/60">
+                {[
+                  { id: "all", label: "All Business Drive" },
+                  { id: "Operating Procedures", label: "Operating Procedures" },
+                  { id: "Inventory", label: "Inventory" },
+                  { id: "Pricing", label: "Pricing" },
+                  { id: "Business Docs", label: "Business Docs" },
+                  { id: "System Archives", label: "System Archives" },
+                ].map((folder) => {
+                  const isActive = docFolderFilter === folder.id;
+                  const count = folder.id === "all" ? shopDocs.length : shopDocs.filter(d => d.folder === folder.id).length;
+                  return (
+                    <button
+                      key={folder.id}
+                      onClick={() => setDocFolderFilter(folder.id)}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                        isActive
+                          ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30 border border-indigo-400/40"
+                          : "bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-800/80 hover:border-zinc-700"
+                      }`}
+                    >
+                      <span>{folder.label}</span>
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-zinc-900 text-zinc-500"}`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-              {media.filter(m => m.type === 'pdf' && (!docSearch || (m.caption || '').toLowerCase().includes(docSearch.toLowerCase()))).length === 0 ? (
-                <div className="col-span-full py-24 text-center bg-zinc-900/40 border border-dashed border-zinc-800 rounded-[32px] group hover:border-indigo-500/30 transition-all">
-                  <div className="bg-zinc-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
-                    <FileText className="h-8 w-8 text-zinc-600" />
-                  </div>
-                  <div className="text-zinc-400 font-black uppercase tracking-[0.4em] text-xs mb-3">No Matching Documents</div>
-                  <p className="text-zinc-600 text-sm max-w-sm mx-auto font-medium">Try searching with a different term or upload new shop paperwork.</p>
-                </div>
-              ) : (
-                media.filter(m => m.type === 'pdf' && (!docSearch || (m.caption || '').toLowerCase().includes(docSearch.toLowerCase()))).map(doc => {
-                  const isGoogleDoc = doc.url.includes('docs.google.com');
+            {/* Visual Documents Grid with Real Visual Preview Thumbnails */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {(() => {
+                const filteredDocs = shopDocs.filter(d => 
+                  (docFolderFilter === "all" || d.folder === docFolderFilter) &&
+                  (!docSearch || d.name.toLowerCase().includes(docSearch.toLowerCase()) || d.folder.toLowerCase().includes(docSearch.toLowerCase()))
+                );
+
+                if (filteredDocs.length === 0) {
                   return (
-                    <Card 
-                      key={doc.id} 
-                      className="group relative bg-zinc-950/40 border-zinc-800/60 hover:border-indigo-500/50 transition-all duration-500 overflow-hidden cursor-pointer aspect-[3/4] flex flex-col shadow-2xl hover:shadow-indigo-500/10"
+                    <div className="col-span-full py-24 text-center bg-zinc-900/40 border border-dashed border-zinc-800 rounded-[32px] group hover:border-indigo-500/30 transition-all">
+                      <div className="bg-zinc-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
+                        <FileText className="h-8 w-8 text-zinc-600" />
+                      </div>
+                      <div className="text-zinc-400 font-black uppercase tracking-[0.4em] text-xs mb-3">No Matching Documents</div>
+                      <p className="text-zinc-600 text-sm max-w-sm mx-auto font-medium">Try selecting another folder filter or uploading a new document.</p>
+                    </div>
+                  );
+                }
+
+                return filteredDocs.map((doc) => {
+                  const isGdoc = doc.type === "gdoc" || doc.url.includes("docs.google.com");
+                  let previewUrl = doc.url;
+                  if (isGdoc) {
+                    if (previewUrl.includes('/edit')) {
+                      previewUrl = previewUrl.replace(/\/edit.*$/, '/preview');
+                    } else if (!previewUrl.endsWith('/preview')) {
+                      previewUrl = previewUrl.split('?')[0].replace(/\/$/, '') + '/preview';
+                    }
+                  }
+
+                  const folderBadgeColors: Record<string, string> = {
+                    "Operating Procedures": "bg-indigo-500/10 text-indigo-400 border-indigo-500/30",
+                    "Inventory": "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+                    "Pricing": "bg-amber-500/10 text-amber-400 border-amber-500/30",
+                    "Business Docs": "bg-blue-500/10 text-blue-400 border-blue-500/30",
+                    "System Archives": "bg-purple-500/10 text-purple-400 border-purple-500/30",
+                  };
+
+                  return (
+                    <Card
+                      key={doc.id}
+                      className="group relative bg-zinc-950/60 border-zinc-800/80 hover:border-indigo-500/60 transition-all duration-300 overflow-hidden cursor-pointer flex flex-col shadow-xl hover:shadow-indigo-500/10 rounded-2xl"
                       onClick={() => setViewingDoc(doc)}
                     >
-                      {/* Document Preview Decor (Thumbnail-ish) */}
-                      <div className="relative flex-1 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black overflow-hidden flex flex-col">
-                        {/* Decorative "Paper" effect */}
-                        <div className="absolute inset-x-6 top-6 bottom-4 bg-zinc-900/50 rounded-sm border border-zinc-800/50 shadow-inner group-hover:translate-y-[-2px] transition-transform duration-500 overflow-hidden">
-                           <div className="p-4 space-y-2 opacity-20">
-                             <div className="h-2 w-3/4 bg-white/10 rounded-full" />
-                             <div className="h-2 w-full bg-white/10 rounded-full" />
-                             <div className="h-2 w-5/6 bg-white/10 rounded-full" />
-                             <div className="pt-4 h-2 w-1/2 bg-white/10 rounded-full" />
-                             <div className="h-2 w-full bg-white/10 rounded-full" />
-                             {/* Mock table */}
-                             <div className="mt-4 grid grid-cols-3 gap-1">
-                               <div className="h-3 bg-white/5 rounded-sm" />
-                               <div className="h-3 bg-white/5 rounded-sm" />
-                               <div className="h-3 bg-white/5 rounded-sm" />
-                             </div>
-                           </div>
-                        </div>
-                        
-                        <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        
-                        {/* Status Icon */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-3">
-                          <div className={`p-4 rounded-[2rem] ${isGoogleDoc ? 'bg-blue-600/20 text-blue-400' : 'bg-red-600/20 text-red-400'} border ${isGoogleDoc ? 'border-blue-500/30' : 'border-red-500/30'} group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
-                            {isGoogleDoc ? <Globe className="h-8 w-8" /> : <FileText className="h-8 w-8" />}
-                          </div>
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 bg-black/60 px-3 py-1 rounded-full border border-zinc-800 backdrop-blur-md">
-                            {isGoogleDoc ? 'Google Doc' : 'PDF Source'}
-                          </span>
-                        </div>
+                      {/* Top Badges */}
+                      <div className="px-4 py-2 bg-zinc-900/80 border-b border-zinc-800/80 flex items-center justify-between">
+                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${folderBadgeColors[doc.folder] || "bg-zinc-800 text-zinc-400 border-zinc-700"}`}>
+                          {doc.folder}
+                        </span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-1">
+                          {isGdoc ? <Globe className="h-3 w-3 text-blue-400" /> : <FileText className="h-3 w-3 text-indigo-400" />}
+                          {doc.type.toUpperCase()}
+                        </span>
+                      </div>
 
-                        {/* Hover Overlay */}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
-                           <Button 
-                             onClick={(e) => { e.stopPropagation(); setViewingDoc(doc); }}
-                             className="bg-white text-black font-black uppercase italic tracking-tighter text-[11px] h-9 px-6 rounded-none hover:bg-zinc-200 active:scale-95 transition-all"
-                           >
-                             <Eye className="mr-2 h-4 w-4" /> Open Doc
-                           </Button>
+                      {/* REAL Visual Preview Box Container */}
+                      <div className="relative aspect-[4/3] w-full bg-zinc-900 overflow-hidden border-b border-zinc-800/80 flex items-center justify-center">
+                        {doc.type === "image" ? (
+                          <img
+                            src={doc.url}
+                            alt={doc.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : isGdoc ? (
+                          <div className="w-full h-full relative overflow-hidden bg-white">
+                            <iframe
+                              src={previewUrl}
+                              className="w-[200%] h-[200%] transform scale-50 origin-top-left pointer-events-none border-0"
+                              title={doc.name}
+                            />
+                          </div>
+                        ) : doc.type === "pdf" && doc.url ? (
+                          <div className="w-full h-full relative overflow-hidden bg-white">
+                            <iframe
+                              src={`${doc.url}#page=1&toolbar=0&navpanes=0&view=FitH`}
+                              className="w-[200%] h-[200%] transform scale-50 origin-top-left pointer-events-none border-0"
+                              title={doc.name}
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-full h-full bg-zinc-900 p-4 text-left font-mono text-[9px] text-zinc-400 overflow-hidden relative">
+                            <div className="border-b border-zinc-800 pb-2 mb-2 font-bold text-indigo-400 flex items-center gap-1">
+                              <FileText className="h-3.5 w-3.5" /> {doc.folder.toUpperCase()}
+                            </div>
+                            <p className="line-clamp-6 opacity-80 leading-relaxed">
+                              {doc.name.replace(/_/g, " ")} — Official shop documentation, guidelines, and reference sheet.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Hover Overlay Button */}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
+                          <Button
+                            onClick={(e) => { e.stopPropagation(); setViewingDoc(doc); }}
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase italic tracking-wider text-[11px] h-10 px-5 rounded-xl shadow-lg active:scale-95 transition-all flex items-center gap-2"
+                          >
+                            <Eye className="h-4 w-4" /> Expand Full Document
+                          </Button>
                         </div>
                       </div>
 
-                      {/* Content Info */}
-                      <div className="p-4 border-t border-zinc-800/80 bg-zinc-950 flex-none">
-                        <h4 className="text-[12px] font-black uppercase tracking-wider text-zinc-100 truncate mb-1 leading-tight group-hover:text-indigo-400 transition-colors">{doc.caption || 'Untitled Document'}</h4>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">{new Date(doc.createdAt || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      {/* Card Info Footer */}
+                      <div className="p-4 bg-zinc-950 flex flex-col justify-between flex-1">
+                        <div>
+                          <h4 className="text-[12px] font-black uppercase tracking-wider text-zinc-100 truncate leading-tight group-hover:text-indigo-400 transition-colors mb-1" title={doc.name}>
+                            {doc.name.replace(/_/g, " ")}
+                          </h4>
+                          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block">
+                            {doc.size || "Document"} • {new Date(doc.modified || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-end pt-2 border-t border-zinc-900 mt-2">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-600 hover:text-white transition-colors">
-                                <MoreVertical className="h-3.5 w-3.5" />
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-white transition-colors">
+                                <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800 text-white min-w-[140px] shadow-2xl">
+                            <DropdownMenuContent align="end" className="bg-zinc-950 border-zinc-800 text-white min-w-[150px] shadow-2xl">
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setViewingDoc(doc); }} className="text-xs font-bold gap-2 cursor-pointer hover:bg-white/5 transition-colors">
-                                <Eye className="h-3.5 w-3.5 text-indigo-400" /> View Full screen
+                                <Eye className="h-3.5 w-3.5 text-indigo-400" /> View Full Screen
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(doc.url, '_blank'); }} className="text-xs font-bold gap-2 cursor-pointer hover:bg-white/5 transition-colors">
-                                <ExternalLink className="h-3.5 w-3.5 text-zinc-400" /> Open Original
-                              </DropdownMenuItem>
+                              {doc.url && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(doc.url, '_blank'); }} className="text-xs font-bold gap-2 cursor-pointer hover:bg-white/5 transition-colors">
+                                  <ExternalLink className="h-3.5 w-3.5 text-zinc-400" /> Open Original
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator className="bg-zinc-800" />
-                              <DropdownMenuItem 
-                                onClick={(e) => { e.stopPropagation(); removeMedia(doc.id); }} 
+                              <DropdownMenuItem
+                                onClick={(e) => { e.stopPropagation(); removeDoc(doc.id); }}
                                 className="text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 gap-2 cursor-pointer transition-colors"
                               >
                                 <Trash2 className="h-3.5 w-3.5" /> Delete Document
@@ -914,8 +1171,8 @@ const ShopSetup = () => {
                       </div>
                     </Card>
                   );
-                })
-              )}
+                });
+              })()}
             </div>
           </TabsContent>
         </Tabs>
@@ -1053,19 +1310,35 @@ const ShopSetup = () => {
         } : undefined}
       />
 
-      {/* ── DOCUMENT UPLOAD DIALOG (Updated) ────────────────── */}
+      {/* ── DOCUMENT UPLOAD DIALOG ────────────────── */}
       <Dialog open={docUploadOpen} onOpenChange={setDocUploadOpen}>
-        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md overflow-hidden">
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md overflow-hidden rounded-2xl">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl -mr-16 -mt-16 rounded-full" />
           
           <DialogHeader>
             <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
-              <FileText className="h-6 w-6" /> Add Document
+              <FileText className="h-6 w-6" /> Add Business Document
             </DialogTitle>
-            <DialogDescription className="text-zinc-500">Add equipment manuals, shop procedures, or Google Docs.</DialogDescription>
+            <DialogDescription className="text-zinc-500">Upload shop SOPs, MSDS reference cards, or link Google Docs directly into Business Drive.</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
+          <div className="space-y-5 py-2">
+            {/* Folder Destination Selector */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Target Folder in Business Drive</Label>
+              <select
+                value={selectedUploadFolder}
+                onChange={(e) => setSelectedUploadFolder(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl h-11 px-3 text-xs font-bold text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="Operating Procedures">Operating Procedures (SOPs, Guides)</option>
+                <option value="Inventory">Inventory (MSDS, Specs, Manuals)</option>
+                <option value="Pricing">Pricing (Price Lists, Packages)</option>
+                <option value="Business Docs">Business Docs (Handbooks, Contracts)</option>
+                <option value="System Archives">System Archives (Checklists, Audits)</option>
+              </select>
+            </div>
+
             {/* Mode Toggle */}
             <div className="grid grid-cols-2 p-1 bg-zinc-900 rounded-xl border border-zinc-800">
                <button 
@@ -1082,60 +1355,59 @@ const ShopSetup = () => {
                </button>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Document Label</Label>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Document Title / Label</Label>
               <Input
                 value={docName}
                 onChange={(e) => setDocName(e.target.value)}
-                placeholder="e.g. My Shop Procedures"
-                className="bg-zinc-900 border-zinc-800 text-white h-12 font-bold focus:ring-indigo-500/50"
+                placeholder="e.g. Detailing Standard Operating Procedure"
+                className="bg-zinc-900 border-zinc-800 text-white h-11 font-bold text-xs focus:ring-indigo-500/50"
               />
             </div>
 
             {isUrlMode ? (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 text-indigo-400">Google Doc / Web URL</Label>
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Google Doc / Web URL</Label>
                 <div className="relative">
                   <Input
                     value={docUrl}
                     onChange={(e) => setDocUrl(e.target.value)}
                     placeholder="https://docs.google.com/document/d/..."
-                    className="bg-zinc-900 border-zinc-800 text-white h-12 font-bold pl-10"
+                    className="bg-zinc-900 border-zinc-800 text-white h-11 text-xs font-bold pl-10"
                   />
                   <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600" />
                 </div>
-                <p className="text-[10px] text-zinc-600 font-medium">Make sure the document is shared as 'Anyone with the link can view'.</p>
+                <p className="text-[10px] text-zinc-500 font-medium">Make sure the Google document permissions are set to 'Anyone with link can view'.</p>
               </div>
             ) : (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className={`h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all relative overflow-hidden ${
+              <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className={`h-28 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center transition-all relative overflow-hidden ${
                   docFile ? 'border-indigo-500/50 bg-indigo-500/10' : 'border-zinc-800 group-hover:border-indigo-500/50 group-hover:bg-indigo-500/5'
                 }`}>
                   {!docFile ? (
                     <>
                       <input
                         type="file"
-                        accept="application/pdf"
+                        accept="application/pdf,image/*,.doc,.docx"
                         onChange={(e) => {
                           const file = e.target.files?.[0] || null;
                           setDocFile(file);
                           if (file && !docName.trim()) {
-                            // Strip extension for the label
                             const name = file.name.replace(/\.[^/.]+$/, "");
                             setDocName(name);
                           }
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       />
-                      <div className="h-12 w-12 rounded-2xl bg-zinc-800 text-zinc-500 flex items-center justify-center mb-2 shadow-xl group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                        <FileText className="h-6 w-6" />
+                      <div className="h-10 w-10 rounded-xl bg-zinc-800 text-zinc-500 flex items-center justify-center mb-1 shadow-xl group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                        <FileText className="h-5 w-5" />
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-600 group-hover:text-indigo-400">Tap to browse PDF</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-indigo-400">Click to browse file (PDF or Image)</span>
                     </>
                   ) : (
-                    <div className="flex flex-col items-center gap-3 animate-in fade-in zoom-in-95 duration-300">
-                      <div className="h-12 w-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl">
-                        <FileText className="h-6 w-6" />
+                    <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-300">
+                      <div className="h-10 w-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xl">
+                        <FileText className="h-5 w-5" />
                       </div>
                       <div className="text-center px-4">
                         <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400 block truncate max-w-[200px] mb-1">
@@ -1145,22 +1417,10 @@ const ShopSetup = () => {
                           <Button 
                             variant="link" 
                             size="sm" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const blobUrl = URL.createObjectURL(docFile);
-                              setViewingDoc({ id: 'preview', url: blobUrl, caption: docFile.name + " (Preview)", type: 'pdf' });
-                            }}
-                            className="text-[9px] text-indigo-400 uppercase font-black hover:text-indigo-300 p-0 h-auto flex items-center gap-1"
-                          >
-                            <Eye className="h-3 w-3" /> Preview
-                          </Button>
-                          <Button 
-                            variant="link" 
-                            size="sm" 
                             onClick={() => { setDocFile(null); setDocName(""); }}
                             className="text-[9px] text-zinc-500 uppercase font-black hover:text-red-400 p-0 h-auto"
                           >
-                            Remove
+                            Remove File
                           </Button>
                         </div>
                       </div>
@@ -1174,43 +1434,52 @@ const ShopSetup = () => {
           <DialogFooter className="mt-4 flex flex-col gap-2">
             {!docName.trim() && (docFile || docUrl) && (
               <p className="text-center text-[10px] font-black uppercase tracking-widest text-red-500 animate-pulse">
-                Please enter a Document Label above
+                Please enter a Document Title above
               </p>
             )}
             <Button
               onClick={handleDocUpload}
               disabled={uploading || (!isUrlMode && !docFile) || (isUrlMode && !docUrl.trim()) || !docName.trim()}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest h-14 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black italic uppercase tracking-widest h-12 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
             >
-              {uploading ? "Locking into Database..." : "Complete Registry"}
+              {uploading ? "Locking into Business Drive..." : "Complete Document Sync"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── FULL SCREEN DOCUMENT VIEWER ──────────────────── */}
+      {/* ── FULL SCREEN DOCUMENT VIEWER MODAL ──────────────────── */}
       <Dialog open={!!viewingDoc} onOpenChange={(open) => !open && setViewingDoc(null)}>
         <DialogContent className="max-w-[95vw] w-[1400px] h-[95vh] p-0 bg-[#030303] border-zinc-800 overflow-hidden flex flex-col shadow-2xl rounded-3xl">
-          <div className="flex items-center justify-between p-4 bg-zinc-900/50 border-b border-zinc-800 backdrop-blur-xl shrink-0">
+          <div className="flex items-center justify-between p-4 bg-zinc-900/80 border-b border-zinc-800 backdrop-blur-xl shrink-0">
             <div className="flex items-center gap-4">
-               <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${viewingDoc?.url.includes('docs.google.com') ? 'bg-blue-600/20 text-blue-400' : 'bg-red-600/20 text-red-400'} border border-white/5`}>
-                 {viewingDoc?.url.includes('docs.google.com') ? <Globe className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+               <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${viewingDoc?.type === 'gdoc' ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'}`}>
+                 {viewingDoc?.type === 'gdoc' ? <Globe className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                </div>
                <div>
-                 <h2 className="text-sm font-black uppercase tracking-widest text-white leading-none mb-1">{viewingDoc?.caption || 'Business Document'}</h2>
-                 <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Digital Registry • {new Date(viewingDoc?.createdAt || '').toLocaleDateString()}</p>
+                 <div className="flex items-center gap-2">
+                   <h2 className="text-sm font-black uppercase tracking-widest text-white leading-none">{viewingDoc?.name.replace(/_/g, " ") || 'Business Document'}</h2>
+                   <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                     {viewingDoc?.folder}
+                   </span>
+                 </div>
+                 <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1">
+                   Business Drive • {viewingDoc?.size || 'Document'} • {new Date(viewingDoc?.modified || Date.now()).toLocaleDateString()}
+                 </p>
                </div>
             </div>
             
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white h-10 px-4 font-bold uppercase tracking-widest text-[10px]"
-                onClick={() => window.open(viewingDoc?.url, '_blank')}
-              >
-                <ExternalLink className="mr-2 h-3.5 w-3.5" /> Source
-              </Button>
+              {viewingDoc?.url && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white h-10 px-4 font-bold uppercase tracking-widest text-[10px]"
+                  onClick={() => window.open(viewingDoc?.url, '_blank')}
+                >
+                  <ExternalLink className="mr-2 h-3.5 w-3.5" /> Source File
+                </Button>
+              )}
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -1222,9 +1491,10 @@ const ShopSetup = () => {
             </div>
           </div>
 
-          <div className="flex-1 w-full bg-zinc-950 relative group">
+          <div className="flex-1 w-full bg-zinc-950 relative group flex items-center justify-center overflow-auto">
              {(() => {
-               let displayUrl = viewingDoc?.url || "";
+               if (!viewingDoc) return null;
+               let displayUrl = viewingDoc.url || "";
                if (displayUrl.includes('docs.google.com')) {
                  if (displayUrl.includes('/edit')) {
                    displayUrl = displayUrl.replace(/\/edit.*$/, '/preview');
@@ -1232,6 +1502,17 @@ const ShopSetup = () => {
                    displayUrl = displayUrl.split('?')[0].replace(/\/$/, '') + '/preview';
                  }
                }
+
+               if (viewingDoc.type === "image") {
+                 return (
+                   <img
+                     src={displayUrl}
+                     alt={viewingDoc.name}
+                     className="max-w-full max-h-full object-contain p-4 animate-in zoom-in-95 duration-300"
+                   />
+                 );
+               }
+
                return (
                  <iframe
                    key={displayUrl}
@@ -1243,7 +1524,7 @@ const ShopSetup = () => {
                );
              })()}
              
-             {/* Loading Overlay (hidden when iframe loads) */}
+             {/* Loading Overlay */}
              <div className="absolute inset-0 pointer-events-none flex items-center justify-center bg-zinc-950 z-[-1]">
                 <div className="flex flex-col items-center gap-4">
                    <div className="h-12 w-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
