@@ -33,6 +33,18 @@ import {
   ArrowLeft,
   FileText,
   Warehouse,
+  Fuel,
+  CheckSquare,
+  Square,
+  MapPin,
+  RotateCcw,
+  ShieldCheck,
+  AlertTriangle,
+  Gauge,
+  Zap,
+  Search,
+  SlidersHorizontal,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   getChemicals,
@@ -81,6 +93,56 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface PreDepartureItem {
+  id: string;
+  name: string;
+  category: "Chemicals" | "Supplies" | "Tools";
+  location: string;
+  checked: boolean;
+  notes?: string;
+  jobType: "full_detail" | "exterior" | "interior" | "custom";
+}
+
+const DEFAULT_PREDEPARTURE: PreDepartureItem[] = [
+  // Full Detail Loadout
+  { id: "pd-1", name: "Wheel & Tire Cleaner", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "full_detail" },
+  { id: "pd-2", name: "All Purpose Cleaner (APC)", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "full_detail" },
+  { id: "pd-3", name: "Glass Cleaner (Streak Free)", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "full_detail" },
+  { id: "pd-4", name: "Rinseless / Wash Soap", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "full_detail" },
+  { id: "pd-5", name: "Ceramic Sealant / Bead Maker", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "full_detail" },
+  { id: "pd-6", name: "Leather / Vinyl Conditioner", category: "Chemicals", location: "Chemical Caddy 2", checked: false, jobType: "full_detail" },
+  { id: "pd-7", name: "Microfiber Towels (Edgeless)", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "full_detail" },
+  { id: "pd-8", name: "Drying Towels (Gauntlet)", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "full_detail" },
+  { id: "pd-9", name: "Detailing Brushes & Drill Brushes", category: "Supplies", location: "Passenger Side Compartment", checked: true, jobType: "full_detail" },
+  { id: "pd-10", name: "Nitrile Gloves (Large/XL)", category: "Supplies", location: "Passenger Side Compartment", checked: true, jobType: "full_detail" },
+  { id: "pd-11", name: "50ft Commercial Extension Cord", category: "Supplies", location: "Rear Bed Skid", checked: true, jobType: "full_detail" },
+  { id: "pd-12", name: "Pressure Washer Hose Reel", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "full_detail" },
+  { id: "pd-13", name: "Commercial Vacuum & Extractor", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "full_detail" },
+
+  // Exterior Detail Loadout
+  { id: "pd-14", name: "Heavy Duty Foam Cannon & Wash Soap", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "exterior" },
+  { id: "pd-15", name: "Iron Decontamination Spray & Clay Bar", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "exterior" },
+  { id: "pd-16", name: "Tire Dressing & Applicators", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "exterior" },
+  { id: "pd-17", name: "Gauntlet Drying Towels", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "exterior" },
+  { id: "pd-18", name: "Pressure Washer & 50ft Hose", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "exterior" },
+
+  // Interior Detail Loadout
+  { id: "pd-19", name: "Interior APC & Carpet Cleaner", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "interior" },
+  { id: "pd-20", name: "Leather Clean & Protect", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "interior" },
+  { id: "pd-21", name: "Steam Extractor & Drill Brushes", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "interior" },
+  { id: "pd-22", name: "Microfiber & Glass Towels", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "interior" },
+  { id: "pd-23", name: "Pet Hair Removal Brushes", category: "Supplies", location: "Passenger Side Compartment", checked: true, jobType: "interior" },
+];
+
+const RIG_LOCATIONS = [
+  "Driver Side Drawer",
+  "Passenger Side Compartment",
+  "Rear Bed Skid",
+  "Chemical Caddy 1",
+  "Chemical Caddy 2",
+  "Under-Seat Storage"
+];
+
 // ─────────────────────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────────────────────
@@ -99,6 +161,200 @@ const MobileSetup = () => {
   const [loading, setLoading] = useState(true);
   const [media, setMedia] = useState<SetupMedia[]>([]);
   const [categories, setCategories] = useState<SetupCategory[]>([]);
+
+  // Pre-Departure & Rig Equipment State
+  const [checklist, setChecklist] = useState<PreDepartureItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("f150_predeparture_checklist");
+      return saved ? JSON.parse(saved) : DEFAULT_PREDEPARTURE;
+    } catch {
+      return DEFAULT_PREDEPARTURE;
+    }
+  });
+
+  const [equipmentSubTab, setEquipmentSubTab] = useState<"checklist" | "locations" | "condition">("checklist");
+  const [selectedJobType, setSelectedJobType] = useState<"full_detail" | "exterior" | "interior" | "custom" | "all">("full_detail");
+  const [selectedLocFilter, setSelectedLocFilter] = useState<string>("all");
+  
+  // Storage Locations Search state
+  const [locationSearch, setLocationSearch] = useState("");
+
+  // Condition & Fuel Search/Filter state
+  const [conditionSearch, setConditionSearch] = useState("");
+  const [conditionFilter, setConditionFilter] = useState<"all" | "good" | "worn" | "needs_replacement">("all");
+
+  const [addChecklistOpen, setAddChecklistOpen] = useState(false);
+  const [newChecklistItem, setNewChecklistItem] = useState<{ name: string; category: "Chemicals" | "Supplies" | "Tools"; location: string; jobType: "full_detail" | "exterior" | "interior" | "custom" }>({
+    name: "",
+    category: "Supplies",
+    location: "Driver Side Drawer",
+    jobType: "full_detail",
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("f150_predeparture_checklist", JSON.stringify(checklist));
+    } catch (e) {
+      console.error("Failed to save checklist to local storage", e);
+    }
+  }, [checklist]);
+
+  // Master Inventory Search Results for adding to checklists
+  const masterSearchResults = useMemo(() => {
+    if (!locationSearch.trim()) return [];
+    const q = locationSearch.toLowerCase().trim();
+    const res: Array<{ id: string; name: string; category: "Chemicals" | "Supplies" | "Tools"; defaultLoc: string }> = [];
+
+    chemicals.forEach((c) => {
+      if (c.name?.toLowerCase().includes(q) || c.brand?.toLowerCase().includes(q) || c.category?.toLowerCase().includes(q)) {
+        res.push({ id: `chem-${c.id}`, name: c.name, category: "Chemicals", defaultLoc: c.shelfLocation || "Chemical Caddy 1" });
+      }
+    });
+
+    materials.forEach((m) => {
+      if (m.name?.toLowerCase().includes(q) || m.category?.toLowerCase().includes(q)) {
+        res.push({ id: `mat-${m.id}`, name: m.name, category: "Supplies", defaultLoc: m.location || "Driver Side Drawer" });
+      }
+    });
+
+    tools.forEach((t) => {
+      if (t.name?.toLowerCase().includes(q) || t.notes?.toLowerCase().includes(q)) {
+        res.push({ id: `tool-${t.id}`, name: t.name, category: "Tools", defaultLoc: t.location || "Rear Bed Skid" });
+      }
+    });
+
+    return res.slice(0, 15);
+  }, [locationSearch, chemicals, materials, tools]);
+
+  // Curated tools list for Condition & Fuel tracking (only items in rig checklists or with equipment metadata)
+  const curatedTools = useMemo(() => {
+    const checklistToolNames = new Set(checklist.map((item) => item.name.toLowerCase()));
+
+    return tools.filter((tool) => {
+      const inChecklist = checklistToolNames.has(tool.name.toLowerCase()) || Boolean(tool.conditionStatus || tool.fuelLevel || tool.location);
+      if (!inChecklist) return false;
+
+      if (conditionFilter !== "all" && tool.conditionStatus !== conditionFilter) {
+        return false;
+      }
+
+      if (conditionSearch.trim()) {
+        const q = conditionSearch.toLowerCase().trim();
+        const matchName = tool.name?.toLowerCase().includes(q);
+        const matchLoc = tool.location?.toLowerCase().includes(q);
+        const matchNotes = tool.conditionNote?.toLowerCase().includes(q) || tool.notes?.toLowerCase().includes(q);
+        return matchName || matchLoc || matchNotes;
+      }
+
+      return true;
+    });
+  }, [tools, checklist, conditionFilter, conditionSearch]);
+
+  const toggleChecklistItem = (id: string) => {
+    setChecklist((prev) => prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)));
+  };
+
+  const selectAllChecklist = (jobType?: string) => {
+    setChecklist((prev) => prev.map((item) => (!jobType || jobType === "all" || item.jobType === jobType ? { ...item, checked: true } : item)));
+  };
+
+  const uncheckAllChecklist = (jobType?: string) => {
+    setChecklist((prev) => prev.map((item) => (!jobType || jobType === "all" || item.jobType === jobType ? { ...item, checked: false } : item)));
+  };
+
+  const resetChecklist = () => {
+    setChecklist(DEFAULT_PREDEPARTURE);
+    toast({ title: "Checklist Reset", description: "Pre-departure loadouts restored to defaults." });
+  };
+
+  const handleAddMasterItemToChecklist = (
+    item: { name: string; category: "Chemicals" | "Supplies" | "Tools"; defaultLoc: string },
+    targetJobType: "full_detail" | "exterior" | "interior" | "custom"
+  ) => {
+    const newItem: PreDepartureItem = {
+      id: `pd-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      name: item.name,
+      category: item.category,
+      location: item.defaultLoc,
+      checked: false,
+      jobType: targetJobType,
+    };
+    setChecklist((prev) => [...prev, newItem]);
+    setLocationSearch("");
+    toast({
+      title: "Added to Checklist",
+      description: `${item.name} added to ${targetJobType.replace("_", " ").toUpperCase()} checklist.`,
+    });
+  };
+
+  const handleRemoveItemFromChecklist = (id: string) => {
+    setChecklist((prev) => prev.filter((item) => item.id !== id));
+    toast({ title: "Item Removed", description: "Item removed from rig checklist." });
+  };
+
+  const handleUpdateChecklistItemLocation = (id: string, newLocation: string) => {
+    setChecklist((prev) => prev.map((item) => (item.id === id ? { ...item, location: newLocation } : item)));
+    toast({ title: "Location Updated", description: `Item assigned to ${newLocation}` });
+  };
+
+  const handleAddChecklistItem = () => {
+    if (!newChecklistItem.name.trim()) return;
+    const item: PreDepartureItem = {
+      id: `pd-${Date.now()}`,
+      name: newChecklistItem.name.trim(),
+      category: newChecklistItem.category,
+      location: newChecklistItem.location || "Driver Side Drawer",
+      checked: false,
+      jobType: newChecklistItem.jobType || "full_detail",
+    };
+    setChecklist((prev) => [...prev, item]);
+    setNewChecklistItem({ name: "", category: "Supplies", location: "Driver Side Drawer", jobType: "full_detail" });
+    setAddChecklistOpen(false);
+    toast({ title: "Item Added", description: `${item.name} added to pre-departure checklist.` });
+  };
+
+  const handleUpdateToolCondition = async (toolId: string, updates: Partial<Tool>) => {
+    const target = tools.find((t) => t.id === toolId);
+    if (!target) return;
+    const updated: Tool = { ...target, ...updates, updatedAt: new Date().toISOString() };
+    setTools((prev) => prev.map((t) => (t.id === toolId ? updated : t)));
+    try {
+      await saveTool(updated, true);
+      toast({ title: "Equipment Specs Saved", description: `${target.name} condition and fuel updated.` });
+    } catch {
+      toast({ title: "Save Error", description: "Could not update tool data.", variant: "destructive" });
+    }
+  };
+
+  const handleUpdateItemLocation = async (itemType: "chemical" | "material" | "tool", itemId: string, newLocation: string) => {
+    try {
+      if (itemType === "chemical") {
+        const target = chemicals.find(c => c.id === itemId);
+        if (target) {
+          const updated = { ...target, shelfLocation: newLocation, updatedAt: new Date().toISOString() };
+          setChemicals(prev => prev.map(c => c.id === itemId ? updated : c));
+          await saveChemical(updated, true);
+        }
+      } else if (itemType === "material") {
+        const target = materials.find(m => m.id === itemId);
+        if (target) {
+          const updated = { ...target, location: newLocation, updatedAt: new Date().toISOString() };
+          setMaterials(prev => prev.map(m => m.id === itemId ? updated : m));
+          await saveMaterial(updated, true);
+        }
+      } else {
+        const target = tools.find(t => t.id === itemId);
+        if (target) {
+          const updated = { ...target, location: newLocation, updatedAt: new Date().toISOString() };
+          setTools(prev => prev.map(t => t.id === itemId ? updated : t));
+          await saveTool(updated, true);
+        }
+      }
+      toast({ title: "Location Updated", description: `Storage location changed to ${newLocation}` });
+    } catch {
+      toast({ title: "Error", description: "Could not update storage location.", variant: "destructive" });
+    }
+  };
 
   // Upload state
   const [uploading, setUploading] = useState(false);
@@ -636,99 +892,524 @@ const MobileSetup = () => {
 
           </TabsContent>
 
-          {/* ── INVENTORY TAB ──────────────────────────── */}
-          <TabsContent value="inventory" className="mt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Tools */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 px-4 py-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
-                  <Wrench className="h-5 w-5 text-indigo-400" />
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-indigo-200">Tools & Hardware</h3>
-                  {isAdmin && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-indigo-500/20 text-indigo-400" onClick={() => { setAddType("tool"); setQuickAddOpen(true); }}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                  {tools.map((tool) => (
-                    <Card key={tool.id} className="bg-zinc-900/80 border-zinc-800/50 p-4 hover:border-indigo-500/30 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                          {tool.imageUrl ? <img src={tool.imageUrl} className="w-full h-full object-cover rounded-xl" /> : <Wrench className="h-5 w-5 text-zinc-600" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-bold text-white truncate">{tool.name}</h4>
-                          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{tool.notes || "No Notes"}</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-indigo-400 transition-colors" />
-                      </div>
-                    </Card>
-                  ))}
-                  {tools.length === 0 && <p className="text-xs text-center text-zinc-600 py-10">No tools in inventory</p>}
-                </div>
+          {/* ── INVENTORY TAB (Pre-Departure Checklist & Rig Location / Condition System) ── */}
+          <TabsContent value="inventory" className="mt-0 space-y-8">
+            {/* Top Navigation Pills */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-900/60 border border-zinc-800 p-3 rounded-2xl">
+              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto custom-scrollbar pb-1 sm:pb-0">
+                <Button
+                  variant="ghost"
+                  onClick={() => setEquipmentSubTab("checklist")}
+                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all shrink-0 ${
+                    equipmentSubTab === "checklist"
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <ClipboardCheck className="h-4 w-4" /> Service Loadouts & Checklist
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setEquipmentSubTab("locations")}
+                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all shrink-0 ${
+                    equipmentSubTab === "locations"
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <MapPin className="h-4 w-4" /> Rig Storage Locations
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setEquipmentSubTab("condition")}
+                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all shrink-0 ${
+                    equipmentSubTab === "condition"
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <Gauge className="h-4 w-4" /> Equipment Condition & Fuel ({curatedTools.length})
+                </Button>
               </div>
 
-              {/* Chemicals */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 px-4 py-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                  <FlaskConical className="h-5 w-5 text-emerald-400" />
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-emerald-200">Fluid Systems</h3>
-                  {isAdmin && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-emerald-500/20 text-emerald-400" onClick={() => { setAddType("chemical"); setQuickAddOpen(true); }}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  )}
+              {equipmentSubTab === "checklist" && (
+                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetChecklist}
+                    className="border-zinc-800 text-zinc-400 hover:text-white h-9 text-[10px] font-black uppercase tracking-widest gap-1"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> Reset Defaults
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setAddChecklistOpen(true)}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white h-9 text-[10px] font-black uppercase tracking-widest gap-1 shadow-md shadow-indigo-600/20"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Add Custom Item
+                  </Button>
                 </div>
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                  {chemicals.map((chem) => (
-                    <Card key={chem.id} className="bg-zinc-900/80 border-zinc-800/50 p-4 hover:border-emerald-500/30 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                          {chem.imageUrl ? <img src={chem.imageUrl} className="w-full h-full object-cover rounded-xl" /> : <FlaskConical className="h-5 w-5 text-zinc-600" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-bold text-white truncate">{chem.name}</h4>
-                          <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">{chem.currentStock} in stock</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-emerald-400 transition-colors" />
-                      </div>
-                    </Card>
-                  ))}
-                  {chemicals.length === 0 && <p className="text-xs text-center text-zinc-600 py-10">No chemicals in inventory</p>}
-                </div>
-              </div>
-
-              {/* Materials */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/10 rounded-2xl border border-amber-500/20">
-                  <Package className="h-5 w-5 text-amber-400" />
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-amber-200">Consumables</h3>
-                  {isAdmin && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-amber-500/20 text-amber-400" onClick={() => { setAddType("material"); setQuickAddOpen(true); }}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                  {materials.map((mat) => (
-                    <Card key={mat.id} className="bg-zinc-900/80 border-zinc-800/50 p-4 hover:border-amber-500/30 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                          <Package className="h-5 w-5 text-zinc-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-bold text-white truncate">{mat.name}</h4>
-                          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{mat.category}</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-amber-400 transition-colors" />
-                      </div>
-                    </Card>
-                  ))}
-                  {materials.length === 0 && <p className="text-xs text-center text-zinc-600 py-10">No materials in inventory</p>}
-                </div>
-              </div>
+              )}
             </div>
+
+            {/* SUB-VIEW 1: PRE-DEPARTURE SERVICE CHECKLISTS */}
+            {equipmentSubTab === "checklist" && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Job Type Selector Pills */}
+                <div className="flex items-center justify-between gap-4 bg-zinc-950/80 p-3 rounded-2xl border border-zinc-800/80">
+                  <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2 flex items-center gap-1.5 shrink-0">
+                      <Truck className="h-3.5 w-3.5 text-indigo-400" /> Detailing Package:
+                    </span>
+                    {(
+                      [
+                        { id: "full_detail", label: "Full Detail Loadout" },
+                        { id: "exterior", label: "Exterior Detail Loadout" },
+                        { id: "interior", label: "Interior Detail Loadout" },
+                        { id: "custom", label: "Custom Rig Loadout" },
+                        { id: "all", label: "All Combined Items" },
+                      ] as const
+                    ).map((pkg) => (
+                      <Button
+                        key={pkg.id}
+                        variant="ghost"
+                        onClick={() => setSelectedJobType(pkg.id)}
+                        className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-all ${
+                          selectedJobType === pkg.id
+                            ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        {pkg.label} (
+                        {
+                          checklist.filter((i) => pkg.id === "all" || i.jobType === pkg.id).length
+                        })
+                      </Button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => selectAllChecklist(selectedJobType)}
+                      className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/10"
+                    >
+                      Check All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => uncheckAllChecklist(selectedJobType)}
+                      className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:bg-zinc-800"
+                    >
+                      Uncheck All
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Progress Meter */}
+                {(() => {
+                  const activeItems = checklist.filter((i) => selectedJobType === "all" || i.jobType === selectedJobType);
+                  const packedCount = activeItems.filter((i) => i.checked).length;
+                  const pct = activeItems.length > 0 ? Math.round((packedCount / activeItems.length) * 100) : 0;
+                  return (
+                    <Card className="bg-zinc-950/60 border-zinc-800 p-4 rounded-2xl flex items-center justify-between gap-4">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-white uppercase tracking-wider text-[11px]">
+                            Rig Packing Status: {packedCount} of {activeItems.length} Items Loaded
+                          </span>
+                          <span className="font-black text-indigo-400">{pct}% Ready</span>
+                        </div>
+                        <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                          <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-300" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })()}
+
+                {/* Checklist items list */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {checklist
+                    .filter((item) => selectedJobType === "all" || item.jobType === selectedJobType)
+                    .map((item) => (
+                      <Card
+                        key={item.id}
+                        className={`p-4 rounded-2xl border transition-all ${
+                          item.checked
+                            ? "bg-emerald-950/20 border-emerald-500/40"
+                            : "bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0 cursor-pointer flex-1" onClick={() => toggleChecklistItem(item.id)}>
+                            <div className={`h-6 w-6 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
+                              item.checked ? "bg-emerald-500 text-black" : "border border-zinc-700 text-transparent"
+                            }`}>
+                              {item.checked && <CheckSquare className="h-4 w-4" />}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className={`text-xs font-bold truncate ${item.checked ? "line-through text-emerald-300/70" : "text-white"}`}>
+                                {item.name}
+                              </h4>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-indigo-300">
+                                  {item.category}
+                                </span>
+                                <span className="text-[9px] font-bold text-zinc-500">
+                                  Location: {item.location}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveItemFromChecklist(item.id)}
+                            className="h-8 w-8 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                            title="Remove from checklist"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+
+                  {checklist.filter((item) => selectedJobType === "all" || item.jobType === selectedJobType).length === 0 && (
+                    <div className="col-span-full py-12 text-center space-y-3 bg-zinc-950/40 border border-dashed border-zinc-800 rounded-3xl">
+                      <Package className="h-8 w-8 text-zinc-600 mx-auto" />
+                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">No items in this checklist loadout yet.</p>
+                      <p className="text-[11px] text-zinc-600">Use the Storage Locations tab or search bar to search and add items.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* SUB-VIEW 2: RIG STORAGE LOCATIONS & MASTER INVENTORY SEARCH */}
+            {equipmentSubTab === "locations" && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Search Bar for 212 Master Inventory Items */}
+                <Card className="bg-zinc-950/80 border-indigo-500/30 p-5 rounded-3xl space-y-4 shadow-xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <Search className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black uppercase tracking-wider text-white">Search Master Inventory</h3>
+                        <p className="text-[10px] text-zinc-500 font-medium">Search chemicals, supplies, or tools by name to add directly to a service loadout checklist.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-zinc-500" />
+                    <Input
+                      value={locationSearch}
+                      onChange={(e) => setLocationSearch(e.target.value)}
+                      placeholder="Type to search 212 inventory items (e.g., Ceramic, APC, Towels, DA Polisher)..."
+                      className="bg-zinc-900 border-zinc-800 text-white pl-10 pr-10 h-11 text-xs font-medium rounded-xl focus:border-indigo-500"
+                    />
+                    {locationSearch && (
+                      <button
+                        onClick={() => setLocationSearch("")}
+                        className="absolute right-3.5 top-3.5 text-zinc-500 hover:text-white"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Instant Search Results Box */}
+                  {locationSearch.trim() !== "" && (
+                    <div className="space-y-2 pt-2 border-t border-zinc-800/80 max-h-[300px] overflow-y-auto custom-scrollbar">
+                      <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        <span>Search Results ({masterSearchResults.length})</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {masterSearchResults.map((res) => (
+                          <div
+                            key={res.id}
+                            className="flex items-center justify-between p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-indigo-500/40 transition-all"
+                          >
+                            <div className="min-w-0 flex-1 pr-2">
+                              <h4 className="text-xs font-bold text-white truncate">{res.name}</h4>
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-indigo-400">{res.category}</span>
+                            </div>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white h-7 text-[9px] font-black uppercase tracking-wider px-2.5 rounded-lg gap-1">
+                                  + Add to Checklist <ChevronDown className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-white">
+                                <DropdownMenuItem onClick={() => handleAddMasterItemToChecklist(res, "full_detail")} className="text-xs font-bold cursor-pointer">
+                                  Add to Full Detail Loadout
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAddMasterItemToChecklist(res, "exterior")} className="text-xs font-bold cursor-pointer">
+                                  Add to Exterior Detail Loadout
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAddMasterItemToChecklist(res, "interior")} className="text-xs font-bold cursor-pointer">
+                                  Add to Interior Detail Loadout
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleAddMasterItemToChecklist(res, "custom")} className="text-xs font-bold cursor-pointer">
+                                  Add to Custom Rig Loadout
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        ))}
+
+                        {masterSearchResults.length === 0 && (
+                          <p className="text-xs text-zinc-500 py-4 text-center col-span-full">No inventory items matched "{locationSearch}".</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+
+                {/* Storage Zone Filter & Checklist Location Map */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Curated Rig Storage Location Map</h3>
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                      {checklist.length} Total Rig Items Assigned
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setSelectedLocFilter("all")}
+                      className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest shrink-0 ${
+                        selectedLocFilter === "all" ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+                      }`}
+                    >
+                      All Rig Zones ({checklist.length})
+                    </Button>
+                    {RIG_LOCATIONS.map((loc) => {
+                      const count = checklist.filter((item) => item.location === loc).length;
+                      return (
+                        <Button
+                          key={loc}
+                          variant="ghost"
+                          onClick={() => setSelectedLocFilter(loc)}
+                          className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest shrink-0 ${
+                            selectedLocFilter === loc ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+                          }`}
+                        >
+                          {loc} ({count})
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Rig items grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {checklist
+                      .filter((item) => selectedLocFilter === "all" || item.location === selectedLocFilter)
+                      .map((item) => (
+                        <Card key={item.id} className="bg-zinc-950/60 border-zinc-800 p-4 rounded-2xl space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className="h-9 w-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                                {item.category === "Chemicals" ? (
+                                  <FlaskConical className="h-4 w-4 text-emerald-400" />
+                                ) : item.category === "Tools" ? (
+                                  <Wrench className="h-4 w-4 text-indigo-400" />
+                                ) : (
+                                  <Package className="h-4 w-4 text-amber-400" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-xs font-bold text-white truncate">{item.name}</h4>
+                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
+                                  {item.jobType ? item.jobType.replace("_", " ").toUpperCase() : "GENERAL LOADOUT"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <Select
+                              value={item.location}
+                              onValueChange={(val) => handleUpdateChecklistItemLocation(item.id, val)}
+                            >
+                              <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[10px] font-bold text-indigo-300 w-[140px] shrink-0">
+                                <SelectValue placeholder="Set Location" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-zinc-950 border-zinc-800 text-white text-xs">
+                                {RIG_LOCATIONS.map((l) => (
+                                  <SelectItem key={l} value={l} className="text-xs font-bold">
+                                    {l}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </Card>
+                      ))}
+
+                    {checklist.filter((item) => selectedLocFilter === "all" || item.location === selectedLocFilter).length === 0 && (
+                      <p className="text-xs text-center text-zinc-600 py-8 col-span-full">No items assigned to this rig storage zone.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-VIEW 3: CURATED CONDITION & FUEL TRACKING */}
+            {equipmentSubTab === "condition" && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Search & Filter Header for Condition & Fuel */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-950/80 border border-zinc-800/80 p-4 rounded-3xl">
+                  <div className="relative w-full sm:w-80">
+                    <Search className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                    <Input
+                      value={conditionSearch}
+                      onChange={(e) => setConditionSearch(e.target.value)}
+                      placeholder="Filter active rig equipment..."
+                      className="bg-zinc-900 border-zinc-800 text-white pl-10 pr-10 h-10 text-xs font-medium rounded-xl"
+                    />
+                    {conditionSearch && (
+                      <button onClick={() => setConditionSearch("")} className="absolute right-3.5 top-3 text-zinc-500 hover:text-white">
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar w-full sm:w-auto">
+                    {(
+                      [
+                        { id: "all", label: "All Equipment" },
+                        { id: "good", label: "Operational" },
+                        { id: "worn", label: "Service Soon" },
+                        { id: "needs_replacement", label: "Out of Order" },
+                      ] as const
+                    ).map((st) => (
+                      <Button
+                        key={st.id}
+                        variant="ghost"
+                        onClick={() => setConditionFilter(st.id)}
+                        className={`h-9 px-3.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                          conditionFilter === st.id ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+                        }`}
+                      >
+                        {st.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Curated Equipment Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {curatedTools.map((tool) => {
+                    const fuel = tool.fuelLevel || "full";
+                    const fuelColor =
+                      fuel === "full"
+                        ? "bg-emerald-500 text-emerald-400"
+                        : fuel === "3/4" || fuel === "1/2"
+                        ? "bg-amber-500 text-amber-400"
+                        : fuel === "1/4" || fuel === "low"
+                        ? "bg-red-500 text-red-400 animate-pulse"
+                        : "bg-zinc-700 text-zinc-400";
+
+                    return (
+                      <Card key={tool.id} className="bg-zinc-950/60 border-zinc-800 p-6 rounded-3xl space-y-5 shadow-xl">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                              {tool.imageUrl ? (
+                                <img src={tool.imageUrl} className="h-full w-full object-cover rounded-2xl" />
+                              ) : (
+                                <Wrench className="h-6 w-6" />
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="text-base font-black uppercase text-white truncate max-w-[200px]">{tool.name}</h4>
+                              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
+                                Location: {tool.location || "Unassigned"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <Select
+                            value={tool.conditionStatus || "good"}
+                            onValueChange={(val) => handleUpdateToolCondition(tool.id, { conditionStatus: val as any })}
+                          >
+                            <SelectTrigger className={`h-8 border text-[10px] font-black uppercase tracking-wider px-3 rounded-full w-[130px] ${
+                              tool.conditionStatus === "needs_replacement"
+                                ? "bg-red-500/20 border-red-500/40 text-red-400"
+                                : tool.conditionStatus === "worn"
+                                ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
+                                : "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                            }`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-950 border-zinc-800 text-white text-xs font-bold">
+                              <SelectItem value="good">✓ Operational</SelectItem>
+                              <SelectItem value="worn">⚠️ Service Soon</SelectItem>
+                              <SelectItem value="needs_replacement">⛔ Out of Order</SelectItem>
+                              <SelectItem value="new">★ Brand New</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Fuel Level Selector Bar */}
+                        <div className="space-y-2 bg-zinc-900/60 p-3.5 rounded-2xl border border-zinc-800">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1.5">
+                              <Fuel className="h-3.5 w-3.5 text-amber-400" /> Fuel / Energy Level:
+                            </span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${fuelColor.split(" ")[1]}`}>
+                              {fuel.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-6 gap-1 pt-1">
+                            {(["full", "3/4", "1/2", "1/4", "low", "n/a"] as const).map((lvl) => (
+                              <button
+                                key={lvl}
+                                onClick={() => handleUpdateToolCondition(tool.id, { fuelLevel: lvl })}
+                                className={`py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
+                                  fuel === lvl
+                                    ? "bg-indigo-600 text-white shadow-md"
+                                    : "bg-zinc-800 text-zinc-500 hover:text-zinc-300"
+                                }`}
+                              >
+                                {lvl}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Condition & Maintenance Note */}
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Maintenance & Service Notes</Label>
+                          <Input
+                            defaultValue={tool.conditionNote || tool.notes || ""}
+                            onBlur={(e) => handleUpdateToolCondition(tool.id, { conditionNote: e.target.value })}
+                            placeholder="e.g. Oil changed 8/15, 89 Octane Gas..."
+                            className="bg-zinc-900 border-zinc-800 text-white h-10 font-medium text-xs"
+                          />
+                        </div>
+                      </Card>
+                    );
+                  })}
+
+                  {curatedTools.length === 0 && (
+                    <div className="col-span-full py-12 text-center space-y-3 bg-zinc-950/40 border border-dashed border-zinc-800 rounded-3xl">
+                      <Gauge className="h-8 w-8 text-zinc-600 mx-auto" />
+                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">No rig tools match the selected condition filter.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </main>
@@ -745,6 +1426,82 @@ const MobileSetup = () => {
           </div>
         </div>
       </footer>
+
+      {/* ── ADD PRE-DEPARTURE ITEM MODAL ────────────────── */}
+      <Dialog open={addChecklistOpen} onOpenChange={setAddChecklistOpen}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5" /> Add Pre-Departure Item
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500 text-xs">Add supplies or chemicals to your rig departure checklist.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Item Name</Label>
+              <Input
+                value={newChecklistItem.name}
+                onChange={(e) => setNewChecklistItem({ ...newChecklistItem, name: e.target.value })}
+                placeholder="e.g. Clay Bars"
+                className="bg-zinc-900 border-zinc-800 text-white font-bold h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Category</Label>
+              <Select
+                value={newChecklistItem.category}
+                onValueChange={(val: "Chemicals" | "Supplies" | "Tools") => setNewChecklistItem({ ...newChecklistItem, category: val })}
+              >
+                <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white font-bold h-11 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                  <SelectItem value="Chemicals">Chemicals</SelectItem>
+                  <SelectItem value="Supplies">Supplies</SelectItem>
+                  <SelectItem value="Tools">Tools & Equipment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Service Loadout / Job Type</Label>
+              <Select
+                value={newChecklistItem.jobType}
+                onValueChange={(val: "full_detail" | "exterior" | "interior" | "custom") => setNewChecklistItem({ ...newChecklistItem, jobType: val })}
+              >
+                <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white font-bold h-11 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                  <SelectItem value="full_detail">Full Detail Loadout</SelectItem>
+                  <SelectItem value="exterior">Exterior Detail Loadout</SelectItem>
+                  <SelectItem value="interior">Interior Detail Loadout</SelectItem>
+                  <SelectItem value="custom">Custom Rig Loadout</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Rig Location</Label>
+              <Select
+                value={newChecklistItem.location}
+                onValueChange={(val) => setNewChecklistItem({ ...newChecklistItem, location: val })}
+              >
+                <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white font-bold h-11 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                  {RIG_LOCATIONS.map((l) => (
+                    <SelectItem key={l} value={l}>{l}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAddChecklistOpen(false)} className="text-zinc-500">Cancel</Button>
+            <Button onClick={handleAddChecklistItem} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest px-6">Add to Rig Checklist</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── CATEGORY MANAGER MODAL ─────────────────────── */}
       <Dialog open={catManagerOpen} onOpenChange={setCatManagerOpen}>

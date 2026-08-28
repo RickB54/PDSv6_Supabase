@@ -125,6 +125,10 @@ export interface Tool {
     location?: string;
     containerLocation?: string;
     hideFromIac?: boolean;
+    conditionStatus?: 'new' | 'good' | 'worn' | 'needs_replacement';
+    conditionNote?: string;
+    lastUsedDate?: string;
+    fuelLevel?: 'full' | '3/4' | '1/2' | '1/4' | 'low' | 'n/a';
 }
 
 export interface SetupMedia {

@@ -35,6 +35,7 @@ import {
   Globe,
   ExternalLink,
   Eye,
+  Search,
 } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import {
@@ -174,6 +175,7 @@ const ShopSetup = () => {
   const [docUrl, setDocUrl] = useState("");
   const [isUrlMode, setIsUrlMode] = useState(false);
   const [viewingDoc, setViewingDoc] = useState<SetupMedia | null>(null);
+  const [docSearch, setDocSearch] = useState("");
 
   // ─── Load ─────────────────────────────────────────────
   const loadData = async () => {
@@ -715,96 +717,69 @@ const ShopSetup = () => {
 
           {/* ── INVENTORY TAB ──────────────────────────── */}
           <TabsContent value="inventory" className="mt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Tools */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 px-4 py-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
-                  <Wrench className="h-5 w-5 text-indigo-400" />
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-indigo-200">Shop Tools</h3>
-                  {isAdmin && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-indigo-500/20 text-indigo-400" onClick={() => { setAddType("tool"); setQuickAddOpen(true); }}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Tools Link Card */}
+              <Card 
+                onClick={() => navigate('/inventory-control?section=tools')}
+                className="group relative bg-gradient-to-br from-zinc-900 via-zinc-950 to-black border border-zinc-800 hover:border-indigo-500/50 p-8 rounded-3xl cursor-pointer transition-all duration-300 shadow-xl hover:shadow-indigo-500/10 flex flex-col justify-between"
+              >
+                <div className="space-y-4">
+                  <div className="h-14 w-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white text-indigo-400 transition-all duration-300">
+                    <Wrench className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black uppercase tracking-wider text-white mb-2 group-hover:text-indigo-400 transition-colors">Shop Tools</h3>
+                    <p className="text-zinc-400 text-xs font-medium leading-relaxed">Direct access to equipment inventory category page, machinery, polishers, and hardware specs.</p>
+                  </div>
                 </div>
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                  {tools.map((tool) => (
-                    <Card key={tool.id} className="bg-zinc-900/80 border-zinc-800/50 p-4 hover:border-indigo-500/30 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                          {tool.imageUrl ? <img src={tool.imageUrl} className="w-full h-full object-cover rounded-xl" /> : <Wrench className="h-5 w-5 text-zinc-600" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-bold text-white truncate">{tool.name}</h4>
-                          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{tool.notes || "No Notes"}</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-indigo-400 transition-colors" />
-                      </div>
-                    </Card>
-                  ))}
+                <div className="pt-6 mt-6 border-t border-zinc-800/80 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">View Equipment Page</span>
+                  <ChevronRight className="h-5 w-5 text-indigo-400 group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
+              </Card>
 
-              {/* Chemicals */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 px-4 py-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                  <FlaskConical className="h-5 w-5 text-emerald-400" />
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-emerald-200">Shop Chemical Feed</h3>
-                  {isAdmin && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-emerald-500/20 text-emerald-400" onClick={() => { setAddType("chemical"); setQuickAddOpen(true); }}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  )}
+              {/* Chemical Feed Link Card */}
+              <Card 
+                onClick={() => navigate('/inventory-control?section=chemicals')}
+                className="group relative bg-gradient-to-br from-zinc-900 via-zinc-950 to-black border border-zinc-800 hover:border-emerald-500/50 p-8 rounded-3xl cursor-pointer transition-all duration-300 shadow-xl hover:shadow-emerald-500/10 flex flex-col justify-between"
+              >
+                <div className="space-y-4">
+                  <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-600 group-hover:text-white text-emerald-400 transition-all duration-300">
+                    <FlaskConical className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black uppercase tracking-wider text-white mb-2 group-hover:text-emerald-400 transition-colors">Shop Chemical Feed</h3>
+                    <p className="text-zinc-400 text-xs font-medium leading-relaxed">Direct access to chemical inventory category page, stock levels, dilution ratios, and SDS cards.</p>
+                  </div>
                 </div>
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                  {chemicals.map((chem) => (
-                    <Card key={chem.id} className="bg-zinc-900/80 border-zinc-800/50 p-4 hover:border-emerald-500/30 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                          {chem.imageUrl ? <img src={chem.imageUrl} className="w-full h-full object-cover rounded-xl" /> : <FlaskConical className="h-5 w-5 text-zinc-600" />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-bold text-white truncate">{chem.name}</h4>
-                          <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">{chem.currentStock} in stock</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-emerald-400 transition-colors" />
-                      </div>
-                    </Card>
-                  ))}
+                <div className="pt-6 mt-6 border-t border-zinc-800/80 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">View Chemical Page</span>
+                  <ChevronRight className="h-5 w-5 text-emerald-400 group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
+              </Card>
 
-              {/* Materials */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/10 rounded-2xl border border-amber-500/20">
-                  <Package className="h-5 w-5 text-amber-400" />
-                  <h3 className="text-sm font-black uppercase tracking-[0.2em] text-amber-200">Fixed Inventory</h3>
-                  {isAdmin && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto hover:bg-amber-500/20 text-amber-400" onClick={() => { setAddType("material"); setQuickAddOpen(true); }}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  )}
+              {/* Shop Supplies Link Card */}
+              <Card 
+                onClick={() => navigate('/inventory-control?section=supplies')}
+                className="group relative bg-gradient-to-br from-zinc-900 via-zinc-950 to-black border border-zinc-800 hover:border-amber-500/50 p-8 rounded-3xl cursor-pointer transition-all duration-300 shadow-xl hover:shadow-amber-500/10 flex flex-col justify-between"
+              >
+                <div className="space-y-4">
+                  <div className="h-14 w-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-amber-600 group-hover:text-white text-amber-400 transition-all duration-300">
+                    <Package className="h-7 w-7" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black uppercase tracking-wider text-white mb-2 group-hover:text-amber-400 transition-colors">Shop Supplies</h3>
+                    <p className="text-zinc-400 text-xs font-medium leading-relaxed">Direct access to supplies inventory category page, microfiber towels, pads, and shop consumables.</p>
+                  </div>
                 </div>
-                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                  {materials.map((mat) => (
-                    <Card key={mat.id} className="bg-zinc-900/80 border-zinc-800/50 p-4 hover:border-amber-500/30 transition-all group">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center shrink-0">
-                          <Package className="h-5 w-5 text-zinc-600" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="text-sm font-bold text-white truncate">{mat.name}</h4>
-                          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">{mat.category}</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-zinc-700 group-hover:text-amber-400 transition-colors" />
-                      </div>
-                    </Card>
-                  ))}
+                <div className="pt-6 mt-6 border-t border-zinc-800/80 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">View Supplies Page</span>
+                  <ChevronRight className="h-5 w-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
                 </div>
-              </div>
+              </Card>
             </div>
           </TabsContent>
-          <TabsContent value="paperwork" className="mt-0 space-y-12">
+          <TabsContent value="paperwork" className="mt-0 space-y-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-zinc-900/60 border border-zinc-800 p-8 rounded-3xl relative z-10 shadow-xl overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] -mr-32 -mt-32 rounded-full" />
               <div className="relative z-10 flex items-center gap-4">
@@ -827,17 +802,38 @@ const ShopSetup = () => {
               )}
             </div>
 
+            {/* Document Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-zinc-900/40 p-4 rounded-2xl border border-zinc-800">
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                <Input
+                  value={docSearch}
+                  onChange={(e) => setDocSearch(e.target.value)}
+                  placeholder="Search SOPs, manuals, procedures, reference sheets..."
+                  className="bg-zinc-950 border-zinc-800 text-white pl-10 h-10 font-medium text-xs focus:border-indigo-500"
+                />
+                {docSearch && (
+                  <button onClick={() => setDocSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 shrink-0">
+                {media.filter(m => m.type === 'pdf' && (!docSearch || (m.caption || '').toLowerCase().includes(docSearch.toLowerCase()))).length} Documents Filtered
+              </span>
+            </div>
+
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-              {media.filter(m => m.type === 'pdf').length === 0 ? (
+              {media.filter(m => m.type === 'pdf' && (!docSearch || (m.caption || '').toLowerCase().includes(docSearch.toLowerCase()))).length === 0 ? (
                 <div className="col-span-full py-24 text-center bg-zinc-900/40 border border-dashed border-zinc-800 rounded-[32px] group hover:border-indigo-500/30 transition-all">
                   <div className="bg-zinc-800/50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
                     <FileText className="h-8 w-8 text-zinc-600" />
                   </div>
-                  <div className="text-zinc-400 font-black uppercase tracking-[0.4em] text-xs mb-3">Document Library Empty</div>
-                  <p className="text-zinc-600 text-sm max-w-sm mx-auto font-medium">Capture and store your shop's essential paperwork for instant team access.</p>
+                  <div className="text-zinc-400 font-black uppercase tracking-[0.4em] text-xs mb-3">No Matching Documents</div>
+                  <p className="text-zinc-600 text-sm max-w-sm mx-auto font-medium">Try searching with a different term or upload new shop paperwork.</p>
                 </div>
               ) : (
-                media.filter(m => m.type === 'pdf').map(doc => {
+                media.filter(m => m.type === 'pdf' && (!docSearch || (m.caption || '').toLowerCase().includes(docSearch.toLowerCase()))).map(doc => {
                   const isGoogleDoc = doc.url.includes('docs.google.com');
                   return (
                     <Card 

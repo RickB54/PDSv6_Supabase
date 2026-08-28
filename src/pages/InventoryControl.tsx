@@ -583,6 +583,20 @@ const InventoryControl = () => {
     } else if (params.get("modal") === "iac") {
       setInventoryAuditOpen(true);
     }
+    const section = params.get("section") || params.get("tab");
+    if (section) {
+      const lower = section.toLowerCase();
+      if (lower.includes("chem")) {
+        setExpandedSections(prev => ({ ...prev, chemicals: true }));
+        scrollToSection('container-chemicals');
+      } else if (lower.includes("mat") || lower.includes("supp")) {
+        setExpandedSections(prev => ({ ...prev, materials: true }));
+        scrollToSection('container-materials');
+      } else if (lower.includes("tool") || lower.includes("equip")) {
+        setExpandedSections(prev => ({ ...prev, tools: true }));
+        scrollToSection('container-equipment');
+      }
+    }
   }, [location.search]);
 
   useEffect(() => {
