@@ -53,6 +53,7 @@ import {
   saveChemical,
   saveMaterial,
   saveTool,
+  deleteTool,
   getSetupMedia,
   saveSetupMedia,
   deleteSetupMedia,
@@ -172,6 +173,31 @@ const MobileSetup = () => {
     }
   });
 
+  // Dynamic custom rig locations list
+  const [customRigLocations, setCustomRigLocations] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("f150_custom_rig_locations");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const allRigLocations = useMemo(() => {
+    const combined = [...RIG_LOCATIONS, ...customRigLocations];
+    return Array.from(new Set(combined));
+  }, [customRigLocations]);
+
+  // User-saved loadout snapshot for Reset functionality
+  const [userSavedSnapshot, setUserSavedSnapshot] = useState<PreDepartureItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("f150_saved_loadout_snapshot");
+      return saved ? JSON.parse(saved) : DEFAULT_PREDEPARTURE;
+    } catch {
+      return DEFAULT_PREDEPARTURE;
+    }
+  });
+
   const [equipmentSubTab, setEquipmentSubTab] = useState<"checklist" | "locations" | "condition">("checklist");
   const [selectedJobType, setSelectedJobType] = useState<"full_detail" | "exterior" | "interior" | "custom" | "all">("full_detail");
   const [selectedLocFilter, setSelectedLocFilter] = useState<string>("all");
@@ -182,13 +208,48 @@ const MobileSetup = () => {
   // Condition & Fuel Search/Filter state
   const [conditionSearch, setConditionSearch] = useState("");
   const [conditionFilter, setConditionFilter] = useState<"all" | "good" | "worn" | "needs_replacement">("all");
+  const [editingToolId, setEditingToolId] = useState<string | null>(null);
 
+  // Modal State for Adding Pre-Departure Checklist Items with Custom Field Support
   const [addChecklistOpen, setAddChecklistOpen] = useState(false);
-  const [newChecklistItem, setNewChecklistItem] = useState<{ name: string; category: "Chemicals" | "Supplies" | "Tools"; location: string; jobType: "full_detail" | "exterior" | "interior" | "custom" }>({
+  const [newChecklistItem, setNewChecklistItem] = useState<{
+    name: string;
+    category: string;
+    customCategory: string;
+    location: string;
+    customLocation: string;
+    jobType: string;
+    customJobType: string;
+  }>({
     name: "",
     category: "Supplies",
+    customCategory: "",
     location: "Driver Side Drawer",
+    customLocation: "",
     jobType: "full_detail",
+    customJobType: "",
+  });
+
+  // Modal State for Adding Equipment Entry directly inside Condition & Fuel Section
+  const [addEquipmentOpen, setAddEquipmentOpen] = useState(false);
+  const [newEquipment, setNewEquipment] = useState<{
+    name: string;
+    category: string;
+    customCategory: string;
+    location: string;
+    customLocation: string;
+    conditionStatus: "good" | "worn" | "needs_replacement" | "new";
+    fuelLevel: "full" | "3/4" | "1/2" | "1/4" | "low" | "n/a";
+    conditionNote: string;
+  }>({
+    name: "",
+    category: "Tools & Equipment",
+    customCategory: "",
+    location: "Rear Bed Skid",
+    customLocation: "",
+    conditionStatus: "good",
+    fuelLevel: "full",
+    conditionNote: "",
   });
 
   useEffect(() => {
@@ -262,9 +323,34 @@ const MobileSetup = () => {
     setChecklist((prev) => prev.map((item) => (!jobType || jobType === "all" || item.jobType === jobType ? { ...item, checked: false } : item)));
   };
 
-  const resetChecklist = () => {
+  // --- USER SNAPSHOT & RESET FUNCTIONALITY ---
+  const saveCurrentLoadoutSnapshot = () => {
+    try {
+      localStorage.setItem("f150_saved_loadout_snapshot", JSON.stringify(checklist));
+      setUserSavedSnapshot(checklist);
+      toast({
+        title: "Loadout Snapshot Saved",
+        description: "Your current customized loadout layout has been saved as default.",
+      });
+    } catch {
+      toast({ title: "Save Error", description: "Failed to save loadout snapshot.", variant: "destructive" });
+    }
+  };
+
+  const resetToUserSavedSnapshot = () => {
+    setChecklist(userSavedSnapshot);
+    toast({
+      title: "Restored to Saved Snapshot",
+      description: "Restored checklist to your last saved custom loadout state.",
+    });
+  };
+
+  const restoreFactoryDefaults = () => {
     setChecklist(DEFAULT_PREDEPARTURE);
-    toast({ title: "Checklist Reset", description: "Pre-departure loadouts restored to defaults." });
+    toast({
+      title: "Restored to Factory Baseline",
+      description: "Restored checklist to original factory defaults.",
+    });
   };
 
   const handleAddMasterItemToChecklist = (
@@ -293,24 +379,130 @@ const MobileSetup = () => {
   };
 
   const handleUpdateChecklistItemLocation = (id: string, newLocation: string) => {
+    if (newLocation === "custom") {
+      const customVal = prompt("Enter new custom rig location name:");
+      if (!customVal || !customVal.trim()) return;
+      const cleanVal = customVal.trim();
+      if (!customRigLocations.includes(cleanVal)) {
+        const updated = [...customRigLocations, cleanVal];
+        setCustomRigLocations(updated);
+        localStorage.setItem("f150_custom_rig_locations", JSON.stringify(updated));
+      }
+      setChecklist((prev) => prev.map((item) => (item.id === id ? { ...item, location: cleanVal } : item)));
+      toast({ title: "Custom Location Saved", description: `Item assigned to ${cleanVal}` });
+      return;
+    }
     setChecklist((prev) => prev.map((item) => (item.id === id ? { ...item, location: newLocation } : item)));
     toast({ title: "Location Updated", description: `Item assigned to ${newLocation}` });
   };
 
   const handleAddChecklistItem = () => {
     if (!newChecklistItem.name.trim()) return;
+
+    let finalCategory = newChecklistItem.category;
+    if (finalCategory === "custom") {
+      finalCategory = newChecklistItem.customCategory.trim() || "Supplies";
+    }
+
+    let finalJobType: any = newChecklistItem.jobType;
+    if (finalJobType === "custom_input") {
+      finalJobType = "custom";
+    }
+
+    let finalLocation = newChecklistItem.location;
+    if (finalLocation === "custom") {
+      finalLocation = newChecklistItem.customLocation.trim() || "Driver Side Drawer";
+      if (newChecklistItem.customLocation.trim() && !customRigLocations.includes(newChecklistItem.customLocation.trim())) {
+        const updatedLocs = [...customRigLocations, newChecklistItem.customLocation.trim()];
+        setCustomRigLocations(updatedLocs);
+        localStorage.setItem("f150_custom_rig_locations", JSON.stringify(updatedLocs));
+      }
+    }
+
     const item: PreDepartureItem = {
       id: `pd-${Date.now()}`,
       name: newChecklistItem.name.trim(),
-      category: newChecklistItem.category,
-      location: newChecklistItem.location || "Driver Side Drawer",
+      category: finalCategory as any,
+      location: finalLocation,
       checked: false,
-      jobType: newChecklistItem.jobType || "full_detail",
+      jobType: finalJobType,
     };
+
     setChecklist((prev) => [...prev, item]);
-    setNewChecklistItem({ name: "", category: "Supplies", location: "Driver Side Drawer", jobType: "full_detail" });
+    setNewChecklistItem({
+      name: "",
+      category: "Supplies",
+      customCategory: "",
+      location: "Driver Side Drawer",
+      customLocation: "",
+      jobType: "full_detail",
+      customJobType: "",
+    });
     setAddChecklistOpen(false);
     toast({ title: "Item Added", description: `${item.name} added to pre-departure checklist.` });
+  };
+
+  const handleAddEquipmentEntry = async () => {
+    if (!newEquipment.name.trim()) return;
+
+    let finalLoc = newEquipment.location;
+    if (finalLoc === "custom") {
+      finalLoc = newEquipment.customLocation.trim() || "Rear Bed Skid";
+      if (newEquipment.customLocation.trim() && !customRigLocations.includes(newEquipment.customLocation.trim())) {
+        const updated = [...customRigLocations, newEquipment.customLocation.trim()];
+        setCustomRigLocations(updated);
+        localStorage.setItem("f150_custom_rig_locations", JSON.stringify(updated));
+      }
+    }
+
+    let finalCat = newEquipment.category;
+    if (finalCat === "custom") {
+      finalCat = newEquipment.customCategory.trim() || "Tools & Equipment";
+    }
+
+    const newToolObj: Tool = {
+      id: `tool-${Date.now()}`,
+      name: newEquipment.name.trim(),
+      category: finalCat,
+      location: finalLoc,
+      conditionStatus: newEquipment.conditionStatus,
+      fuelLevel: newEquipment.fuelLevel,
+      conditionNote: newEquipment.conditionNote.trim(),
+      notes: newEquipment.conditionNote.trim(),
+      quantity: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setTools((prev) => [newToolObj, ...prev]);
+    try {
+      await saveTool(newToolObj, true);
+      toast({ title: "Equipment Entry Added", description: `${newToolObj.name} added to rig inventory.` });
+    } catch {
+      toast({ title: "Save Error", description: "Could not save equipment entry to database.", variant: "destructive" });
+    }
+
+    setAddEquipmentOpen(false);
+    setNewEquipment({
+      name: "",
+      category: "Tools & Equipment",
+      customCategory: "",
+      location: "Rear Bed Skid",
+      customLocation: "",
+      conditionStatus: "good",
+      fuelLevel: "full",
+      conditionNote: "",
+    });
+  };
+
+  const handleDeleteEquipmentEntry = async (toolId: string, toolName: string) => {
+    setTools((prev) => prev.filter((t) => t.id !== toolId));
+    try {
+      await deleteTool(toolId);
+      toast({ title: "Equipment Deleted", description: `${toolName} removed from rig inventory.` });
+    } catch {
+      toast({ title: "Delete Error", description: "Could not delete tool from database.", variant: "destructive" });
+    }
   };
 
   const handleUpdateToolCondition = async (toolId: string, updates: Partial<Tool>) => {
@@ -937,11 +1129,33 @@ const MobileSetup = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={resetChecklist}
-                    className="border-zinc-800 text-zinc-400 hover:text-white h-9 text-[10px] font-black uppercase tracking-widest gap-1"
+                    onClick={saveCurrentLoadoutSnapshot}
+                    className="border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10 h-9 text-[10px] font-black uppercase tracking-widest gap-1"
+                    title="Save current checklist layout as your customized default"
                   >
-                    <RotateCcw className="h-3.5 w-3.5" /> Reset Defaults
+                    <ShieldCheck className="h-3.5 w-3.5" /> Save My Loadout
                   </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-zinc-800 text-zinc-300 hover:text-white h-9 text-[10px] font-black uppercase tracking-widest gap-1"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" /> Reset Options <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-white">
+                      <DropdownMenuItem onClick={resetToUserSavedSnapshot} className="text-xs font-bold cursor-pointer">
+                        <RotateCcw className="h-3.5 w-3.5 mr-2 text-indigo-400" /> Reset to My Saved Snapshot
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={restoreFactoryDefaults} className="text-xs font-bold text-zinc-400 hover:text-white cursor-pointer">
+                        <RotateCcw className="h-3.5 w-3.5 mr-2 text-amber-400" /> Restore Factory Baseline
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                   <Button
                     size="sm"
                     onClick={() => setAddChecklistOpen(true)}
@@ -1194,7 +1408,7 @@ const MobileSetup = () => {
                     >
                       All Rig Zones ({checklist.length})
                     </Button>
-                    {RIG_LOCATIONS.map((loc) => {
+                    {allRigLocations.map((loc) => {
                       const count = checklist.filter((item) => item.location === loc).length;
                       return (
                         <Button
@@ -1244,11 +1458,14 @@ const MobileSetup = () => {
                                 <SelectValue placeholder="Set Location" />
                               </SelectTrigger>
                               <SelectContent className="bg-zinc-950 border-zinc-800 text-white text-xs">
-                                {RIG_LOCATIONS.map((l) => (
+                                {allRigLocations.map((l) => (
                                   <SelectItem key={l} value={l} className="text-xs font-bold">
                                     {l}
                                   </SelectItem>
                                 ))}
+                                <SelectItem value="custom" className="text-xs font-bold text-indigo-400">
+                                  + Custom Location...
+                                </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -1268,42 +1485,51 @@ const MobileSetup = () => {
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Search & Filter Header for Condition & Fuel */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-950/80 border border-zinc-800/80 p-4 rounded-3xl">
-                  <div className="relative w-full sm:w-80">
-                    <Search className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
-                    <Input
-                      value={conditionSearch}
-                      onChange={(e) => setConditionSearch(e.target.value)}
-                      placeholder="Filter active rig equipment..."
-                      className="bg-zinc-900 border-zinc-800 text-white pl-10 pr-10 h-10 text-xs font-medium rounded-xl"
-                    />
-                    {conditionSearch && (
-                      <button onClick={() => setConditionSearch("")} className="absolute right-3.5 top-3 text-zinc-500 hover:text-white">
-                        <X className="h-4 w-4" />
-                      </button>
-                    )}
+                  <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
+                    <div className="relative w-full sm:w-72">
+                      <Search className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
+                      <Input
+                        value={conditionSearch}
+                        onChange={(e) => setConditionSearch(e.target.value)}
+                        placeholder="Filter active rig equipment..."
+                        className="bg-zinc-900 border-zinc-800 text-white pl-10 pr-10 h-10 text-xs font-medium rounded-xl"
+                      />
+                      {conditionSearch && (
+                        <button onClick={() => setConditionSearch("")} className="absolute right-3.5 top-3 text-zinc-500 hover:text-white">
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar">
+                      {(
+                        [
+                          { id: "all", label: "All" },
+                          { id: "good", label: "Operational" },
+                          { id: "worn", label: "Service Soon" },
+                          { id: "needs_replacement", label: "Out of Order" },
+                        ] as const
+                      ).map((st) => (
+                        <Button
+                          key={st.id}
+                          variant="ghost"
+                          onClick={() => setConditionFilter(st.id)}
+                          className={`h-9 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                            conditionFilter === st.id ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+                          }`}
+                        >
+                          {st.label}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar w-full sm:w-auto">
-                    {(
-                      [
-                        { id: "all", label: "All Equipment" },
-                        { id: "good", label: "Operational" },
-                        { id: "worn", label: "Service Soon" },
-                        { id: "needs_replacement", label: "Out of Order" },
-                      ] as const
-                    ).map((st) => (
-                      <Button
-                        key={st.id}
-                        variant="ghost"
-                        onClick={() => setConditionFilter(st.id)}
-                        className={`h-9 px-3.5 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 ${
-                          conditionFilter === st.id ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
-                        }`}
-                      >
-                        {st.label}
-                      </Button>
-                    ))}
-                  </div>
+                  <Button
+                    onClick={() => setAddEquipmentOpen(true)}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white h-10 text-[10px] font-black uppercase tracking-wider px-4 rounded-xl gap-1.5 shrink-0 shadow-md shadow-indigo-600/20"
+                  >
+                    <Plus className="h-4 w-4" /> Add Equipment Entry
+                  </Button>
                 </div>
 
                 {/* Curated Equipment Cards */}
@@ -1319,10 +1545,12 @@ const MobileSetup = () => {
                         ? "bg-red-500 text-red-400 animate-pulse"
                         : "bg-zinc-700 text-zinc-400";
 
+                    const isEditingThisToolName = editingToolId === tool.id;
+
                     return (
                       <Card key={tool.id} className="bg-zinc-950/60 border-zinc-800 p-6 rounded-3xl space-y-5 shadow-xl">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
                               {tool.imageUrl ? (
                                 <img src={tool.imageUrl} className="h-full w-full object-cover rounded-2xl" />
@@ -1330,34 +1558,111 @@ const MobileSetup = () => {
                                 <Wrench className="h-6 w-6" />
                               )}
                             </div>
-                            <div>
-                              <h4 className="text-base font-black uppercase text-white truncate max-w-[200px]">{tool.name}</h4>
-                              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                                Location: {tool.location || "Unassigned"}
-                              </span>
+                            <div className="min-w-0 flex-1">
+                              {isEditingThisToolName ? (
+                                <Input
+                                  defaultValue={tool.name}
+                                  onBlur={(e) => {
+                                    if (e.target.value.trim() && e.target.value.trim() !== tool.name) {
+                                      handleUpdateToolCondition(tool.id, { name: e.target.value.trim() });
+                                    }
+                                    setEditingToolId(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      (e.target as HTMLInputElement).blur();
+                                    }
+                                  }}
+                                  className="h-8 bg-zinc-900 border-indigo-500 text-white font-black uppercase text-xs"
+                                  autoFocus
+                                />
+                              ) : (
+                                <div className="flex items-center gap-1.5 group">
+                                  <h4 className="text-base font-black uppercase text-white truncate max-w-[180px]">{tool.name}</h4>
+                                  <button
+                                    onClick={() => setEditingToolId(tool.id)}
+                                    className="text-zinc-600 hover:text-indigo-400 opacity-60 group-hover:opacity-100 transition-opacity"
+                                    title="Edit tool name"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Editable Rig Location Selector */}
+                              <div className="flex items-center gap-2 pt-1">
+                                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Location:</span>
+                                <Select
+                                  value={tool.location || "Rear Bed Skid"}
+                                  onValueChange={(val) => {
+                                    if (val === "custom") {
+                                      const customLoc = prompt("Enter new custom storage location:");
+                                      if (customLoc && customLoc.trim()) {
+                                        const cleanLoc = customLoc.trim();
+                                        if (!customRigLocations.includes(cleanLoc)) {
+                                          const updated = [...customRigLocations, cleanLoc];
+                                          setCustomRigLocations(updated);
+                                          localStorage.setItem("f150_custom_rig_locations", JSON.stringify(updated));
+                                        }
+                                        handleUpdateItemLocation("tool", tool.id, cleanLoc);
+                                      }
+                                      return;
+                                    }
+                                    handleUpdateItemLocation("tool", tool.id, val);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-6 bg-zinc-900/80 border-zinc-800 text-[9px] font-bold text-indigo-300 w-[140px] px-2 rounded-md">
+                                    <SelectValue placeholder="Location" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-zinc-950 border-zinc-800 text-white text-xs">
+                                    {allRigLocations.map((l) => (
+                                      <SelectItem key={l} value={l} className="text-xs font-bold">
+                                        {l}
+                                      </SelectItem>
+                                    ))}
+                                    <SelectItem value="custom" className="text-xs font-bold text-indigo-400">
+                                      + Custom Location...
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
                           </div>
 
-                          <Select
-                            value={tool.conditionStatus || "good"}
-                            onValueChange={(val) => handleUpdateToolCondition(tool.id, { conditionStatus: val as any })}
-                          >
-                            <SelectTrigger className={`h-8 border text-[10px] font-black uppercase tracking-wider px-3 rounded-full w-[130px] ${
-                              tool.conditionStatus === "needs_replacement"
-                                ? "bg-red-500/20 border-red-500/40 text-red-400"
-                                : tool.conditionStatus === "worn"
-                                ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
-                                : "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
-                            }`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-zinc-950 border-zinc-800 text-white text-xs font-bold">
-                              <SelectItem value="good">✓ Operational</SelectItem>
-                              <SelectItem value="worn">⚠️ Service Soon</SelectItem>
-                              <SelectItem value="needs_replacement">⛔ Out of Order</SelectItem>
-                              <SelectItem value="new">★ Brand New</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Condition Status Selector */}
+                            <Select
+                              value={tool.conditionStatus || "good"}
+                              onValueChange={(val) => handleUpdateToolCondition(tool.id, { conditionStatus: val as any })}
+                            >
+                              <SelectTrigger className={`h-8 border text-[10px] font-black uppercase tracking-wider px-3 rounded-full w-[125px] ${
+                                tool.conditionStatus === "needs_replacement"
+                                  ? "bg-red-500/20 border-red-500/40 text-red-400"
+                                  : tool.conditionStatus === "worn"
+                                  ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
+                                  : "bg-emerald-500/20 border-emerald-500/40 text-emerald-400"
+                              }`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-zinc-950 border-zinc-800 text-white text-xs font-bold">
+                                <SelectItem value="good">✓ Operational</SelectItem>
+                                <SelectItem value="worn">⚠️ Service Soon</SelectItem>
+                                <SelectItem value="needs_replacement">⛔ Out of Order</SelectItem>
+                                <SelectItem value="new">★ Brand New</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {/* Delete Tool Button */}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteEquipmentEntry(tool.id, tool.name)}
+                              className="h-8 w-8 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-full"
+                              title="Delete equipment entry"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
 
                         {/* Fuel Level Selector Bar */}
@@ -1404,7 +1709,14 @@ const MobileSetup = () => {
                   {curatedTools.length === 0 && (
                     <div className="col-span-full py-12 text-center space-y-3 bg-zinc-950/40 border border-dashed border-zinc-800 rounded-3xl">
                       <Gauge className="h-8 w-8 text-zinc-600 mx-auto" />
-                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">No rig tools match the selected condition filter.</p>
+                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">No equipment entries found.</p>
+                      <Button
+                        size="sm"
+                        onClick={() => setAddEquipmentOpen(true)}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-wider text-[10px] px-4"
+                      >
+                        + Add First Equipment Entry
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -1427,14 +1739,14 @@ const MobileSetup = () => {
         </div>
       </footer>
 
-      {/* ── ADD PRE-DEPARTURE ITEM MODAL ────────────────── */}
+      {/* ── ADD PRE-DEPARTURE ITEM MODAL (WITH CUSTOM DROPDOWN OPTIONS FOR EVERY FIELD) ────────────────── */}
       <Dialog open={addChecklistOpen} onOpenChange={setAddChecklistOpen}>
         <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
               <ClipboardCheck className="h-5 w-5" /> Add Pre-Departure Item
             </DialogTitle>
-            <DialogDescription className="text-zinc-500 text-xs">Add supplies or chemicals to your rig departure checklist.</DialogDescription>
+            <DialogDescription className="text-zinc-500 text-xs">Add supplies, chemicals, or equipment to your rig departure checklist.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-3">
             <div className="space-y-2">
@@ -1442,15 +1754,17 @@ const MobileSetup = () => {
               <Input
                 value={newChecklistItem.name}
                 onChange={(e) => setNewChecklistItem({ ...newChecklistItem, name: e.target.value })}
-                placeholder="e.g. Clay Bars"
+                placeholder="e.g. Clay Bars, Spot Light, APC..."
                 className="bg-zinc-900 border-zinc-800 text-white font-bold h-11"
               />
             </div>
+
+            {/* Category Dropdown with Custom Option */}
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Category</Label>
               <Select
                 value={newChecklistItem.category}
-                onValueChange={(val: "Chemicals" | "Supplies" | "Tools") => setNewChecklistItem({ ...newChecklistItem, category: val })}
+                onValueChange={(val) => setNewChecklistItem({ ...newChecklistItem, category: val })}
               >
                 <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white font-bold h-11 text-xs">
                   <SelectValue />
@@ -1459,14 +1773,25 @@ const MobileSetup = () => {
                   <SelectItem value="Chemicals">Chemicals</SelectItem>
                   <SelectItem value="Supplies">Supplies</SelectItem>
                   <SelectItem value="Tools">Tools & Equipment</SelectItem>
+                  <SelectItem value="custom" className="text-indigo-400 font-bold">+ Custom Category...</SelectItem>
                 </SelectContent>
               </Select>
+              {newChecklistItem.category === "custom" && (
+                <Input
+                  value={newChecklistItem.customCategory}
+                  onChange={(e) => setNewChecklistItem({ ...newChecklistItem, customCategory: e.target.value })}
+                  placeholder="Type custom category name..."
+                  className="bg-zinc-900 border-indigo-500/50 text-white font-medium h-10 text-xs mt-1.5"
+                />
+              )}
             </div>
+
+            {/* Service Loadout / Job Type Dropdown with Custom Option */}
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Service Loadout / Job Type</Label>
               <Select
                 value={newChecklistItem.jobType}
-                onValueChange={(val: "full_detail" | "exterior" | "interior" | "custom") => setNewChecklistItem({ ...newChecklistItem, jobType: val })}
+                onValueChange={(val) => setNewChecklistItem({ ...newChecklistItem, jobType: val })}
               >
                 <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white font-bold h-11 text-xs">
                   <SelectValue />
@@ -1476,9 +1801,20 @@ const MobileSetup = () => {
                   <SelectItem value="exterior">Exterior Detail Loadout</SelectItem>
                   <SelectItem value="interior">Interior Detail Loadout</SelectItem>
                   <SelectItem value="custom">Custom Rig Loadout</SelectItem>
+                  <SelectItem value="custom_input" className="text-indigo-400 font-bold">+ Custom Job Type Name...</SelectItem>
                 </SelectContent>
               </Select>
+              {newChecklistItem.jobType === "custom_input" && (
+                <Input
+                  value={newChecklistItem.customJobType}
+                  onChange={(e) => setNewChecklistItem({ ...newChecklistItem, customJobType: e.target.value })}
+                  placeholder="Type custom job type name..."
+                  className="bg-zinc-900 border-indigo-500/50 text-white font-medium h-10 text-xs mt-1.5"
+                />
+              )}
             </div>
+
+            {/* Rig Location Dropdown with Custom Option */}
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Rig Location</Label>
               <Select
@@ -1489,16 +1825,158 @@ const MobileSetup = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
-                  {RIG_LOCATIONS.map((l) => (
+                  {allRigLocations.map((l) => (
                     <SelectItem key={l} value={l}>{l}</SelectItem>
                   ))}
+                  <SelectItem value="custom" className="text-indigo-400 font-bold">+ Custom Storage Location...</SelectItem>
                 </SelectContent>
               </Select>
+              {newChecklistItem.location === "custom" && (
+                <Input
+                  value={newChecklistItem.customLocation}
+                  onChange={(e) => setNewChecklistItem({ ...newChecklistItem, customLocation: e.target.value })}
+                  placeholder="Type custom storage location (e.g., Roof Rack Skid)..."
+                  className="bg-zinc-900 border-indigo-500/50 text-white font-medium h-10 text-xs mt-1.5"
+                />
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setAddChecklistOpen(false)} className="text-zinc-500">Cancel</Button>
             <Button onClick={handleAddChecklistItem} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest px-6">Add to Rig Checklist</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── ADD EQUIPMENT ENTRY MODAL (FOR CONDITION & FUEL SECTION) ────────────────── */}
+      <Dialog open={addEquipmentOpen} onOpenChange={setAddEquipmentOpen}>
+        <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
+              <Wrench className="h-5 w-5" /> Add Equipment Entry
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500 text-xs">Add new tools, generators, or pressure washers to rig condition tracking.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Equipment / Tool Name</Label>
+              <Input
+                value={newEquipment.name}
+                onChange={(e) => setNewEquipment({ ...newEquipment, name: e.target.value })}
+                placeholder="e.g. Honda EU2200i Generator, Flex PE14-2..."
+                className="bg-zinc-900 border-zinc-800 text-white font-bold h-11"
+              />
+            </div>
+
+            {/* Category Selector with Custom */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Category</Label>
+              <Select
+                value={newEquipment.category}
+                onValueChange={(val) => setNewEquipment({ ...newEquipment, category: val })}
+              >
+                <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white font-bold h-11 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                  <SelectItem value="Tools & Equipment">Tools & Equipment</SelectItem>
+                  <SelectItem value="Pressure Washers">Pressure Washers</SelectItem>
+                  <SelectItem value="Generators & Power">Generators & Power</SelectItem>
+                  <SelectItem value="Polishers & Lighting">Polishers & Lighting</SelectItem>
+                  <SelectItem value="custom" className="text-indigo-400 font-bold">+ Custom Category...</SelectItem>
+                </SelectContent>
+              </Select>
+              {newEquipment.category === "custom" && (
+                <Input
+                  value={newEquipment.customCategory}
+                  onChange={(e) => setNewEquipment({ ...newEquipment, customCategory: e.target.value })}
+                  placeholder="Type custom category name..."
+                  className="bg-zinc-900 border-indigo-500/50 text-white font-medium h-10 text-xs mt-1.5"
+                />
+              )}
+            </div>
+
+            {/* Rig Location Selector with Custom */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Rig Location</Label>
+              <Select
+                value={newEquipment.location}
+                onValueChange={(val) => setNewEquipment({ ...newEquipment, location: val })}
+              >
+                <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white font-bold h-11 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                  {allRigLocations.map((l) => (
+                    <SelectItem key={l} value={l}>{l}</SelectItem>
+                  ))}
+                  <SelectItem value="custom" className="text-indigo-400 font-bold">+ Custom Storage Location...</SelectItem>
+                </SelectContent>
+              </Select>
+              {newEquipment.location === "custom" && (
+                <Input
+                  value={newEquipment.customLocation}
+                  onChange={(e) => setNewEquipment({ ...newEquipment, customLocation: e.target.value })}
+                  placeholder="Type custom storage location..."
+                  className="bg-zinc-900 border-indigo-500/50 text-white font-medium h-10 text-xs mt-1.5"
+                />
+              )}
+            </div>
+
+            {/* Initial Condition Status Selector */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Initial Operational Status</Label>
+              <Select
+                value={newEquipment.conditionStatus}
+                onValueChange={(val: any) => setNewEquipment({ ...newEquipment, conditionStatus: val })}
+              >
+                <SelectTrigger className="bg-zinc-900 border-zinc-800 text-white font-bold h-11 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                  <SelectItem value="good">✓ Operational</SelectItem>
+                  <SelectItem value="worn">⚠️ Service Soon</SelectItem>
+                  <SelectItem value="needs_replacement">⛔ Out of Order</SelectItem>
+                  <SelectItem value="new">★ Brand New</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Fuel Selector */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Fuel / Energy Level</Label>
+              <div className="grid grid-cols-6 gap-1 pt-1">
+                {(["full", "3/4", "1/2", "1/4", "low", "n/a"] as const).map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => setNewEquipment({ ...newEquipment, fuelLevel: lvl })}
+                    className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                      newEquipment.fuelLevel === lvl
+                        ? "bg-indigo-600 text-white shadow-md"
+                        : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    {lvl}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Maintenance & Service Notes</Label>
+              <Input
+                value={newEquipment.conditionNote}
+                onChange={(e) => setNewEquipment({ ...newEquipment, conditionNote: e.target.value })}
+                placeholder="e.g. Purchased 2025, 89 Octane Gas..."
+                className="bg-zinc-900 border-zinc-800 text-white font-medium h-10 text-xs"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAddEquipmentOpen(false)} className="text-zinc-500">Cancel</Button>
+            <Button onClick={handleAddEquipmentEntry} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest px-6">Save Equipment</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
