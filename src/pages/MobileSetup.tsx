@@ -910,11 +910,11 @@ const MobileSetup = () => {
         </div>
 
         <Tabs defaultValue="gallery" className="space-y-8">
-          <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 rounded-2xl h-14 w-full justify-start sm:justify-center overflow-x-auto overflow-y-hidden custom-scrollbar">
-            <TabsTrigger value="gallery" className="rounded-xl px-3 sm:px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px] shrink-0">
+          <TabsList className="bg-zinc-900/50 border border-zinc-800 p-1 rounded-2xl h-auto w-full justify-center flex-wrap gap-1">
+            <TabsTrigger value="gallery" className="rounded-xl px-3 sm:px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px]">
               <ImageIcon className="mr-2 h-4 w-4" /> Visual Setup
             </TabsTrigger>
-            <TabsTrigger value="inventory" className="rounded-xl px-3 sm:px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px] shrink-0">
+            <TabsTrigger value="inventory" className="rounded-xl px-3 sm:px-8 data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[9px] sm:text-[10px]">
               <Package className="mr-2 h-4 w-4" /> Equipment Pool
             </TabsTrigger>
           </TabsList>
@@ -1087,12 +1087,12 @@ const MobileSetup = () => {
           {/* ── INVENTORY TAB (Pre-Departure Checklist & Rig Location / Condition System) ── */}
           <TabsContent value="inventory" className="mt-0 space-y-8">
             {/* Top Navigation Pills */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-900/60 border border-zinc-800 p-3 rounded-2xl">
-              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto custom-scrollbar pb-1 sm:pb-0">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-zinc-900/60 border border-zinc-800 p-3 rounded-2xl">
+              <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                 <Button
                   variant="ghost"
                   onClick={() => setEquipmentSubTab("checklist")}
-                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all shrink-0 ${
+                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all ${
                     equipmentSubTab === "checklist"
                       ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
@@ -1103,7 +1103,7 @@ const MobileSetup = () => {
                 <Button
                   variant="ghost"
                   onClick={() => setEquipmentSubTab("locations")}
-                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all shrink-0 ${
+                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all ${
                     equipmentSubTab === "locations"
                       ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
@@ -1114,7 +1114,7 @@ const MobileSetup = () => {
                 <Button
                   variant="ghost"
                   onClick={() => setEquipmentSubTab("condition")}
-                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all shrink-0 ${
+                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all ${
                     equipmentSubTab === "condition"
                       ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
@@ -1125,7 +1125,7 @@ const MobileSetup = () => {
               </div>
 
               {equipmentSubTab === "checklist" && (
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
                   <Button
                     variant="outline"
                     size="sm"
@@ -1171,8 +1171,8 @@ const MobileSetup = () => {
             {equipmentSubTab === "checklist" && (
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Job Type Selector Pills */}
-                <div className="flex items-center justify-between gap-4 bg-zinc-950/80 p-3 rounded-2xl border border-zinc-800/80">
-                  <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-zinc-950/80 p-3 rounded-2xl border border-zinc-800/80">
+                  <div className="flex flex-wrap items-center gap-2 flex-1">
                     <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2 flex items-center gap-1.5 shrink-0">
                       <Truck className="h-3.5 w-3.5 text-indigo-400" /> Detailing Package:
                     </span>
@@ -1189,7 +1189,7 @@ const MobileSetup = () => {
                         key={pkg.id}
                         variant="ghost"
                         onClick={() => setSelectedJobType(pkg.id)}
-                        className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-all ${
+                        className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
                           selectedJobType === pkg.id
                             ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
                             : "text-zinc-400 hover:text-white"
@@ -1398,11 +1398,11 @@ const MobileSetup = () => {
                     </span>
                   </div>
 
-                  <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                  <div className="flex flex-wrap gap-2 pb-2">
                     <Button
                       variant="ghost"
                       onClick={() => setSelectedLocFilter("all")}
-                      className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest shrink-0 ${
+                      className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${
                         selectedLocFilter === "all" ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
                       }`}
                     >
@@ -1415,7 +1415,7 @@ const MobileSetup = () => {
                           key={loc}
                           variant="ghost"
                           onClick={() => setSelectedLocFilter(loc)}
-                          className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest shrink-0 ${
+                          className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${
                             selectedLocFilter === loc ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
                           }`}
                         >
@@ -1485,7 +1485,7 @@ const MobileSetup = () => {
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Search & Filter Header for Condition & Fuel */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-950/80 border border-zinc-800/80 p-4 rounded-3xl">
-                  <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto flex-1">
                     <div className="relative w-full sm:w-72">
                       <Search className="absolute left-3.5 top-3 h-4 w-4 text-zinc-500" />
                       <Input
@@ -1501,7 +1501,7 @@ const MobileSetup = () => {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar">
+                    <div className="flex flex-wrap items-center gap-2">
                       {(
                         [
                           { id: "all", label: "All" },
@@ -1514,7 +1514,7 @@ const MobileSetup = () => {
                           key={st.id}
                           variant="ghost"
                           onClick={() => setConditionFilter(st.id)}
-                          className={`h-9 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                          className={`h-9 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider ${
                             conditionFilter === st.id ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
                           }`}
                         >
