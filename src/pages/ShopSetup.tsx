@@ -101,64 +101,12 @@ export interface ShopDocItem {
   source?: "drive" | "setup";
 }
 
-const SAMPLE_PDF_BASE64 = "data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nDPQM1Qo5ypUMFAwALJMLU31jBQsTAz1LBSKChQOtwL5AIFuBh4KZW5kc3RyZWFtCmVuZG9iagozIDAgb2JqCjQ2CmVuZG9iago4IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveCBbMCAwIDYxMiA3OTJdL1Jlc291cmNlcyA8PC9Gb250IDw8L0YxIDUgMCBSPj4+Pi9Db250ZW50cyAyIDAgUi9QYXJlbnQgNiAwIFI+PgplbmRvYmoKNSAwIG9iago8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PgplbmRvYmoKNiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkcyBbNCAwIFJdPj4KZW5kb2JqCjcgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDYgMCBSPj4KZW5kb2JqCnhyZWYKMCA4CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwMCAwMDAwMCBuIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAxMzIgMDAwMDAgbiAKMDAwMDAwMDE1MSAwMDAwMCBuIAowMDAwMDAwMjc1IDAwMDAwIG4gCjAwMDAwMDAzNjMgMDAwMDAgbiAKMDAwMDAwMDQyMiAwMDAwMCBuIAp0cmFpbGVyCjw8L1NpemUgOC9Sb290IDcgMCBSPj4Kc3RhcnR4cmVmCjQ3MQolJUVPRgo=";
-
-const DEFAULT_BUSINESS_DOCS: ShopDocItem[] = [
-  {
-    id: "doc-sop-1",
-    name: "Standard_Operating_Procedure_Detailing_v6.pdf",
-    folder: "Operating Procedures",
-    type: "pdf",
-    url: SAMPLE_PDF_BASE64,
-    size: "1.2 MB",
-    modified: new Date().toISOString(),
-  },
-  {
-    id: "doc-inv-1",
-    name: "Chemical_MSDS_Safety_Data_Sheet.pdf",
-    folder: "Inventory",
-    type: "pdf",
-    url: SAMPLE_PDF_BASE64,
-    size: "850 KB",
-    modified: new Date().toISOString(),
-  },
-  {
-    id: "doc-prc-1",
-    name: "Detailing_Packages_and_Pricing_Guide_2026.pdf",
-    folder: "Pricing",
-    type: "pdf",
-    url: SAMPLE_PDF_BASE64,
-    size: "450 KB",
-    modified: new Date().toISOString(),
-  },
-  {
-    id: "doc-biz-1",
-    name: "Employee_Safety_and_Operations_Handbook.pdf",
-    folder: "Business Docs",
-    type: "pdf",
-    url: SAMPLE_PDF_BASE64,
-    size: "2.1 MB",
-    modified: new Date().toISOString(),
-  },
-  {
-    id: "doc-sop-2",
-    name: "Shop_Floor_Layout_and_Equipment_Blueprint.png",
-    folder: "Operating Procedures",
-    type: "image",
-    url: "/shop.jpg",
-    size: "1.5 MB",
-    modified: new Date().toISOString(),
-  },
-  {
-    id: "doc-arc-1",
-    name: "Archived_Daily_Checklist_Report_2026.pdf",
-    folder: "System Archives",
-    type: "pdf",
-    url: SAMPLE_PDF_BASE64,
-    size: "320 KB",
-    modified: new Date().toISOString(),
-  }
-];
+export const isBlankOrDummyPdf = (dataOrUrl?: string): boolean => {
+  if (!dataOrUrl || !dataOrUrl.trim()) return true;
+  if (dataOrUrl.includes("xnDPQM1Qo5ypUMFAwALJMLU31jBQsTAz1LBSKChQOtwL5AIFuBh4KZW5kc3RyZWFt")) return true;
+  if (dataOrUrl.includes("JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+")) return true;
+  return false;
+};
 
 // ─────────────────────────────────────────────────────────
 // Main Component
@@ -274,8 +222,14 @@ const ShopSetup = () => {
         setSelectedCategoryForUpload("all");
       }
 
-      // Map Business Drive files
-      const mappedDriveDocs: ShopDocItem[] = (driveFiles || []).map((df) => {
+      // Map Business Drive files & filter out dummy/blank PDFs
+      const rawDriveFiles = driveFiles || [];
+      const cleanDriveFiles = rawDriveFiles.filter(df => !isBlankOrDummyPdf(df.data || df.url));
+      if (cleanDriveFiles.length !== rawDriveFiles.length) {
+        localforage.setItem('business_drive_files_v3', cleanDriveFiles).catch(() => {});
+      }
+
+      const mappedDriveDocs: ShopDocItem[] = cleanDriveFiles.map((df) => {
         const folderName = df.path && df.path.length > 0 ? df.path[0] : "Business Docs";
         const url = df.data || df.url || "";
         const isImage = df.type?.startsWith("image/") || /\.(png|jpg|jpeg|webp|svg)$/i.test(df.name);
@@ -296,7 +250,7 @@ const ShopSetup = () => {
 
       // Map Setup Media docs
       const mappedMediaDocs: ShopDocItem[] = (savedMedia || [])
-        .filter((sm) => sm.type === "pdf" || sm.url?.includes("docs.google.com"))
+        .filter((sm) => (sm.type === "pdf" || sm.url?.includes("docs.google.com")) && !isBlankOrDummyPdf(sm.url))
         .map((sm) => ({
           id: sm.id,
           name: sm.caption || "Shop Document",
@@ -308,12 +262,17 @@ const ShopSetup = () => {
           source: "setup"
         }));
 
-      // Combine & Deduplicate
-      let combined = [...mappedDriveDocs, ...mappedMediaDocs];
-      const existingNames = new Set(combined.map(d => d.name.toLowerCase()));
-      DEFAULT_BUSINESS_DOCS.forEach(defDoc => {
-        if (!existingNames.has(defDoc.name.toLowerCase())) {
-          combined.push(defDoc);
+      // Combine & Deduplicate by URL or Name
+      const combined: ShopDocItem[] = [];
+      const seenUrls = new Set<string>();
+      const seenNames = new Set<string>();
+
+      [...mappedDriveDocs, ...mappedMediaDocs].forEach(item => {
+        const nameKey = item.name.toLowerCase();
+        if (!isBlankOrDummyPdf(item.url) && !seenUrls.has(item.url) && !seenNames.has(nameKey)) {
+          seenUrls.add(item.url);
+          seenNames.add(nameKey);
+          combined.push(item);
         }
       });
 
@@ -327,6 +286,11 @@ const ShopSetup = () => {
 
   useEffect(() => {
     loadData();
+    const handleDriveUpdate = () => {
+      loadData();
+    };
+    window.addEventListener("business_drive_updated", handleDriveUpdate);
+    return () => window.removeEventListener("business_drive_updated", handleDriveUpdate);
   }, []);
 
   // ─── Upload Multiple ──────────────────────────────────
@@ -444,6 +408,7 @@ const ShopSetup = () => {
         data: finalUrl
       };
       await localforage.setItem('business_drive_files_v3', [driveFileRecord, ...existingDrive]);
+      window.dispatchEvent(new Event("business_drive_updated"));
 
       setShopDocs((prev) => [newDocItem, ...prev]);
       setMedia((prev) => [newMedia, ...prev]);
@@ -472,6 +437,7 @@ const ShopSetup = () => {
       const existingDrive = (await localforage.getItem<any[]>('business_drive_files_v3')) || [];
       const updatedDrive = existingDrive.filter(f => f.id !== id);
       await localforage.setItem('business_drive_files_v3', updatedDrive);
+      window.dispatchEvent(new Event("business_drive_updated"));
 
       setShopDocs((prev) => prev.filter((d) => d.id !== id));
       setMedia((prev) => prev.filter((m) => m.id !== id));

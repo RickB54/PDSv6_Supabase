@@ -405,6 +405,7 @@ export default function BusinessDrive() {
                 // Save to local cache (Fast)
                 await localforage.setItem('business_drive_files_v3', files);
                 await localforage.setItem('business_drive_folders_v3', folders);
+                window.dispatchEvent(new Event('business_drive_updated'));
 
                 // Push to Cloud Sync (Cross-device)
                 if (user) {
@@ -427,6 +428,22 @@ export default function BusinessDrive() {
         return () => clearTimeout(timer);
     }, [files, folders, isLoaded]);
 
+    // Real-Time Two-Way Sync Listener with Shop Setup / Business Documents
+    useEffect(() => {
+        const handleDriveUpdate = async () => {
+            try {
+                const { default: localforage } = await import('localforage');
+                const latestFiles = await localforage.getItem<DriveFile[]>('business_drive_files_v3');
+                if (latestFiles) {
+                    const clean = latestFiles.filter(f => !f.data || (!f.data.includes("xnDPQM1Qo5ypUMFAwALJMLU31jBQsTAz1LBSKChQOtwL5AIFuBh4KZW5kc3RyZWFt") && !f.data.includes("JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+")));
+                    setFiles(clean);
+                }
+            } catch {}
+        };
+        window.addEventListener('business_drive_updated', handleDriveUpdate);
+        return () => window.removeEventListener('business_drive_updated', handleDriveUpdate);
+    }, []);
+
     const handleDismissAlert = (file: DriveFile, silent = false) => {
         if (!file.metadata || !file.metadata.recordType) return;
         dismissAlertsForRecord(file.metadata.recordType, file.id);
@@ -437,97 +454,24 @@ export default function BusinessDrive() {
         if (!silent) toast({ title: 'Alert Dismissed', description: 'The alert for this document has been cleared.' });
     };
 
-    // 1. Restore Legacy Test Files if completely missing
+    // 1. Ensure Root & Subfolders exist cleanly
     useEffect(() => {
         if (!isLoaded) return;
-        const RESTORED_KEY = 'v6_test_files_restored_final';
-        if (!localStorage.getItem(RESTORED_KEY)) {
-            localStorage.setItem(RESTORED_KEY, 'true');
-            const mockFiles = [
-                { name: 'Checklist_Progress.pdf', folder: 'Checklists', cat: 'Checklist' },
-                { name: 'Job_Completion_1.pdf', folder: 'Jobs', cat: 'Job' },
-                { name: 'Job_Completion_2.pdf', folder: 'Jobs', cat: 'Job' },
-                { name: 'Bookings.pdf', folder: 'Bookings', cat: 'Bookings' }
-            ];
-            const toAdd = mockFiles.filter(m => !files.some(f => f.name === m.name));
-            if (toAdd.length > 0) {
-                let newFiles: DriveFile[] = [];
-                toAdd.forEach((m, idx) => {
-                    newFiles.push({
-                        id: 'restored-' + idx + '-' + Date.now(),
-                        name: m.name,
-                        type: 'application/pdf',
-                        size: '150 KB',
-                        modified: new Date(Date.now() - 24 * 3600 * 1000 * (idx % 2)).toISOString(),
-                        path: ['System Archives', m.folder],
-                        data: 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nDPQM1Qo5ypUMFAwALJMLU31jBQsTAz1LBSKChQOtwL5AIFuBh4KZW5kc3RyZWFtCmVuZG9iagozIDAgb2JqCjQ2CmVuZG9iago0IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveCBbMCAwIDYxMiA3OTJdL1Jlc291cmNlcyA8PC9Gb250IDw8L0YxIDUgMCBSPj4+Pi9Db250ZW50cyAyIDAgUi9QYXJlbnQgNiAwIFI+PgplbmRvYmoKNSAwIG9iago8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PgplbmRvYmoKNiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkcyBbNCAwIFJdPj4KZW5kb2JqCjcgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDYgMCBSPj4KZW5kb2JqCnhyZWYKMCA4CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwMCAwMDAwMCBuIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAxMzIgMDAwMDAgbiAKMDAwMDAwMDE1MSAwMDAwMCBuIAowMDAwMDAwMjc1IDAwMDAwIG4gCjAwMDAwMDAzNjMgMDAwMDAgbiAKMDAwMDAwMDQyMiAwMDAwMCBuIAp0cmFpbGVyCjw8L1NpemUgOC9Sb290IDcgMCBSPj4Kc3RhcnR4cmVmCjQ3MQolJUVPRgo=',
-                        metadata: { recordType: m.cat }
-                    });
-                });
-                
-                // Also ensure the subfolders exist
-                setFolders(prev => {
-                    const newFolders = [...prev];
-                    
-                    ALL_CATEGORIES.forEach(cat => {
-                        if (!newFolders.some(f => f.name === cat && f.path.length === 1 && f.path[0] === 'System Archives')) {
-                            newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: cat, path: ['System Archives'] });
-                        }
-                    });
-
-                    ROOT_FOLDERS.forEach(root => {
-                        if (!newFolders.some(f => f.name === root && f.path.length === 0)) {
-                            newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: root, path: [] });
-                        }
-                    });
-                    
-                    import('localforage').then(lf => {
-                        lf.default.setItem('business_drive_folders_v3', newFolders);
-                    });
-                    return newFolders;
-                });
-
-                setFiles(prev => [...prev, ...newFiles]);
-
-                import('localforage').then(lf => {
-                    lf.default.getItem<DriveFile[]>('business_drive_files_v3').then(existing => {
-                        lf.default.setItem('business_drive_files_v3', [...(existing || []), ...newFiles]);
-                    });
-                });
-            }
-        }
-        
-        // 1.5 Repair broken PDFs that were previously generated blank
-        if (files.length > 0) {
-            const badBase64_1 = 'data:application/pdf;base64,JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwvTGVuZ3RoIDMgMCBSL0ZpbHRlci9GbGF0ZURlY29kZT4+CnN0cmVhbQp4nDPQM1Qo5ypUMFAwALJMLU31jBQsTAz1LBSKChQOtwL5AIFuBh4KZW5kc3RyZWFtCmVuZG9iagozIDAgb2JqCjQ2CmVuZG9iago0IDAgb2JqCjw8L1R5cGUvUGFnZS9NZWRpYUJveCBbMCAwIDYxMiA3OTJdL1Jlc291cmNlcyA8PC9Gb250IDw8L0YxIDUgMCBSPj4+Pi9Db250ZW50cyAyIDAgUi9QYXJlbnQgNiAwIFI+PgplbmRvYmoKNSAwIG9iago8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+PgplbmRvYmoKNiAwIG9iago8PC9UeXBlL1BhZ2VzL0NvdW50IDEvS2lkcyBbNCAwIFJdPj4KZW5kb2JqCjcgMCBvYmoKPDwvVHlwZS9DYXRhbG9nL1BhZ2VzIDYgMCBSPj4KZW5kb2JqCnhyZWYKMCA4CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwMCAwMDAwMCBuIAowMDAwMDAwMDE1IDAwMDAwIG4gCjAwMDAwMDAxMzIgMDAwMDAgbiAKMDAwMDAwMDE1MSAwMDAwMCBuIAowMDAwMDAwMjc1IDAwMDAwIG4gCjAwMDAwMDAzNjMgMDAwMDAgbiAKMDAwMDAwMDQyMiAwMDAwMCBuIAp0cmFpbGVyCjw8L1NpemUgOC9Sb290IDcgMCBSPj4Kc3RhcnR4cmVmCjQ3MQolJUVPRgo=';
-            const badBase64_2 = 'data:application/pdf;base64,JVBERi0xLjcKCjEgMCBvYmogICUgZW50cnkgcG9pbnQKPDwKICAvVHlwZSAvQ2F0YWxvZwogIC9QYWdlcyAyIDAgUgo+PgplbmRvYmoKCjIgMCBvYmoKPDwKICAvVHlwZSAvUGFnZXMKICAvTWVkaWFCb3ggWyAwIDAgMjAwIDIwMCBdCiAgL0NvdW50IDEKICAvS2lkcyBbIDMgMCBSIF0KPj4KZW5kb2JqCgozIDAgb2JqCjw8CiAgL1R5cGUgL1BhZ2UKICAvUGFyZW50IDIgMCBSCiAgL1Jlc291cmNlcyA8PAogICAgL0ZvbnQgPDwKICAgICAgL0YxIDQgMCBSCj4+CiAgPj4KICAvQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCgo0IDAgb2JqCjw8CiAgL1R5cGUgL0ZvbnQKICAvU3VidHlwZSAvVHlwZTEKICAvQmFzZUZvbnQgL1RpbWVzLVJvbWFuCj4+CmVuZG9iagoKNSAwIG9iago8PAogIC9MZW5ndGggMzAKPj4Kc3RhcnR4cmVmCkJUCi9GMSAxOCBUZgoyMCAxMDAgVGQKKFJlc3RvcmVkIEZpbGUpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxMCAwMDAwMCBuIAowMDAwMDAwMDc5IDAwMDAwIG4gCjAwMDAwMDAxNzMgMDAwMDAgbiAKMDAwMDAwMDI5MiAwMDAwMCBuIAowMDAwMDAwMzg3IDAwMDAwIG4gCnRyYWlsZXIKPDwKICAvU2l6ZSA2CiAgL1Jvb3QgMSAwIFIKPj4Kc3RhcnR4cmVmCjQ2NgolJUVPRgo=';
-            
-            let hasRepaired = false;
-            const repairedFiles = files.map(f => {
-                if (f.data === badBase64_1 || f.data === badBase64_2 || !f.data) {
-                    hasRepaired = true;
-                    const doc = new jsPDF();
-                    doc.setFontSize(16);
-                    doc.setTextColor(200, 0, 0);
-                    doc.text(`RESTORED FILE: ${f.name}`, 20, 20);
-                    doc.setFontSize(12);
-                    doc.setTextColor(50, 50, 50);
-                    doc.text("The original contents of this file were permanently lost", 20, 35);
-                    doc.text("due to a local storage wipe bug.", 20, 45);
-                    doc.text("This placeholder was generated automatically so you", 20, 55);
-                    doc.text("can safely test folder functionality and alerts.", 20, 65);
-                    return { ...f, data: doc.output('datauristring') };
+        setFolders(prev => {
+            const newFolders = [...prev];
+            ALL_CATEGORIES.forEach(cat => {
+                if (!newFolders.some(f => f.name === cat && f.path.length === 1 && f.path[0] === 'System Archives')) {
+                    newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: cat, path: ['System Archives'] });
                 }
-                return f;
             });
-            if (hasRepaired) {
-                setFiles(repairedFiles);
-                import('localforage').then(lf => {
-                    lf.default.setItem('business_drive_files_v3', repairedFiles);
-                });
-            }
-        }
-    }, [isLoaded, files]);
+            ROOT_FOLDERS.forEach(root => {
+                if (!newFolders.some(f => f.name === root && f.path.length === 0)) {
+                    newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: root, path: [] });
+                }
+            });
+            return newFolders;
+        });
+    }, [isLoaded]);
 
     const hasAutoExpanded = React.useRef(false);
     
