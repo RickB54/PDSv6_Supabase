@@ -582,6 +582,18 @@ const MobileSetup = () => {
     });
   };
 
+  const markAllUnrestocked = (jobType?: string) => {
+    setChecklist((prev) =>
+      prev.map((item) =>
+        !jobType || jobType === "all" || item.jobType === jobType ? { ...item, restocked: false } : item
+      )
+    );
+    toast({
+      title: "All Flagged Needs Refill",
+      description: "Flagged all loadout items as needing refill.",
+    });
+  };
+
   const updateItemQuantity = (id: string, qty: number) => {
     setChecklist((prev) =>
       prev.map((item) => (item.id === id ? { ...item, quantity: Math.max(1, qty) } : item))
@@ -1666,31 +1678,28 @@ const MobileSetup = () => {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    {checklistMode === "packing" ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => selectAllChecklist(selectedJobType)}
-                          className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/10"
-                        >
-                          Check All
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => uncheckAllChecklist(selectedJobType)}
-                          className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:bg-zinc-800"
-                        >
-                          Uncheck All
-                        </Button>
-                      </>
-                    ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => selectAllChecklist(selectedJobType)}
+                      className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/10"
+                    >
+                      Check All
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => uncheckAllChecklist(selectedJobType)}
+                      className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:bg-zinc-800"
+                    >
+                      Uncheck All
+                    </Button>
+                    {checklistMode === "restock" && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => markAllRestocked(selectedJobType)}
-                        className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/10"
+                        className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:bg-indigo-500/10"
                       >
                         Restock All
                       </Button>
