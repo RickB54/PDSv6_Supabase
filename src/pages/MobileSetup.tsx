@@ -425,8 +425,10 @@ const MobileSetup = () => {
   const [selectedJobType, setSelectedJobType] = useState<"full_detail" | "exterior" | "interior" | "add_ons" | "custom" | "all">("full_detail");
   const [selectedLocFilter, setSelectedLocFilter] = useState<string>("all");
   
-  // Storage Locations Search state
+  // Storage Locations Search & Bulk Reassignment state
   const [locationSearch, setLocationSearch] = useState("");
+  const [selectedLocItemIds, setSelectedLocItemIds] = useState<string[]>([]);
+  const [bulkTargetLocation, setBulkTargetLocation] = useState<string>("");
 
   // Condition & Fuel Search/Filter state
   const [conditionSearch, setConditionSearch] = useState("");
@@ -604,6 +606,49 @@ const MobileSetup = () => {
       title: "All Flagged Needs Refill",
       description: "Flagged all loadout items as needing refill.",
     });
+  };
+
+  const toggleSelectLocItem = (id: string) => {
+    setSelectedLocItemIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllVisibleLocItems = (visibleIds: string[]) => {
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedLocItemIds.includes(id));
+    if (allSelected) {
+      setSelectedLocItemIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedLocItemIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleBulkReassignLocation = (targetLoc: string) => {
+    if (!targetLoc || selectedLocItemIds.length === 0) return;
+
+    let finalLoc = targetLoc;
+    if (targetLoc === "custom") {
+      const customVal = prompt("Enter new custom rig location name for bulk reassignment:");
+      if (!customVal || !customVal.trim()) return;
+      finalLoc = customVal.trim();
+      if (!customRigLocations.includes(finalLoc)) {
+        const updated = [...customRigLocations, finalLoc];
+        setCustomRigLocations(updated);
+        localStorage.setItem("f150_custom_rig_locations", JSON.stringify(updated));
+      }
+    }
+
+    setChecklist((prev) =>
+      prev.map((item) => (selectedLocItemIds.includes(item.id) ? { ...item, location: finalLoc } : item))
+    );
+
+    toast({
+      title: "Bulk Location Updated",
+      description: `Reassigned ${selectedLocItemIds.length} item(s) to ${finalLoc}.`,
+    });
+
+    setSelectedLocItemIds([]);
+    setBulkTargetLocation("");
   };
 
   const updateItemQuantity = (id: string, qty: number) => {
@@ -2019,91 +2064,197 @@ const MobileSetup = () => {
 
                 {/* Storage Zone Filter & Checklist Location Map */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Curated Rig Storage Location Map</h3>
-                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-                      {checklist.length} Total Rig Items Assigned
-                    </span>
-                  </div>
+                  {(() => {
+                    const visibleItems = checklist.filter((item) => selectedLocFilter === "all" || item.location === selectedLocFilter);
+                    const visibleIds = visibleItems.map((i) => i.id);
+                    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedLocItemIds.includes(id));
 
-                  <div className="flex flex-wrap gap-2 pb-2">
-                    <Button
-                      variant="ghost"
-                      onClick={() => setSelectedLocFilter("all")}
-                      className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${
-                        selectedLocFilter === "all" ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
-                      }`}
-                    >
-                      All Rig Zones ({checklist.length})
-                    </Button>
-                    {allRigLocations.map((loc) => {
-                      const count = checklist.filter((item) => item.location === loc).length;
-                      return (
-                        <Button
-                          key={loc}
-                          variant="ghost"
-                          onClick={() => setSelectedLocFilter(loc)}
-                          className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${
-                            selectedLocFilter === loc ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
-                          }`}
-                        >
-                          {loc} ({count})
-                        </Button>
-                      );
-                    })}
-                  </div>
+                    return (
+                      <>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Curated Rig Storage Location Map</h3>
+                            <p className="text-[10px] text-zinc-500 font-medium">Select multiple items to reassign them to a new storage zone in one action, or use per-item dropdowns.</p>
+                          </div>
 
-                  {/* Rig items grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {checklist
-                      .filter((item) => selectedLocFilter === "all" || item.location === selectedLocFilter)
-                      .map((item) => (
-                        <Card key={item.id} className="bg-zinc-950/60 border-zinc-800 p-4 rounded-2xl space-y-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <div className="h-9 w-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
-                                {item.category === "Chemicals" ? (
-                                  <FlaskConical className="h-4 w-4 text-emerald-400" />
-                                ) : item.category === "Tools" ? (
-                                  <Wrench className="h-4 w-4 text-indigo-400" />
-                                ) : (
-                                  <Package className="h-4 w-4 text-amber-400" />
-                                )}
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSelectAllVisibleLocItems(visibleIds)}
+                              className="h-8 px-3 text-[10px] font-black uppercase tracking-widest border-zinc-800 text-zinc-300 hover:bg-zinc-900 gap-1.5"
+                            >
+                              <CheckSquare className="h-3.5 w-3.5 text-indigo-400" />
+                              {allVisibleSelected ? "Deselect Zone" : `Select All in ${selectedLocFilter === "all" ? "All Zones" : selectedLocFilter}`}
+                            </Button>
+                            {selectedLocItemIds.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedLocItemIds([])}
+                                className="h-8 px-2 text-[10px] font-bold text-zinc-500 hover:text-white"
+                              >
+                                Clear ({selectedLocItemIds.length})
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Storage Zone Filter Pills */}
+                        <div className="flex flex-wrap gap-2 pb-1">
+                          <Button
+                            variant="ghost"
+                            onClick={() => setSelectedLocFilter("all")}
+                            className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                              selectedLocFilter === "all" ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+                            }`}
+                          >
+                            All Rig Zones ({checklist.length})
+                          </Button>
+                          {allRigLocations.map((loc) => {
+                            const count = checklist.filter((item) => item.location === loc).length;
+                            return (
+                              <Button
+                                key={loc}
+                                variant="ghost"
+                                onClick={() => setSelectedLocFilter(loc)}
+                                className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                                  selectedLocFilter === loc ? "bg-indigo-600 text-white" : "bg-zinc-900 border border-zinc-800 text-zinc-400"
+                                }`}
+                              >
+                                {loc} ({count})
+                              </Button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Bulk Action Bar (Visible when items selected) */}
+                        {selectedLocItemIds.length > 0 && (
+                          <Card className="bg-indigo-950/40 border border-indigo-500/50 p-4 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xl animate-in fade-in duration-200">
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 shrink-0">
+                                <MapPin className="h-4.5 w-4.5 animate-bounce" />
                               </div>
-                              <div className="min-w-0 flex-1">
-                                <h4 className="text-xs font-bold text-white truncate">{item.name}</h4>
-                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
-                                  {item.jobType ? item.jobType.replace("_", " ").toUpperCase() : "GENERAL LOADOUT"}
-                                </span>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="bg-indigo-500/30 text-indigo-200 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border border-indigo-500/40">
+                                    {selectedLocItemIds.length} Items Selected
+                                  </span>
+                                  <h4 className="text-xs font-bold text-white">Bulk Storage Location Reassignment</h4>
+                                </div>
+                                <p className="text-[10px] text-zinc-400 font-medium">Choose target location below to move all {selectedLocItemIds.length} selected item(s) simultaneously.</p>
                               </div>
                             </div>
 
-                            <Select
-                              value={item.location}
-                              onValueChange={(val) => handleUpdateChecklistItemLocation(item.id, val)}
-                            >
-                              <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[10px] font-bold text-indigo-300 w-[140px] shrink-0">
-                                <SelectValue placeholder="Set Location" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-zinc-950 border-zinc-800 text-white text-xs">
-                                {allRigLocations.map((l) => (
-                                  <SelectItem key={l} value={l} className="text-xs font-bold">
-                                    {l}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Select
+                                value={bulkTargetLocation}
+                                onValueChange={(val) => {
+                                  setBulkTargetLocation(val);
+                                  handleBulkReassignLocation(val);
+                                }}
+                              >
+                                <SelectTrigger className="h-9 bg-zinc-900 border-indigo-500/50 text-xs font-bold text-white w-[200px] rounded-xl">
+                                  <SelectValue placeholder="Move Selected To..." />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-950 border-zinc-800 text-white text-xs">
+                                  {allRigLocations.map((l) => (
+                                    <SelectItem key={l} value={l} className="text-xs font-bold">
+                                      📍 {l}
+                                    </SelectItem>
+                                  ))}
+                                  <SelectItem value="custom" className="text-xs font-bold text-indigo-400">
+                                    + Custom Location...
                                   </SelectItem>
-                                ))}
-                                <SelectItem value="custom" className="text-xs font-bold text-indigo-400">
-                                  + Custom Location...
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </Card>
-                      ))}
+                                </SelectContent>
+                              </Select>
 
-                    {checklist.filter((item) => selectedLocFilter === "all" || item.location === selectedLocFilter).length === 0 && (
-                      <p className="text-xs text-center text-zinc-600 py-8 col-span-full">No items assigned to this rig storage zone.</p>
-                    )}
-                  </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedLocItemIds([])}
+                                className="h-9 px-3 text-[10px] font-bold text-zinc-400 hover:text-white"
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </Card>
+                        )}
+
+                        {/* Rig items grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {visibleItems.map((item) => {
+                            const isItemSelected = selectedLocItemIds.includes(item.id);
+                            return (
+                              <Card
+                                key={item.id}
+                                className={`p-4 rounded-2xl space-y-3 transition-all ${
+                                  isItemSelected
+                                    ? "bg-indigo-950/30 border-indigo-500/60 shadow-lg shadow-indigo-950/30"
+                                    : "bg-zinc-950/60 border-zinc-800 hover:border-zinc-700"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <input
+                                      type="checkbox"
+                                      checked={isItemSelected}
+                                      onChange={() => toggleSelectLocItem(item.id)}
+                                      className="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
+                                    />
+                                    <div
+                                      className="h-9 w-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0 cursor-pointer"
+                                      onClick={() => toggleSelectLocItem(item.id)}
+                                    >
+                                      {item.category === "Chemicals" ? (
+                                        <FlaskConical className="h-4 w-4 text-emerald-400" />
+                                      ) : item.category === "Tools" ? (
+                                        <Wrench className="h-4 w-4 text-indigo-400" />
+                                      ) : (
+                                        <Package className="h-4 w-4 text-amber-400" />
+                                      )}
+                                    </div>
+                                    <div
+                                      className="min-w-0 flex-1 cursor-pointer"
+                                      onClick={() => toggleSelectLocItem(item.id)}
+                                    >
+                                      <h4 className="text-xs font-bold text-white truncate">{item.name}</h4>
+                                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">
+                                        {item.jobType ? item.jobType.replace("_", " ").toUpperCase() : "GENERAL LOADOUT"}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <Select
+                                    value={item.location}
+                                    onValueChange={(val) => handleUpdateChecklistItemLocation(item.id, val)}
+                                  >
+                                    <SelectTrigger className="h-8 bg-zinc-900 border-zinc-800 text-[10px] font-bold text-indigo-300 w-[140px] shrink-0">
+                                      <SelectValue placeholder="Set Location" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-950 border-zinc-800 text-white text-xs">
+                                      {allRigLocations.map((l) => (
+                                        <SelectItem key={l} value={l} className="text-xs font-bold">
+                                          {l}
+                                        </SelectItem>
+                                      ))}
+                                      <SelectItem value="custom" className="text-xs font-bold text-indigo-400">
+                                        + Custom Location...
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </Card>
+                            );
+                          })}
+
+                          {visibleItems.length === 0 && (
+                            <p className="text-xs text-center text-zinc-600 py-8 col-span-full">No items assigned to this rig storage zone.</p>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             )}
