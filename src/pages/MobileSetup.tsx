@@ -47,7 +47,11 @@ import {
   SlidersHorizontal,
   ClipboardCheck,
   Sparkles,
+  Printer,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { savePDFToArchive } from "@/lib/pdfArchive";
 import {
   getChemicals,
   getMaterials,
@@ -664,6 +668,142 @@ const MobileSetup = () => {
       title: "Restored to SOP Baseline",
       description: "Restored checklist to original SOP baseline.",
     });
+  };
+
+  const exportChecklistPdf = () => {
+    try {
+      const doc = new jsPDF();
+
+      const jobTypeTitleMap: Record<string, string> = {
+        full_detail: "Full Detail Package Loadout",
+        exterior: "Exterior Detail Package Loadout",
+        interior: "Interior Detail Package Loadout",
+        add_ons: "Add-Ons Package Loadout",
+        custom: "Custom Rig Package Loadout",
+        all: "All Loadout Packages Combined"
+      };
+
+      const packageTitle = jobTypeTitleMap[selectedJobType] || "Mobile Rig Checklist";
+      const modeTitle = checklistMode === "restock" ? "End-of-Day Restock & Refill" : "Pre-Departure Rig Packing";
+
+      const filteredItems = checklist.filter(
+        (item) => selectedJobType === "all" || item.jobType === selectedJobType
+      );
+
+      // Top Banner Header
+      doc.setFillColor(79, 70, 229); // Indigo 600
+      doc.rect(0, 0, 210, 28, "F");
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(15);
+      doc.setFont("helvetica", "bold");
+      doc.text("PDS MOBILE DETAILING RIG LOADOUT & CHECKLIST", 14, 13);
+
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.text(`PACKAGE: ${packageTitle.toUpperCase()}   |   MODE: ${modeTitle.toUpperCase()}`, 14, 21);
+
+      const formattedDate = new Date().toLocaleDateString("en-US", {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+      doc.setFontSize(8);
+      doc.text(`Generated: ${formattedDate}`, 196, 13, { align: "right" });
+      doc.text(`Total Rig Items: ${filteredItems.length}`, 196, 21, { align: "right" });
+
+      // Table Generation
+      const tableRows = filteredItems.map((item, index) => {
+        const checkSymbol = "[   ]";
+        const statusText = checklistMode === "restock"
+          ? (item.restocked === false ? "Refill Needed" : "Stocked & Full")
+          : (item.checked ? "Packed" : "Unpacked");
+
+        return [
+          checkSymbol,
+          (index + 1).toString(),
+          item.name,
+          item.category || "Supplies",
+          `x${item.quantity || 1}`,
+          item.location || "Unassigned Compartment",
+          statusText
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 34,
+        margin: { left: 14, right: 14 },
+        head: [["[  ]", "#", "Item / Chemical / Tool Name", "Category", "Qty", "Rig Storage Location", "Current Status"]],
+        body: tableRows,
+        theme: "grid",
+        headStyles: {
+          fillColor: [79, 70, 229],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 9
+        },
+        columnStyles: {
+          0: { cellWidth: 10, halign: "center", fontStyle: "bold" },
+          1: { cellWidth: 8, halign: "center" },
+          2: { cellWidth: "auto", fontStyle: "bold" },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 10, halign: "center", fontStyle: "bold" },
+          5: { cellWidth: 44 },
+          6: { cellWidth: 24, fontStyle: "bold" }
+        },
+        styles: {
+          fontSize: 8.5,
+          cellPadding: 3.5,
+          textColor: [30, 41, 59]
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        },
+        didDrawPage: (data) => {
+          const pageCount = (doc as any).internal.getNumberOfPages();
+          doc.setFontSize(8);
+          doc.setTextColor(148, 163, 184);
+          doc.text(
+            `PDS Mobile Detailing System  •  Page ${data.pageNumber} of ${pageCount}`,
+            105,
+            287,
+            { align: "center" }
+          );
+        }
+      });
+
+      const dateStr = new Date().toISOString().split("T")[0];
+      const filename = `PDS_Rig_Checklist_${selectedJobType}_${dateStr}.pdf`;
+
+      // Trigger Browser Save / Print
+      doc.save(filename);
+
+      // Save to File Manager Archive
+      const dataUri = doc.output("datauristring");
+      savePDFToArchive(
+        "Checklist",
+        `Mobile Rig - ${packageTitle}`,
+        `checklist_${selectedJobType}_${Date.now()}`,
+        dataUri,
+        { fileName: filename }
+      );
+
+      toast({
+        title: "PDF Checklist Exported & Archived",
+        description: `Exported ${filteredItems.length} items to ${filename} and saved to File Manager.`,
+        className: "bg-indigo-600 text-white"
+      });
+    } catch (err) {
+      console.error("Failed to export PDF checklist:", err);
+      toast({
+        title: "Export Failed",
+        description: "An error occurred while generating the PDF checklist.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleAddMasterItemToChecklist = (
@@ -1577,6 +1717,16 @@ const MobileSetup = () => {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={exportChecklistPdf}
+                    className="border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10 h-9 text-[10px] font-black uppercase tracking-widest gap-1 shadow-sm"
+                    title="Generate and print formatted PDF checklist"
+                  >
+                    <Printer className="h-3.5 w-3.5" /> Print / Save PDF
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={saveCurrentLoadoutSnapshot}
                     className="border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/10 h-9 text-[10px] font-black uppercase tracking-widest gap-1"
                     title="Save current checklist layout as your customized default"
@@ -1783,6 +1933,15 @@ const MobileSetup = () => {
                         Restock All
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={exportChecklistPdf}
+                      className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-indigo-300 hover:bg-indigo-500/10 gap-1 border border-indigo-500/20"
+                      title="Print or Save PDF"
+                    >
+                      <Printer className="h-3.5 w-3.5" /> Print PDF
+                    </Button>
                   </div>
                 </div>
 
