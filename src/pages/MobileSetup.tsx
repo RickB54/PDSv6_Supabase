@@ -530,17 +530,29 @@ const MobileSetup = () => {
   const selectAllChecklist = (jobType?: string) => {
     setChecklist((prev) =>
       prev.map((item) =>
-        !jobType || jobType === "all" || item.jobType === jobType ? { ...item, checked: true } : item
+        !jobType || jobType === "all" || item.jobType === jobType
+          ? { ...item, checked: true, restocked: true }
+          : item
       )
     );
+    toast({
+      title: "All Items Checked & Stocked",
+      description: "Marked all loadout items as checked and fully stocked.",
+    });
   };
 
   const uncheckAllChecklist = (jobType?: string) => {
     setChecklist((prev) =>
       prev.map((item) =>
-        !jobType || jobType === "all" || item.jobType === jobType ? { ...item, checked: false } : item
+        !jobType || jobType === "all" || item.jobType === jobType
+          ? { ...item, checked: false, restocked: false }
+          : item
       )
     );
+    toast({
+      title: "All Items Unchecked / Flagged Refill",
+      description: "Unchecked all loadout items and flagged them for refill.",
+    });
   };
 
   const saveCurrentLoadoutSnapshot = () => {
@@ -1621,9 +1633,31 @@ const MobileSetup = () => {
                         <RotateCcw className="h-4 w-4" />
                       </div>
                       <div>
-                        <h4 className="text-xs font-black uppercase tracking-wider text-white">
-                          End-of-Day Restock & Depletion Tracker
-                        </h4>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-white">
+                            End-of-Day Restock & Depletion Tracker
+                          </h4>
+                          <HelpTooltipPopup
+                            title="Restock View Controls Explanation"
+                            subtitle="How Check All, Uncheck All, and Mark All Restocked work"
+                            side="bottom"
+                            align="start"
+                            steps={[
+                              {
+                                title: "Check All",
+                                desc: "Sets every item in the active view to 'Stocked & Full' (🟢 Green). Use when all supplies are topped off."
+                              },
+                              {
+                                title: "Uncheck All",
+                                desc: "Flags every item in the active view as 'Needs Refill' (🔴 Red). Use at end-of-day to wipe the board and begin marking depleted items."
+                              },
+                              {
+                                title: "Mark All Restocked & Full",
+                                desc: "A master reset button that clears all red warning flags, marking 100% of your rig's inventory as full & restocked for tomorrow."
+                              }
+                            ]}
+                          />
+                        </div>
                         <p className="text-[10px] text-zinc-400 font-medium">
                           Click items to mark them as 🔴 Needs Refill or 🟢 Restocked & Full. Use "Mark All Restocked" when finished.
                         </p>
