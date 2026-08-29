@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
+import { HelpTooltipPopup } from "@/components/ui/HelpTooltipPopup";
 import {
   Truck,
   Package,
@@ -879,7 +880,28 @@ const MobileSetup = () => {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row flex-wrap justify-center xl:justify-start gap-3 md:gap-4 w-full xl:w-auto">
+            <div className="flex flex-col sm:flex-row flex-wrap justify-center xl:justify-start gap-3 md:gap-4 w-full xl:w-auto items-center">
+              <HelpTooltipPopup
+                title="Mobile Setup Instructions"
+                subtitle="F-150 detailing rig setup & pre-departure loadouts"
+                triggerLabel="Mobile Setup Guide"
+                side="bottom"
+                align="end"
+                steps={[
+                  {
+                    title: "1. Mobile Rig Configuration",
+                    desc: "Manage mobile detailing truck equipment, drawer storage locations, condition status, and fuel levels."
+                  },
+                  {
+                    title: "2. Visual Rig Setup",
+                    desc: "Upload photos of driver drawers, passenger compartments, and rear bed skids for visual technician orientation."
+                  },
+                  {
+                    title: "3. Pre-Departure Checklists",
+                    desc: "Verify loadouts before leaving the shop to prevent forgotten gear on job sites."
+                  }
+                ]}
+              />
               <Button
                 variant="outline"
                 className="border-zinc-700 text-zinc-300 hover:text-white hover:border-indigo-400 gap-2 h-12 md:h-14 px-6 font-bold uppercase tracking-wider bg-black/40 backdrop-blur-sm flex-1 sm:flex-none"
@@ -1086,42 +1108,136 @@ const MobileSetup = () => {
 
           {/* ── INVENTORY TAB (Pre-Departure Checklist & Rig Location / Condition System) ── */}
           <TabsContent value="inventory" className="mt-0 space-y-8">
-            {/* Top Navigation Pills */}
+            {/* Top Navigation Pills with Help Tooltip Popups on Each Button */}
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 bg-zinc-900/60 border border-zinc-800 p-3 rounded-2xl">
               <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                <Button
-                  variant="ghost"
-                  onClick={() => setEquipmentSubTab("checklist")}
-                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all ${
-                    equipmentSubTab === "checklist"
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  <ClipboardCheck className="h-4 w-4" /> Service Loadouts & Checklist
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setEquipmentSubTab("locations")}
-                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all ${
-                    equipmentSubTab === "locations"
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  <MapPin className="h-4 w-4" /> Rig Storage Locations
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => setEquipmentSubTab("condition")}
-                  className={`h-11 px-5 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all ${
-                    equipmentSubTab === "condition"
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  <Gauge className="h-4 w-4" /> Equipment Condition & Fuel ({curatedTools.length})
-                </Button>
+                <HelpTooltipPopup
+                  title="Equipment Pool Overview"
+                  subtitle="Mobile detailing rig equipment & inventory system"
+                  triggerLabel="Equipment Pool Guide"
+                  side="bottom"
+                  align="start"
+                  steps={[
+                    {
+                      title: "1. Equipment Pool Purpose",
+                      desc: "Serves as the master inventory hub for all tools, chemicals, and supplies assigned to the mobile detailing truck."
+                    },
+                    {
+                      title: "2. Three Operational Submenus",
+                      desc: "Switch between Service Loadouts & Checklists, Rig Storage Locations, and Equipment Condition & Fuel tracking."
+                    },
+                    {
+                      title: "3. Real-Time Status Monitoring",
+                      desc: "Keep gas generators fueled, track polisher maintenance, and reassign gear between truck compartments."
+                    }
+                  ]}
+                />
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setEquipmentSubTab("checklist")}
+                    className={`h-11 px-4 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all ${
+                      equipmentSubTab === "checklist"
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                        : "text-zinc-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <ClipboardCheck className="h-4 w-4" /> Service Loadouts & Checklist
+                  </Button>
+                  <HelpTooltipPopup
+                    title="Service Loadouts & Checklist Instructions"
+                    subtitle="Job-specific pre-departure checklist management"
+                    side="bottom"
+                    align="start"
+                    steps={[
+                      {
+                        title: "1. Filter by Job Type",
+                        desc: "Select Full Detail, Exterior, Interior, or Custom loadouts to view required chemicals, towels, and equipment."
+                      },
+                      {
+                        title: "2. Pre-Departure Verification",
+                        desc: "Check off items as they are packed into the truck. Clear all or select all with one click."
+                      },
+                      {
+                        title: "3. Save My Loadout",
+                        desc: "Click 'Save My Loadout' to lock in your custom packing configuration as your saved shop default."
+                      },
+                      {
+                        title: "4. Reset Options",
+                        desc: "Restore your saved snapshot or revert to factory baseline loadouts anytime."
+                      }
+                    ]}
+                  />
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setEquipmentSubTab("locations")}
+                    className={`h-11 px-4 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all ${
+                      equipmentSubTab === "locations"
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                        : "text-zinc-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <MapPin className="h-4 w-4" /> Rig Storage Locations
+                  </Button>
+                  <HelpTooltipPopup
+                    title="Rig Storage Locations Instructions"
+                    subtitle="Truck compartment organization & item assignment"
+                    side="bottom"
+                    align="start"
+                    steps={[
+                      {
+                        title: "1. Compartment View",
+                        desc: "View gear organized by truck location: Driver Side Drawer, Passenger Compartment, Rear Bed Skid, Chemical Caddies."
+                      },
+                      {
+                        title: "2. Location Reassignment",
+                        desc: "Use location dropdowns to move items between compartments or create custom truck storage locations."
+                      },
+                      {
+                        title: "3. Master Inventory Search",
+                        desc: "Search central inventory to assign new chemicals, supplies, or tools directly to a rig storage location."
+                      }
+                    ]}
+                  />
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setEquipmentSubTab("condition")}
+                    className={`h-11 px-4 rounded-xl font-black uppercase tracking-wider text-xs gap-2 transition-all ${
+                      equipmentSubTab === "condition"
+                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+                        : "text-zinc-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <Gauge className="h-4 w-4" /> Equipment Condition & Fuel ({curatedTools.length})
+                  </Button>
+                  <HelpTooltipPopup
+                    title="Equipment Condition & Fuel Instructions"
+                    subtitle="Generator, pressure washer & tool health monitoring"
+                    side="bottom"
+                    align="start"
+                    steps={[
+                      {
+                        title: "1. Health Status Tracking",
+                        desc: "Flag equipment as Good, Worn, or Needs Replacement to schedule maintenance before field breakdown."
+                      },
+                      {
+                        title: "2. Fuel Level Monitoring",
+                        desc: "Track gas levels (Full, 3/4, 1/2, 1/4, Low) for generators, pressure washers, and gas extractors."
+                      },
+                      {
+                        title: "3. Maintenance Logging",
+                        desc: "Record service notes, oil change dates, or damaged hose alerts for quick technician reference."
+                      }
+                    ]}
+                  />
+                </div>
               </div>
 
               {equipmentSubTab === "checklist" && (
@@ -1743,9 +1859,31 @@ const MobileSetup = () => {
       <Dialog open={addChecklistOpen} onOpenChange={setAddChecklistOpen}>
         <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5" /> Add Pre-Departure Item
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="text-xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5" /> Add Pre-Departure Item
+              </DialogTitle>
+              <HelpTooltipPopup
+                title="Add Pre-Departure Item Help"
+                subtitle="Configuring custom checklist items"
+                side="bottom"
+                align="end"
+                steps={[
+                  {
+                    title: "1. Name & Category",
+                    desc: "Enter the item name and assign it to Chemicals, Supplies, Tools, or a custom category."
+                  },
+                  {
+                    title: "2. Target Job Loadout",
+                    desc: "Bind the item to Full Detail, Exterior, Interior, or a custom job loadout."
+                  },
+                  {
+                    title: "3. Rig Compartment Location",
+                    desc: "Select where the item belongs on the truck (e.g., Driver Side Drawer, Rear Bed Skid) or create a new custom location."
+                  }
+                ]}
+              />
+            </div>
             <DialogDescription className="text-zinc-500 text-xs">Add supplies, chemicals, or equipment to your rig departure checklist.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-3">
@@ -1852,9 +1990,31 @@ const MobileSetup = () => {
       <Dialog open={addEquipmentOpen} onOpenChange={setAddEquipmentOpen}>
         <DialogContent className="bg-zinc-950 border-zinc-800 text-white sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
-              <Wrench className="h-5 w-5" /> Add Equipment Entry
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="text-xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
+                <Wrench className="h-5 w-5" /> Add Equipment Entry
+              </DialogTitle>
+              <HelpTooltipPopup
+                title="Add Equipment Entry Help"
+                subtitle="Logging generator, washer & polisher specs"
+                side="bottom"
+                align="end"
+                steps={[
+                  {
+                    title: "1. Equipment Name & Category",
+                    desc: "Specify tool model (e.g. Honda EU2200i) and select equipment category."
+                  },
+                  {
+                    title: "2. Operational Health & Gas",
+                    desc: "Set initial condition status (Operational, Service Soon, Out of Order) and fuel level (Full to Low)."
+                  },
+                  {
+                    title: "3. Maintenance Logging",
+                    desc: "Add initial maintenance notes such as oil change due date or pump inspection."
+                  }
+                ]}
+              />
+            </div>
             <DialogDescription className="text-zinc-500 text-xs">Add new tools, generators, or pressure washers to rig condition tracking.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-3">

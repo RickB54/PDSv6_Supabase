@@ -39,6 +39,7 @@ import {
   Search,
 } from "lucide-react";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
+import { HelpTooltipPopup } from "@/components/ui/HelpTooltipPopup";
 import {
   getChemicals,
   getMaterials,
@@ -632,7 +633,32 @@ const ShopSetup = () => {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row flex-wrap justify-center xl:justify-start gap-3 md:gap-4 w-full xl:w-auto">
+            <div className="flex flex-col sm:flex-row flex-wrap justify-center xl:justify-start gap-3 md:gap-4 w-full xl:w-auto items-center">
+              <HelpTooltipPopup
+                title="Shop Setup Instructions"
+                subtitle="Facility layout, master inventory & document repository"
+                triggerLabel="Shop Setup Guide"
+                side="bottom"
+                align="end"
+                steps={[
+                  {
+                    title: "1. Shop Layout Documentation",
+                    desc: "Upload photos & walk-around videos of detailing bays, ceramic coating rooms, and chemical stations."
+                  },
+                  {
+                    title: "2. Master Inventory Integration",
+                    desc: "Connect chemicals, polishers, microfiber towels, and detailing gear directly to central database inventory."
+                  },
+                  {
+                    title: "3. Area Categories",
+                    desc: "Organize shop zones using custom categories (e.g. Wash Bay, Ceramic Room, Office) to keep technicians oriented."
+                  },
+                  {
+                    title: "4. Business Documents Repository",
+                    desc: "Switch to the Business Documents tab for visual PDF previews of SOPs, SDS sheets, and pricing guides."
+                  }
+                ]}
+              />
               {isAdmin && (
                 <Button
                   variant="outline"
@@ -927,15 +953,46 @@ const ShopSetup = () => {
                   <p className="text-zinc-400 text-sm font-medium">Digital repository with visual previews for SOPs, manuals, MSDS, and shop reference guides.</p>
                 </div>
               </div>
-              {isAdmin && (
-                <Button
-                  size="lg"
-                  onClick={() => setDocUploadOpen(true)}
-                  className="relative z-10 bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto shadow-lg shadow-indigo-600/40 active:scale-95 transition-all"
-                >
-                  <Plus className="mr-2 h-5 w-5" /> Add Business Document
-                </Button>
-              )}
+              <div className="relative z-10 flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                <HelpTooltipPopup
+                  title="Business Documents Instructions"
+                  subtitle="Visual document browser with two-way drive sync"
+                  triggerLabel="Business Docs Guide"
+                  side="bottom"
+                  align="end"
+                  steps={[
+                    {
+                      title: "1. Visual Card Previews",
+                      desc: "Every PDF, image, and reference sheet renders a visual thumbnail preview directly in the card grid before opening."
+                    },
+                    {
+                      title: "2. Full-Page Popup Expansion",
+                      desc: "Click any document card to expand into a high-resolution, full-screen viewer with zoom, scroll, and metadata."
+                    },
+                    {
+                      title: "3. Folder Filters & Search",
+                      desc: "Filter documents by folder scope (Operating Procedures, Inventory, Pricing, Business Docs, System Archives) or search by keyword."
+                    },
+                    {
+                      title: "4. Add Business Document",
+                      desc: "Click 'Add Business Document' to upload new PDFs or images. Uploads dual-write to the shared Business Drive."
+                    },
+                    {
+                      title: "5. Two-Way Sync",
+                      desc: "Documents uploaded here instantly sync with the central File Manager, and files added in File Manager automatically show up here."
+                    }
+                  ]}
+                />
+                {isAdmin && (
+                  <Button
+                    size="lg"
+                    onClick={() => setDocUploadOpen(true)}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-[11px] h-12 w-full md:w-auto shadow-lg shadow-indigo-600/40 active:scale-95 transition-all"
+                  >
+                    <Plus className="mr-2 h-5 w-5" /> Add Business Document
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Document Search Bar & Folder Filter Pills */}
@@ -1282,9 +1339,35 @@ const ShopSetup = () => {
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl -mr-16 -mt-16 rounded-full" />
           
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
-              <FileText className="h-6 w-6" /> Add Business Document
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle className="text-2xl font-black italic uppercase tracking-tighter text-indigo-400 flex items-center gap-2">
+                <FileText className="h-6 w-6" /> Add Business Document
+              </DialogTitle>
+              <HelpTooltipPopup
+                title="Document Upload Instructions"
+                subtitle="Adding PDFs and Google Docs to Business Drive"
+                side="bottom"
+                align="end"
+                steps={[
+                  {
+                    title: "1. Select Target Folder",
+                    desc: "Choose the target folder scope in Business Drive (e.g., Operating Procedures, Inventory, Pricing, Business Docs, System Archives)."
+                  },
+                  {
+                    title: "2. Choose Mode",
+                    desc: "Upload a local PDF file or paste a shareable Google Docs / Sheets URL."
+                  },
+                  {
+                    title: "3. Name Your Document",
+                    desc: "Provide a descriptive title so technicians can easily identify the document in the grid."
+                  },
+                  {
+                    title: "4. Two-Way Sync",
+                    desc: "Submitting automatically saves the document into localforage Business Drive and makes it instantly accessible in File Manager."
+                  }
+                ]}
+              />
+            </div>
             <DialogDescription className="text-zinc-500">Upload shop SOPs, MSDS reference cards, or link Google Docs directly into Business Drive.</DialogDescription>
           </DialogHeader>
 
