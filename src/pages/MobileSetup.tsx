@@ -103,11 +103,13 @@ interface PreDepartureItem {
   location: string;
   checked: boolean;
   notes?: string;
-  jobType: "full_detail" | "exterior" | "interior" | "custom";
+  jobType: "full_detail" | "exterior" | "interior" | "add_ons" | "custom";
+  quantity: number;
+  restocked?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────
-// SOP-DERIVED MASTER CHECKLIST GENERATOR (Tools & Chemicals per Step)
+// SOP-DERIVED MASTER CHECKLIST GENERATOR (Exact SOP Specs + Inventory Matching)
 // ─────────────────────────────────────────────────────────
 export function generateSopPreDepartureItems(
   chemicals?: Chemical[],
@@ -117,63 +119,71 @@ export function generateSopPreDepartureItems(
   const items: PreDepartureItem[] = [];
 
   const exteriorToolsSupplies = [
-    { name: "Wheel Brush", category: "Tools" as const },
-    { name: "Tire Scrub Brush", category: "Tools" as const },
-    { name: "Pressure Washer", category: "Tools" as const },
-    { name: "Bug Sponge", category: "Supplies" as const },
-    { name: "Foam Cannon", category: "Tools" as const },
-    { name: "Microfiber Mitts", category: "Supplies" as const },
-    { name: "Grit Guard Buckets", category: "Tools" as const },
-    { name: "Fine Clay Bar", category: "Supplies" as const },
-    { name: "Clay Mitt", category: "Supplies" as const },
-    { name: "Car Blower", category: "Tools" as const },
-    { name: "Plush Drying Towel", category: "Supplies" as const },
-    { name: "Microfiber Applicator", category: "Supplies" as const },
-    { name: "Buffing Towel", category: "Supplies" as const },
+    { name: "Wheel Brush", category: "Tools" as const, quantity: 1 },
+    { name: "Tire Scrub Brush", category: "Tools" as const, quantity: 1 },
+    { name: "Pressure Washer", category: "Tools" as const, quantity: 1 },
+    { name: "Bug Sponge", category: "Supplies" as const, quantity: 2 },
+    { name: "Foam Cannon", category: "Tools" as const, quantity: 1 },
+    { name: "Microfiber Mitts", category: "Supplies" as const, quantity: 4 },
+    { name: "Grit Guard Buckets", category: "Tools" as const, quantity: 2 },
+    { name: "Fine Clay Bar", category: "Supplies" as const, quantity: 1 },
+    { name: "Clay Mitt", category: "Supplies" as const, quantity: 1 },
+    { name: "Car Blower", category: "Tools" as const, quantity: 1 },
+    { name: "Plush Drying Towel", category: "Supplies" as const, quantity: 2 },
+    { name: "Microfiber Applicator", category: "Supplies" as const, quantity: 4 },
+    { name: "Buffing Towel", category: "Supplies" as const, quantity: 6 },
   ];
 
   const exteriorChemicals = [
-    { name: "Dark Fury (4:1 light / 7:1 heavy)", category: "Chemicals" as const },
-    { name: "Dirt Buster / Muscle Magic", category: "Chemicals" as const },
-    { name: "Road Warrior (4:1)", category: "Chemicals" as const },
-    { name: "Meguiar's Gold Class / Cherry Foam (5:1)", category: "Chemicals" as const },
-    { name: "Formula 4 (20:1)", category: "Chemicals" as const },
-    { name: "Iron Remover", category: "Chemicals" as const },
-    { name: "Tar Remover", category: "Chemicals" as const },
-    { name: "Clay Lube", category: "Chemicals" as const },
-    { name: "drying aid/spray wax", category: "Chemicals" as const },
-    { name: "ceramic sealant/wax/coating", category: "Chemicals" as const },
-    { name: "Cover All Tire Dressing", category: "Chemicals" as const },
+    { name: "Dark Fury (4:1 light / 7:1 heavy)", category: "Chemicals" as const, quantity: 1 },
+    { name: "Dirt Buster / Muscle Magic", category: "Chemicals" as const, quantity: 1 },
+    { name: "Road Warrior (4:1)", category: "Chemicals" as const, quantity: 1 },
+    { name: "Meguiar's Gold Class / Cherry Foam (5:1)", category: "Chemicals" as const, quantity: 1 },
+    { name: "Formula 4 (20:1)", category: "Chemicals" as const, quantity: 1 },
+    { name: "Iron Remover", category: "Chemicals" as const, quantity: 1 },
+    { name: "Tar Remover", category: "Chemicals" as const, quantity: 1 },
+    { name: "Clay Lube", category: "Chemicals" as const, quantity: 1 },
+    { name: "drying aid/spray wax", category: "Chemicals" as const, quantity: 1 },
+    { name: "ceramic sealant/wax/coating", category: "Chemicals" as const, quantity: 1 },
+    { name: "Cover All Tire Dressing", category: "Chemicals" as const, quantity: 1 },
   ];
 
   const interiorToolsSupplies = [
-    { name: "Belongings Bag", category: "Supplies" as const },
-    { name: "Pre-Inspection Form", category: "Supplies" as const },
-    { name: "Air Blow Gun", category: "Tools" as const },
-    { name: "Tornador", category: "Tools" as const },
-    { name: "Shop Vac", category: "Tools" as const },
-    { name: "Carpet Scrub Brush", category: "Tools" as const },
-    { name: "Crevice Tool", category: "Tools" as const },
-    { name: "Drill Brush", category: "Tools" as const },
-    { name: "Detailing Brushes", category: "Supplies" as const },
-    { name: "Microfiber Towel", category: "Supplies" as const },
-    { name: "Horsehair Brush", category: "Tools" as const },
-    { name: "Hot Water Extractor", category: "Tools" as const },
-    { name: "Extractor Machine", category: "Tools" as const },
-    { name: "Glass Microfiber Towel", category: "Supplies" as const },
-    { name: "Reach Tool", category: "Tools" as const },
-    { name: "Microfiber Applicator Pad", category: "Supplies" as const },
-    { name: "Inspection Light", category: "Tools" as const },
+    { name: "Belongings Bag", category: "Supplies" as const, quantity: 10 },
+    { name: "Pre-Inspection Form", category: "Supplies" as const, quantity: 5 },
+    { name: "Air Blow Gun", category: "Tools" as const, quantity: 1 },
+    { name: "Tornador", category: "Tools" as const, quantity: 1 },
+    { name: "Shop Vac", category: "Tools" as const, quantity: 1 },
+    { name: "Carpet Scrub Brush", category: "Tools" as const, quantity: 1 },
+    { name: "Crevice Tool", category: "Tools" as const, quantity: 1 },
+    { name: "Drill Brush", category: "Tools" as const, quantity: 2 },
+    { name: "Detailing Brushes", category: "Supplies" as const, quantity: 5 },
+    { name: "Microfiber Towel", category: "Supplies" as const, quantity: 12 },
+    { name: "Horsehair Brush", category: "Tools" as const, quantity: 1 },
+    { name: "Hot Water Extractor", category: "Tools" as const, quantity: 1 },
+    { name: "Extractor Machine", category: "Tools" as const, quantity: 1 },
+    { name: "Glass Microfiber Towel", category: "Supplies" as const, quantity: 6 },
+    { name: "Reach Tool", category: "Tools" as const, quantity: 1 },
+    { name: "Microfiber Applicator Pad", category: "Supplies" as const, quantity: 4 },
+    { name: "Inspection Light", category: "Tools" as const, quantity: 1 },
   ];
 
   const interiorChemicals = [
-    { name: "Carpet Bomber (7:1 std / 5:1 heavy)", category: "Chemicals" as const },
-    { name: "Terminator / Zap It", category: "Chemicals" as const },
-    { name: "SP Does It All Enzyme Cleaner", category: "Chemicals" as const },
-    { name: "Pink Perfection (10:1)", category: "Chemicals" as const },
-    { name: "Green All", category: "Chemicals" as const },
-    { name: "P&S Xpress (3:1) / SP Cover All (4:1)", category: "Chemicals" as const },
-    { name: "Invisible Glass", category: "Chemicals" as const },
+    { name: "Carpet Bomber (7:1 std / 5:1 heavy)", category: "Chemicals" as const, quantity: 1 },
+    { name: "Terminator / Zap It", category: "Chemicals" as const, quantity: 1 },
+    { name: "SP Does It All Enzyme Cleaner", category: "Chemicals" as const, quantity: 1 },
+    { name: "Pink Perfection (10:1)", category: "Chemicals" as const, quantity: 1 },
+    { name: "Green All", category: "Chemicals" as const, quantity: 1 },
+    { name: "P&S Xpress (3:1) / SP Cover All (4:1)", category: "Chemicals" as const, quantity: 1 },
+    { name: "Invisible Glass", category: "Chemicals" as const, quantity: 1 },
+  ];
+
+  const addOnsItems = [
+    { name: "Engine Bay Cleaner & Dressing", category: "Chemicals" as const, quantity: 1 },
+    { name: "Headlight Oxidation & Polishing Kit", category: "Supplies" as const, quantity: 1 },
+    { name: "Pet Hair Removal Rubber Brush & Pumice Block", category: "Tools" as const, quantity: 1 },
+    { name: "Odor Fogger / Chlorine Dioxide Treatment", category: "Chemicals" as const, quantity: 2 },
+    { name: "Ceramic Paint Coating Kit & Applicators", category: "Supplies" as const, quantity: 1 },
   ];
 
   let chemIdx = 0;
@@ -214,7 +224,7 @@ export function generateSopPreDepartureItems(
       if (match) {
         const loc = match.shelfLocation || match.shelf || "Chemical Caddy 1";
         const ratioStr = match.dilutionRatios && match.dilutionRatios.length > 0
-          ? ` (${match.dilutionRatios.map(d => `${d.label}: ${d.ratio}`).join(', ')})`
+          ? ` (${match.dilutionRatios.map(d => `${d.method || d.soil_level || 'Dilution'}: ${d.ratio}`).join(', ')})`
           : '';
         return { location: loc, notes: `Linked Inventory: ${match.brand ? `${match.brand} ` : ''}${match.name}${ratioStr}` };
       }
@@ -244,8 +254,8 @@ export function generateSopPreDepartureItems(
   };
 
   const buildItem = (
-    raw: { name: string; category: "Chemicals" | "Supplies" | "Tools" },
-    jobType: "exterior" | "interior" | "full_detail"
+    raw: { name: string; category: "Chemicals" | "Supplies" | "Tools"; quantity?: number },
+    jobType: "exterior" | "interior" | "add_ons" | "full_detail"
   ): PreDepartureItem => {
     const match = findMatch(raw.name, raw.category);
     const cleanId = raw.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -256,19 +266,24 @@ export function generateSopPreDepartureItems(
       location: match?.location || getDefaultLoc(raw.category),
       checked: true,
       jobType,
-      notes: match?.notes || `SOP Baseline Default (${jobType === 'full_detail' ? 'Full Detail' : jobType === 'exterior' ? 'Exterior Detail' : 'Interior Detail'})`
+      quantity: raw.quantity || 1,
+      restocked: true,
+      notes: match?.notes || `SOP Baseline Default (${jobType === 'full_detail' ? 'Full Detail' : jobType === 'exterior' ? 'Exterior Detail' : jobType === 'interior' ? 'Interior Detail' : 'Add-Ons'})`
     };
   };
 
-  // 1. Exterior Loadout (24 items: 13 Tools/Supplies + 11 Chemicals)
+  // 1. Exterior Loadout (24 items)
   exteriorToolsSupplies.forEach(raw => items.push(buildItem(raw, "exterior")));
   exteriorChemicals.forEach(raw => items.push(buildItem(raw, "exterior")));
 
-  // 2. Interior Loadout (24 items: 17 Tools/Supplies + 7 Chemicals)
+  // 2. Interior Loadout (24 items)
   interiorToolsSupplies.forEach(raw => items.push(buildItem(raw, "interior")));
   interiorChemicals.forEach(raw => items.push(buildItem(raw, "interior")));
 
-  // 3. Full Detail Loadout (48 items: Combined Exterior + Interior, no duplicates)
+  // 3. Add-Ons Loadout (5 items)
+  addOnsItems.forEach(raw => items.push(buildItem(raw, "add_ons")));
+
+  // 4. Full Detail Loadout (Combined Exterior + Interior, no duplicates)
   const fullCombined = [
     ...exteriorToolsSupplies,
     ...exteriorChemicals,
@@ -289,33 +304,33 @@ export function generateSopPreDepartureItems(
 
 const DEFAULT_PREDEPARTURE: PreDepartureItem[] = [
   // Full Detail Loadout
-  { id: "pd-1", name: "Wheel & Tire Cleaner", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "full_detail" },
-  { id: "pd-2", name: "All Purpose Cleaner (APC)", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "full_detail" },
-  { id: "pd-3", name: "Glass Cleaner (Streak Free)", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "full_detail" },
-  { id: "pd-4", name: "Rinseless / Wash Soap", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "full_detail" },
-  { id: "pd-5", name: "Ceramic Sealant / Bead Maker", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "full_detail" },
-  { id: "pd-6", name: "Leather / Vinyl Conditioner", category: "Chemicals", location: "Chemical Caddy 2", checked: false, jobType: "full_detail" },
-  { id: "pd-7", name: "Microfiber Towels (Edgeless)", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "full_detail" },
-  { id: "pd-8", name: "Drying Towels (Gauntlet)", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "full_detail" },
-  { id: "pd-9", name: "Detailing Brushes & Drill Brushes", category: "Supplies", location: "Passenger Side Compartment", checked: true, jobType: "full_detail" },
-  { id: "pd-10", name: "Nitrile Gloves (Large/XL)", category: "Supplies", location: "Passenger Side Compartment", checked: true, jobType: "full_detail" },
-  { id: "pd-11", name: "50ft Commercial Extension Cord", category: "Supplies", location: "Rear Bed Skid", checked: true, jobType: "full_detail" },
-  { id: "pd-12", name: "Pressure Washer Hose Reel", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "full_detail" },
-  { id: "pd-13", name: "Commercial Vacuum & Extractor", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "full_detail" },
+  { id: "pd-1", name: "Wheel & Tire Cleaner", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-2", name: "All Purpose Cleaner (APC)", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-3", name: "Glass Cleaner (Streak Free)", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-4", name: "Rinseless / Wash Soap", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-5", name: "Ceramic Sealant / Bead Maker", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-6", name: "Leather / Vinyl Conditioner", category: "Chemicals", location: "Chemical Caddy 2", checked: false, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-7", name: "Microfiber Towels (Edgeless)", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "full_detail", quantity: 12, restocked: true },
+  { id: "pd-8", name: "Drying Towels (Gauntlet)", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "full_detail", quantity: 4, restocked: true },
+  { id: "pd-9", name: "Detailing Brushes & Drill Brushes", category: "Supplies", location: "Passenger Side Compartment", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-10", name: "Nitrile Gloves (Large/XL)", category: "Supplies", location: "Passenger Side Compartment", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-11", name: "50ft Commercial Extension Cord", category: "Supplies", location: "Rear Bed Skid", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-12", name: "Pressure Washer Hose Reel", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
+  { id: "pd-13", name: "Commercial Vacuum & Extractor", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "full_detail", quantity: 1, restocked: true },
 
   // Exterior Detail Loadout
-  { id: "pd-14", name: "Heavy Duty Foam Cannon & Wash Soap", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "exterior" },
-  { id: "pd-15", name: "Iron Decontamination Spray & Clay Bar", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "exterior" },
-  { id: "pd-16", name: "Tire Dressing & Applicators", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "exterior" },
-  { id: "pd-17", name: "Gauntlet Drying Towels", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "exterior" },
-  { id: "pd-18", name: "Pressure Washer & 50ft Hose", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "exterior" },
+  { id: "pd-14", name: "Heavy Duty Foam Cannon & Wash Soap", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "exterior", quantity: 1, restocked: true },
+  { id: "pd-15", name: "Iron Decontamination Spray & Clay Bar", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "exterior", quantity: 1, restocked: true },
+  { id: "pd-16", name: "Tire Dressing & Applicators", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "exterior", quantity: 1, restocked: true },
+  { id: "pd-17", name: "Gauntlet Drying Towels", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "exterior", quantity: 4, restocked: true },
+  { id: "pd-18", name: "Pressure Washer & 50ft Hose", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "exterior", quantity: 1, restocked: true },
 
   // Interior Detail Loadout
-  { id: "pd-19", name: "Interior APC & Carpet Cleaner", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "interior" },
-  { id: "pd-20", name: "Leather Clean & Protect", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "interior" },
-  { id: "pd-21", name: "Steam Extractor & Drill Brushes", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "interior" },
-  { id: "pd-22", name: "Microfiber & Glass Towels", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "interior" },
-  { id: "pd-23", name: "Pet Hair Removal Brushes", category: "Supplies", location: "Passenger Side Compartment", checked: true, jobType: "interior" },
+  { id: "pd-19", name: "Interior APC & Carpet Cleaner", category: "Chemicals", location: "Chemical Caddy 1", checked: true, jobType: "interior", quantity: 1, restocked: true },
+  { id: "pd-20", name: "Leather Clean & Protect", category: "Chemicals", location: "Chemical Caddy 2", checked: true, jobType: "interior", quantity: 1, restocked: true },
+  { id: "pd-21", name: "Steam Extractor & Drill Brushes", category: "Tools", location: "Rear Bed Skid", checked: true, jobType: "interior", quantity: 1, restocked: true },
+  { id: "pd-22", name: "Microfiber & Glass Towels", category: "Supplies", location: "Driver Side Drawer", checked: true, jobType: "interior", quantity: 12, restocked: true },
+  { id: "pd-23", name: "Pet Hair Removal Brushes", category: "Supplies", location: "Passenger Side Compartment", checked: true, jobType: "interior", quantity: 1, restocked: true },
 ];
 
 const RIG_LOCATIONS = [
@@ -346,17 +361,7 @@ const MobileSetup = () => {
   const [media, setMedia] = useState<SetupMedia[]>([]);
   const [categories, setCategories] = useState<SetupCategory[]>([]);
 
-  // Source mode state: defaults to "sops"
-  const [checklistSourceMode, setChecklistSourceMode] = useState<"sops" | "inventory">(() => {
-    try {
-      const saved = localStorage.getItem("f150_checklist_source_mode");
-      return (saved === "inventory" ? "inventory" : "sops") as "sops" | "inventory";
-    } catch {
-      return "sops";
-    }
-  });
-
-  // SOP-derived checklist state (DEFAULT)
+  // Single Unified SOP Checklist state
   const [sopChecklist, setSopChecklist] = useState<PreDepartureItem[]>(() => {
     try {
       const saved = localStorage.getItem("f150_sop_predeparture_checklist");
@@ -368,38 +373,19 @@ const MobileSetup = () => {
     return generateSopPreDepartureItems();
   });
 
-  // Inventory-derived checklist state
-  const [inventoryChecklist, setInventoryChecklist] = useState<PreDepartureItem[]>(() => {
-    try {
-      const saved = localStorage.getItem("f150_inventory_predeparture_checklist");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return DEFAULT_PREDEPARTURE;
-  });
+  // Workflow mode: "packing" (Pre-Departure) vs "restock" (Post-Job Return & Refill)
+  const [checklistMode, setChecklistMode] = useState<"packing" | "restock">("packing");
 
-  const checklist = checklistSourceMode === "sops" ? sopChecklist : inventoryChecklist;
+  const checklist = sopChecklist;
 
   const setChecklist = (updater: PreDepartureItem[] | ((prev: PreDepartureItem[]) => PreDepartureItem[])) => {
-    if (checklistSourceMode === "sops") {
-      setSopChecklist((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater;
-        try {
-          localStorage.setItem("f150_sop_predeparture_checklist", JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-    } else {
-      setInventoryChecklist((prev) => {
-        const next = typeof updater === "function" ? updater(prev) : updater;
-        try {
-          localStorage.setItem("f150_inventory_predeparture_checklist", JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-    }
+    setSopChecklist((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      try {
+        localStorage.setItem("f150_sop_predeparture_checklist", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -409,14 +395,6 @@ const MobileSetup = () => {
       console.error("Failed to save SOP checklist to local storage", e);
     }
   }, [sopChecklist]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("f150_inventory_predeparture_checklist", JSON.stringify(inventoryChecklist));
-    } catch (e) {
-      console.error("Failed to save inventory checklist to local storage", e);
-    }
-  }, [inventoryChecklist]);
 
   // Dynamic custom rig locations list
   const [customRigLocations, setCustomRigLocations] = useState<string[]>(() => {
@@ -437,14 +415,14 @@ const MobileSetup = () => {
   const [userSavedSnapshot, setUserSavedSnapshot] = useState<PreDepartureItem[]>(() => {
     try {
       const saved = localStorage.getItem("f150_saved_loadout_snapshot");
-      return saved ? JSON.parse(saved) : DEFAULT_PREDEPARTURE;
+      return saved ? JSON.parse(saved) : generateSopPreDepartureItems();
     } catch {
-      return DEFAULT_PREDEPARTURE;
+      return generateSopPreDepartureItems();
     }
   });
 
   const [equipmentSubTab, setEquipmentSubTab] = useState<"checklist" | "locations" | "condition">("checklist");
-  const [selectedJobType, setSelectedJobType] = useState<"full_detail" | "exterior" | "interior" | "custom" | "all">("full_detail");
+  const [selectedJobType, setSelectedJobType] = useState<"full_detail" | "exterior" | "interior" | "add_ons" | "custom" | "all">("full_detail");
   const [selectedLocFilter, setSelectedLocFilter] = useState<string>("all");
   
   // Storage Locations Search state
@@ -465,6 +443,7 @@ const MobileSetup = () => {
     customLocation: string;
     jobType: string;
     customJobType: string;
+    quantity: number;
   }>({
     name: "",
     category: "Supplies",
@@ -473,9 +452,10 @@ const MobileSetup = () => {
     customLocation: "",
     jobType: "full_detail",
     customJobType: "",
+    quantity: 1,
   });
 
-  // Modal State for Adding Equipment Entry directly inside Condition & Fuel Section
+  // Modal State for Adding Equipment (Condition & Fuel Tab)
   const [addEquipmentOpen, setAddEquipmentOpen] = useState(false);
   const [newEquipment, setNewEquipment] = useState<{
     name: string;
@@ -497,102 +477,129 @@ const MobileSetup = () => {
     conditionNote: "",
   });
 
-  // Master Inventory Search Results for adding to checklists
+  // Search Results across Master Inventory (Chemicals, Materials, Tools)
   const masterSearchResults = useMemo(() => {
-    if (!locationSearch.trim()) return [];
     const q = locationSearch.toLowerCase().trim();
-    const res: Array<{ id: string; name: string; category: "Chemicals" | "Supplies" | "Tools"; defaultLoc: string }> = [];
+    if (!q) return [];
 
-    chemicals.forEach((c) => {
-      if (c.name?.toLowerCase().includes(q) || c.brand?.toLowerCase().includes(q) || c.category?.toLowerCase().includes(q)) {
-        res.push({ id: `chem-${c.id}`, name: c.name, category: "Chemicals", defaultLoc: c.shelfLocation || "Chemical Caddy 1" });
-      }
-    });
+    const chemMatches = chemicals
+      .filter((c) => (c.name || "").toLowerCase().includes(q) || (c.brand || "").toLowerCase().includes(q))
+      .map((c) => ({
+        id: `chem-${c.id}`,
+        name: c.brand ? `${c.brand} ${c.name}` : c.name,
+        category: "Chemicals" as const,
+        defaultLoc: c.shelfLocation || c.shelf || "Chemical Caddy 1",
+      }));
 
-    materials.forEach((m) => {
-      if (m.name?.toLowerCase().includes(q) || m.category?.toLowerCase().includes(q)) {
-        res.push({ id: `mat-${m.id}`, name: m.name, category: "Supplies", defaultLoc: m.location || "Driver Side Drawer" });
-      }
-    });
+    const matMatches = materials
+      .filter((m) => (m.name || "").toLowerCase().includes(q))
+      .map((m) => ({
+        id: `mat-${m.id}`,
+        name: m.name,
+        category: "Supplies" as const,
+        defaultLoc: m.location || "Driver Side Drawer",
+      }));
 
-    tools.forEach((t) => {
-      if (t.name?.toLowerCase().includes(q) || t.notes?.toLowerCase().includes(q)) {
-        res.push({ id: `tool-${t.id}`, name: t.name, category: "Tools", defaultLoc: t.location || "Rear Bed Skid" });
-      }
-    });
+    const toolMatches = tools
+      .filter((t) => (t.name || "").toLowerCase().includes(q))
+      .map((t) => ({
+        id: `tool-${t.id}`,
+        name: t.name,
+        category: "Tools" as const,
+        defaultLoc: t.location || "Rear Bed Skid",
+      }));
 
-    return res.slice(0, 15);
+    return [...chemMatches, ...matMatches, ...toolMatches];
   }, [locationSearch, chemicals, materials, tools]);
 
-  // Curated tools list for Condition & Fuel tracking (only items in rig checklists or with equipment metadata)
+  // Curated Tools list for Condition & Fuel tab
   const curatedTools = useMemo(() => {
-    const checklistToolNames = new Set(checklist.map((item) => item.name.toLowerCase()));
-
-    return tools.filter((tool) => {
-      const inChecklist = checklistToolNames.has(tool.name.toLowerCase()) || Boolean(tool.conditionStatus || tool.fuelLevel || tool.location);
-      if (!inChecklist) return false;
-
-      if (conditionFilter !== "all" && tool.conditionStatus !== conditionFilter) {
-        return false;
-      }
-
-      if (conditionSearch.trim()) {
-        const q = conditionSearch.toLowerCase().trim();
-        const matchName = tool.name?.toLowerCase().includes(q);
-        const matchLoc = tool.location?.toLowerCase().includes(q);
-        const matchNotes = tool.conditionNote?.toLowerCase().includes(q) || tool.notes?.toLowerCase().includes(q);
-        return matchName || matchLoc || matchNotes;
-      }
-
-      return true;
+    return tools.filter((t) => {
+      const matchSearch = !conditionSearch || (t.name || "").toLowerCase().includes(conditionSearch.toLowerCase().trim());
+      const matchFilter = conditionFilter === "all" || t.conditionStatus === conditionFilter;
+      return matchSearch && matchFilter;
     });
-  }, [tools, checklist, conditionFilter, conditionSearch]);
+  }, [tools, conditionSearch, conditionFilter]);
 
   const toggleChecklistItem = (id: string) => {
-    setChecklist((prev) => prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)));
+    setChecklist((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item))
+    );
   };
 
   const selectAllChecklist = (jobType?: string) => {
-    setChecklist((prev) => prev.map((item) => (!jobType || jobType === "all" || item.jobType === jobType ? { ...item, checked: true } : item)));
+    setChecklist((prev) =>
+      prev.map((item) =>
+        !jobType || jobType === "all" || item.jobType === jobType ? { ...item, checked: true } : item
+      )
+    );
   };
 
   const uncheckAllChecklist = (jobType?: string) => {
-    setChecklist((prev) => prev.map((item) => (!jobType || jobType === "all" || item.jobType === jobType ? { ...item, checked: false } : item)));
+    setChecklist((prev) =>
+      prev.map((item) =>
+        !jobType || jobType === "all" || item.jobType === jobType ? { ...item, checked: false } : item
+      )
+    );
   };
 
-  // --- USER SNAPSHOT & RESET FUNCTIONALITY ---
   const saveCurrentLoadoutSnapshot = () => {
     try {
       localStorage.setItem("f150_saved_loadout_snapshot", JSON.stringify(checklist));
       setUserSavedSnapshot(checklist);
       toast({
         title: "Loadout Snapshot Saved",
-        description: "Your current customized loadout layout has been saved as default.",
+        description: "Saved current rig checklist as your custom user baseline.",
       });
     } catch {
-      toast({ title: "Save Error", description: "Failed to save loadout snapshot.", variant: "destructive" });
+      toast({ title: "Save Error", description: "Could not save loadout snapshot.", variant: "destructive" });
     }
   };
 
   const resetToUserSavedSnapshot = () => {
     setChecklist(userSavedSnapshot);
     toast({
-      title: "Restored to Saved Snapshot",
-      description: "Restored checklist to your last saved custom loadout state.",
+      title: "Reset to Saved Baseline",
+      description: "Restored checklist to your last saved snapshot.",
     });
   };
 
-  const restoreFactoryDefaults = () => {
-    setChecklist(DEFAULT_PREDEPARTURE);
+  const toggleItemRestockStatus = (id: string) => {
+    setChecklist((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, restocked: item.restocked === false ? true : false } : item))
+    );
+  };
+
+  const markAllRestocked = (jobType?: string) => {
+    setChecklist((prev) =>
+      prev.map((item) =>
+        !jobType || jobType === "all" || item.jobType === jobType ? { ...item, restocked: true } : item
+      )
+    );
     toast({
-      title: "Restored to Factory Baseline",
-      description: "Restored checklist to original factory defaults.",
+      title: "All Restocked & Full",
+      description: "Marked all loadout items as restocked and ready for the next job.",
+    });
+  };
+
+  const updateItemQuantity = (id: string, qty: number) => {
+    setChecklist((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, quantity: Math.max(1, qty) } : item))
+    );
+  };
+
+  const restoreFactoryDefaults = () => {
+    const fresh = generateSopPreDepartureItems(chemicals, materials, tools);
+    setChecklist(fresh);
+    toast({
+      title: "Restored to SOP Baseline",
+      description: "Restored checklist to original SOP baseline.",
     });
   };
 
   const handleAddMasterItemToChecklist = (
     item: { name: string; category: "Chemicals" | "Supplies" | "Tools"; defaultLoc: string },
-    targetJobType: "full_detail" | "exterior" | "interior" | "custom"
+    targetJobType: "full_detail" | "exterior" | "interior" | "add_ons" | "custom"
   ) => {
     const newItem: PreDepartureItem = {
       id: `pd-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -601,6 +608,8 @@ const MobileSetup = () => {
       location: item.defaultLoc,
       checked: false,
       jobType: targetJobType,
+      quantity: 1,
+      restocked: true,
     };
     setChecklist((prev) => [...prev, newItem]);
     setLocationSearch("");
@@ -663,6 +672,8 @@ const MobileSetup = () => {
       location: finalLocation,
       checked: false,
       jobType: finalJobType,
+      quantity: newChecklistItem.quantity || 1,
+      restocked: true,
     };
 
     setChecklist((prev) => [...prev, item]);
@@ -674,6 +685,7 @@ const MobileSetup = () => {
       customLocation: "",
       jobType: "full_detail",
       customJobType: "",
+      quantity: 1,
     });
     setAddChecklistOpen(false);
     toast({ title: "Item Added", description: `${item.name} added to pre-departure checklist.` });
@@ -705,7 +717,11 @@ const MobileSetup = () => {
       conditionStatus: newEquipment.conditionStatus,
       fuelLevel: newEquipment.fuelLevel,
       conditionNote: newEquipment.conditionNote.trim(),
-      notes: newEquipment.conditionNote.trim(),
+      notes: newEquipment.conditionNote.trim() || "Added via Mobile Setup",
+      purchaseDate: new Date().toISOString().split("T")[0],
+      warranty: "N/A",
+      lifeExpectancy: "2 Years",
+      price: 0,
       quantity: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1390,25 +1406,29 @@ const MobileSetup = () => {
                   </Button>
                   <HelpTooltipPopup
                     title="Service Loadouts & Checklist Instructions"
-                    subtitle="Job-specific pre-departure checklist management"
+                    subtitle="SOP-derived master list, quantity control, Add-Ons & Restock tracking"
                     side="bottom"
                     align="start"
                     steps={[
                       {
-                        title: "1. Data Source Selection (SOPs vs Inventory)",
-                        desc: "Choose between 'My Custom List (From SOPs)' (Default, derived from procedural SOP step requirements) and 'Master Inventory Sync'."
+                        title: "1. Unified SOP Checklist",
+                        desc: "Single SOP-derived master list automatically matched with your real chemical/tool storage locations & dilutions."
                       },
                       {
-                        title: "2. Filter by Job Type",
-                        desc: "Select Full Detail, Exterior, Interior, or Custom loadouts to view required chemicals, towels, and equipment."
+                        title: "2. Item Quantity Steppers",
+                        desc: "Adjust packed item counts (microfiber towels, spray bottles, pads) directly using the +/- quantity controls on each card."
                       },
                       {
-                        title: "3. Pre-Departure Verification",
-                        desc: "Check off items as they are packed into the truck. Clear all or select all with one click."
+                        title: "3. Package & Add-On Loadouts",
+                        desc: "Filter items by Full Detail, Exterior, Interior, Custom, or special Add-On packages (Engine Bay, Headlights, Pet Hair, Odor, Ceramic)."
                       },
                       {
-                        title: "4. Save & Reset Options",
-                        desc: "Save your custom snapshot or click 'Reset to Original SOP Baseline' anytime to start over with pristine SOP step items."
+                        title: "4. Pre-Departure vs Restock Modes",
+                        desc: "Toggle between Pre-Departure Rig Packing to verify gear before leaving, and Post-Job Restock & Refill to flag emptied bottles for refilling."
+                      },
+                      {
+                        title: "5. Responsive 2/4-Column Layout",
+                        desc: "Optimized 2-column mobile and 4-column desktop card grid for dense, efficient gear visibility."
                       }
                     ]}
                   />
@@ -1509,40 +1529,12 @@ const MobileSetup = () => {
                       <DropdownMenuItem onClick={resetToUserSavedSnapshot} className="text-xs font-bold cursor-pointer">
                         <RotateCcw className="h-3.5 w-3.5 mr-2 text-indigo-400" /> Reset to My Saved Snapshot
                       </DropdownMenuItem>
-                      {checklistSourceMode === "sops" ? (
-                        <DropdownMenuItem
-                          onClick={() => {
-                            const fresh = generateSopPreDepartureItems(chemicals, materials, tools);
-                            setSopChecklist(fresh);
-                            try {
-                              localStorage.setItem("f150_sop_predeparture_checklist", JSON.stringify(fresh));
-                            } catch {}
-                            toast({
-                              title: "Restored to SOP Baseline",
-                              description: "Restored checklist to original SOP procedural specifications (Tools & Chemicals per step).",
-                            });
-                          }}
-                          className="text-xs font-bold text-indigo-300 hover:text-white cursor-pointer"
-                        >
-                          <Sparkles className="h-3.5 w-3.5 mr-2 text-indigo-400" /> Reset to Original SOP Baseline
-                        </DropdownMenuItem>
-                      ) : (
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setInventoryChecklist(DEFAULT_PREDEPARTURE);
-                            try {
-                              localStorage.setItem("f150_inventory_predeparture_checklist", JSON.stringify(DEFAULT_PREDEPARTURE));
-                            } catch {}
-                            toast({
-                              title: "Restored to Inventory Baseline",
-                              description: "Restored checklist to original Master Inventory default loadouts.",
-                            });
-                          }}
-                          className="text-xs font-bold text-amber-400 hover:text-white cursor-pointer"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5 mr-2 text-amber-400" /> Restore Factory Inventory Baseline
-                        </DropdownMenuItem>
-                      )}
+                      <DropdownMenuItem
+                        onClick={restoreFactoryDefaults}
+                        className="text-xs font-bold text-indigo-300 hover:text-white cursor-pointer"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 mr-2 text-indigo-400" /> Reset to Original SOP Baseline
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
 
@@ -1560,75 +1552,106 @@ const MobileSetup = () => {
             {/* SUB-VIEW 1: PRE-DEPARTURE SERVICE CHECKLISTS */}
             {equipmentSubTab === "checklist" && (
               <div className="space-y-6 animate-in fade-in duration-300">
-                {/* Checklist Data Source Selector Bar */}
+                {/* Workflow Mode Selector Bar: Packing vs Restock */}
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-zinc-950/90 p-3.5 rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-950/20">
                   <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-indigo-400 animate-pulse" />
                       <span className="text-[11px] font-black uppercase tracking-wider text-zinc-300">
-                        Checklist Data Source:
+                        Checklist Workflow Mode:
                       </span>
                     </div>
-                    <Select
-                      value={checklistSourceMode}
-                      onValueChange={(val: "sops" | "inventory") => {
-                        setChecklistSourceMode(val);
-                        try {
-                          localStorage.setItem("f150_checklist_source_mode", val);
-                        } catch {}
-                        toast({
-                          title: "Checklist Data Source Changed",
-                          description: val === "sops"
-                            ? "Now showing My Custom List (SOP Standard) — Default"
-                            : "Now showing Master Inventory Sync list.",
-                        });
-                      }}
-                    >
-                      <SelectTrigger className="bg-zinc-900 border-indigo-500/50 text-white font-bold h-9 text-xs px-3 min-w-[260px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
-                        <SelectItem value="sops" className="font-bold text-indigo-400 cursor-pointer">
-                          ★ My Custom List (From SOPs) — DEFAULT
-                        </SelectItem>
-                        <SelectItem value="inventory" className="font-bold cursor-pointer">
-                          📦 Master Inventory Sync
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setChecklistMode("packing")}
+                        className={`h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                          checklistMode === "packing"
+                            ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        📦 Pre-Departure Rig Packing
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setChecklistMode("restock")}
+                        className={`h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                          checklistMode === "restock"
+                            ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                            : "text-zinc-400 hover:text-white"
+                        }`}
+                      >
+                        🔄 End-of-Day Restock & Refill
+                      </Button>
+                    </div>
                   </div>
                   <div className="text-[10px] font-bold tracking-wider text-right">
-                    {checklistSourceMode === "sops" ? (
+                    {checklistMode === "packing" ? (
                       <span className="text-indigo-300 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
-                        SOP Procedural Steps Mode (Tools & Chemicals per step)
+                        Verify & check off loaded gear before leaving
                       </span>
                     ) : (
-                      <span className="text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                        Master Inventory Live Sync Mode
+                      <span className="text-emerald-300 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                        Flag emptied bottles & supplies for refilling
                       </span>
                     )}
                   </div>
                 </div>
+
+                {/* Restock Mode Header Banner */}
+                {checklistMode === "restock" && (
+                  <Card className="bg-zinc-950/80 border-indigo-500/30 p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <RotateCcw className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-white">
+                          End-of-Day Restock & Depletion Tracker
+                        </h4>
+                        <p className="text-[10px] text-zinc-400 font-medium">
+                          Click items to mark them as 🔴 Needs Refill or 🟢 Restocked & Full. Use "Mark All Restocked" when finished.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => markAllRestocked(selectedJobType)}
+                        className="border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10 h-8 text-[10px] font-black uppercase tracking-widest gap-1"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" /> Mark All Restocked & Full
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+
                 {/* Job Type Selector Pills */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-zinc-950/80 p-3 rounded-2xl border border-zinc-800/80">
                   <div className="flex flex-wrap items-center gap-2 flex-1">
                     <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2 flex items-center gap-1.5 shrink-0">
-                      <Truck className="h-3.5 w-3.5 text-indigo-400" /> Detailing Package:
+                      <Truck className="h-3.5 w-3.5 text-indigo-400" /> Package Filter:
                     </span>
                     {(
                       [
-                        { id: "full_detail", label: "Full Detail Loadout" },
-                        { id: "exterior", label: "Exterior Detail Loadout" },
-                        { id: "interior", label: "Interior Detail Loadout" },
-                        { id: "custom", label: "Custom Rig Loadout" },
-                        { id: "all", label: "All Combined Items" },
+                        { id: "full_detail", label: "Full Detail" },
+                        { id: "exterior", label: "Exterior Detail" },
+                        { id: "interior", label: "Interior Detail" },
+                        { id: "add_ons", label: "Add-Ons Package" },
+                        { id: "custom", label: "Custom Loadout" },
+                        { id: "all", label: "All Combined" },
                       ] as const
                     ).map((pkg) => (
                       <Button
                         key={pkg.id}
                         variant="ghost"
                         onClick={() => setSelectedJobType(pkg.id)}
-                        className={`h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                        className={`h-9 px-3.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
                           selectedJobType === pkg.id
                             ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
                             : "text-zinc-400 hover:text-white"
@@ -1643,100 +1666,223 @@ const MobileSetup = () => {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => selectAllChecklist(selectedJobType)}
-                      className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/10"
-                    >
-                      Check All
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => uncheckAllChecklist(selectedJobType)}
-                      className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:bg-zinc-800"
-                    >
-                      Uncheck All
-                    </Button>
+                    {checklistMode === "packing" ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => selectAllChecklist(selectedJobType)}
+                          className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/10"
+                        >
+                          Check All
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => uncheckAllChecklist(selectedJobType)}
+                          className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:bg-zinc-800"
+                        >
+                          Uncheck All
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => markAllRestocked(selectedJobType)}
+                        className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-400 hover:bg-emerald-500/10"
+                      >
+                        Restock All
+                      </Button>
+                    )}
                   </div>
                 </div>
 
                 {/* Progress Meter */}
                 {(() => {
                   const activeItems = checklist.filter((i) => selectedJobType === "all" || i.jobType === selectedJobType);
-                  const packedCount = activeItems.filter((i) => i.checked).length;
-                  const pct = activeItems.length > 0 ? Math.round((packedCount / activeItems.length) * 100) : 0;
-                  return (
-                    <Card className="bg-zinc-950/60 border-zinc-800 p-4 rounded-2xl flex items-center justify-between gap-4">
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-white uppercase tracking-wider text-[11px]">
-                            Rig Packing Status: {packedCount} of {activeItems.length} Items Loaded
-                          </span>
-                          <span className="font-black text-indigo-400">{pct}% Ready</span>
-                        </div>
-                        <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
-                          <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-300" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })()}
-
-                {/* Checklist items list */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {checklist
-                    .filter((item) => selectedJobType === "all" || item.jobType === selectedJobType)
-                    .map((item) => (
-                      <Card
-                        key={item.id}
-                        className={`p-4 rounded-2xl border transition-all ${
-                          item.checked
-                            ? "bg-emerald-950/20 border-emerald-500/40"
-                            : "bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0 cursor-pointer flex-1" onClick={() => toggleChecklistItem(item.id)}>
-                            <div className={`h-6 w-6 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
-                              item.checked ? "bg-emerald-500 text-black" : "border border-zinc-700 text-transparent"
-                            }`}>
-                              {item.checked && <CheckSquare className="h-4 w-4" />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h4 className={`text-xs font-bold truncate ${item.checked ? "line-through text-emerald-300/70" : "text-white"}`}>
-                                {item.name}
-                              </h4>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-indigo-300">
-                                  {item.category}
-                                </span>
-                                <span className="text-[9px] font-bold text-zinc-500">
-                                  Location: {item.location}
-                                </span>
-                              </div>
-                            </div>
+                  if (checklistMode === "packing") {
+                    const packedCount = activeItems.filter((i) => i.checked).length;
+                    const pct = activeItems.length > 0 ? Math.round((packedCount / activeItems.length) * 100) : 0;
+                    return (
+                      <Card className="bg-zinc-950/60 border-zinc-800 p-4 rounded-2xl flex items-center justify-between gap-4">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-white uppercase tracking-wider text-[11px]">
+                              Rig Packing Status: {packedCount} of {activeItems.length} Items Loaded
+                            </span>
+                            <span className="font-black text-indigo-400">{pct}% Ready</span>
                           </div>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveItemFromChecklist(item.id)}
-                            className="h-8 w-8 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 shrink-0"
-                            title="Remove from checklist"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                            <div className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 transition-all duration-300" style={{ width: `${pct}%` }} />
+                          </div>
                         </div>
                       </Card>
-                    ))}
+                    );
+                  } else {
+                    const restockedCount = activeItems.filter((i) => i.restocked !== false).length;
+                    const needsRefillCount = activeItems.filter((i) => i.restocked === false).length;
+                    const pct = activeItems.length > 0 ? Math.round((restockedCount / activeItems.length) * 100) : 0;
+                    return (
+                      <Card className="bg-zinc-950/60 border-zinc-800 p-4 rounded-2xl flex items-center justify-between gap-4">
+                        <div className="space-y-1 flex-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-white uppercase tracking-wider text-[11px]">
+                              Supply Restock Status: {needsRefillCount} Need Refill | {restockedCount} Restocked
+                            </span>
+                            <span className={`font-black ${needsRefillCount > 0 ? "text-amber-400" : "text-emerald-400"}`}>{pct}% Fully Stocked</span>
+                          </div>
+                          <div className="h-2 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+                            <div className={`h-full transition-all duration-300 ${needsRefillCount > 0 ? "bg-gradient-to-r from-amber-500 to-emerald-400" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  }
+                })()}
+
+                {/* Checklist items list: 2-Column Mobile / 4-Column Desktop Layout */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {checklist
+                    .filter((item) => selectedJobType === "all" || item.jobType === selectedJobType)
+                    .map((item) => {
+                      const isRestockView = checklistMode === "restock";
+                      return (
+                        <Card
+                          key={item.id}
+                          className={`p-3 rounded-2xl border transition-all flex flex-col justify-between ${
+                            isRestockView
+                              ? item.restocked === false
+                                ? "bg-red-950/30 border-red-500/50 shadow-md shadow-red-950/40"
+                                : "bg-emerald-950/20 border-emerald-500/30"
+                              : item.checked
+                              ? "bg-emerald-950/20 border-emerald-500/40"
+                              : "bg-zinc-950/60 border-zinc-800/80 hover:border-zinc-700"
+                          }`}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-1.5">
+                              <div
+                                className="flex items-center gap-2 min-w-0 cursor-pointer flex-1"
+                                onClick={() =>
+                                  isRestockView ? toggleItemRestockStatus(item.id) : toggleChecklistItem(item.id)
+                                }
+                              >
+                                <div
+                                  className={`h-5 w-5 rounded-md flex items-center justify-center transition-colors shrink-0 ${
+                                    isRestockView
+                                      ? item.restocked === false
+                                        ? "bg-red-500 text-white font-black"
+                                        : "bg-emerald-500 text-black font-black"
+                                      : item.checked
+                                      ? "bg-emerald-500 text-black"
+                                      : "border border-zinc-700 text-transparent"
+                                  }`}
+                                >
+                                  {isRestockView ? (
+                                    item.restocked === false ? (
+                                      <X className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <CheckSquare className="h-3.5 w-3.5" />
+                                    )
+                                  ) : (
+                                    item.checked && <CheckSquare className="h-3.5 w-3.5" />
+                                  )}
+                                </div>
+                                <h4
+                                  className={`text-xs font-bold leading-tight truncate ${
+                                    !isRestockView && item.checked ? "line-through text-emerald-300/70" : "text-white"
+                                  }`}
+                                  title={item.name}
+                                >
+                                  {item.name}
+                                </h4>
+                              </div>
+
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveItemFromChecklist(item.id)}
+                                className="h-6 w-6 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                                title="Remove item"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-between gap-1 text-[9px] text-zinc-400 pt-1.5 border-t border-zinc-800/60">
+                              <span className="font-bold text-zinc-400 truncate max-w-[100px]" title={item.location}>
+                                📍 {item.location}
+                              </span>
+
+                              {/* Quantity Stepper */}
+                              <div className="flex items-center gap-1 bg-zinc-900 border border-zinc-800 rounded-md px-1 py-0.5">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateItemQuantity(item.id, (item.quantity || 1) - 1);
+                                  }}
+                                  className="text-zinc-400 hover:text-white px-1 text-xs font-bold leading-none"
+                                  title="Decrease Quantity"
+                                >
+                                  -
+                                </button>
+                                <span className="text-[10px] font-black text-indigo-300 min-w-[14px] text-center">
+                                  x{item.quantity || 1}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateItemQuantity(item.id, (item.quantity || 1) + 1);
+                                  }}
+                                  className="text-zinc-400 hover:text-white px-1 text-xs font-bold leading-none"
+                                  title="Increase Quantity"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+
+                            {item.notes && (
+                              <p className="text-[9px] text-zinc-500 italic truncate" title={item.notes}>
+                                {item.notes}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Restock View Action Bar */}
+                          {isRestockView && (
+                            <div className="mt-2.5 pt-2 border-t border-zinc-800/60 flex items-center justify-between gap-1">
+                              <span
+                                className={`text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full ${
+                                  item.restocked === false
+                                    ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                                    : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                }`}
+                              >
+                                {item.restocked === false ? "⚠️ Refill Needed" : "✅ Stocked"}
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() => toggleItemRestockStatus(item.id)}
+                                className="text-[9px] font-black uppercase tracking-wider text-indigo-400 hover:text-indigo-300 underline"
+                              >
+                                {item.restocked === false ? "Mark Stocked" : "Flag Refill"}
+                              </button>
+                            </div>
+                          )}
+                        </Card>
+                      );
+                    })}
 
                   {checklist.filter((item) => selectedJobType === "all" || item.jobType === selectedJobType).length === 0 && (
                     <div className="col-span-full py-12 text-center space-y-3 bg-zinc-950/40 border border-dashed border-zinc-800 rounded-3xl">
                       <Package className="h-8 w-8 text-zinc-600 mx-auto" />
-                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">No items in this checklist loadout yet.</p>
-                      <p className="text-[11px] text-zinc-600">Use the Storage Locations tab or search bar to search and add items.</p>
+                      <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">No items in this loadout package yet.</p>
+                      <p className="text-[11px] text-zinc-600">Click "+ Add Custom Item" above to add gear to this list.</p>
                     </div>
                   )}
                 </div>
@@ -2261,6 +2407,7 @@ const MobileSetup = () => {
                   <SelectItem value="full_detail">Full Detail Loadout</SelectItem>
                   <SelectItem value="exterior">Exterior Detail Loadout</SelectItem>
                   <SelectItem value="interior">Interior Detail Loadout</SelectItem>
+                  <SelectItem value="add_ons">Add-Ons Package</SelectItem>
                   <SelectItem value="custom">Custom Rig Loadout</SelectItem>
                   <SelectItem value="custom_input" className="text-indigo-400 font-bold">+ Custom Job Type Name...</SelectItem>
                 </SelectContent>
@@ -2273,6 +2420,19 @@ const MobileSetup = () => {
                   className="bg-zinc-900 border-indigo-500/50 text-white font-medium h-10 text-xs mt-1.5"
                 />
               )}
+            </div>
+
+            {/* Item Quantity */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Item Quantity / Count</Label>
+              <Input
+                type="number"
+                min="1"
+                value={newChecklistItem.quantity || 1}
+                onChange={(e) => setNewChecklistItem({ ...newChecklistItem, quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                placeholder="1"
+                className="bg-zinc-900 border-zinc-800 text-white font-bold h-11"
+              />
             </div>
 
             {/* Rig Location Dropdown with Custom Option */}
