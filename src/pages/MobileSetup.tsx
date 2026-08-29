@@ -46,6 +46,7 @@ import {
   Search,
   SlidersHorizontal,
   ClipboardCheck,
+  Sparkles,
 } from "lucide-react";
 import {
   getChemicals,
@@ -103,6 +104,187 @@ interface PreDepartureItem {
   checked: boolean;
   notes?: string;
   jobType: "full_detail" | "exterior" | "interior" | "custom";
+}
+
+// ─────────────────────────────────────────────────────────
+// SOP-DERIVED MASTER CHECKLIST GENERATOR (Tools & Chemicals per Step)
+// ─────────────────────────────────────────────────────────
+export function generateSopPreDepartureItems(
+  chemicals?: Chemical[],
+  materials?: Material[],
+  tools?: Tool[]
+): PreDepartureItem[] {
+  const items: PreDepartureItem[] = [];
+
+  const exteriorToolsSupplies = [
+    { name: "Wheel Brush", category: "Tools" as const },
+    { name: "Tire Scrub Brush", category: "Tools" as const },
+    { name: "Pressure Washer", category: "Tools" as const },
+    { name: "Bug Sponge", category: "Supplies" as const },
+    { name: "Foam Cannon", category: "Tools" as const },
+    { name: "Microfiber Mitts", category: "Supplies" as const },
+    { name: "Grit Guard Buckets", category: "Tools" as const },
+    { name: "Fine Clay Bar", category: "Supplies" as const },
+    { name: "Clay Mitt", category: "Supplies" as const },
+    { name: "Car Blower", category: "Tools" as const },
+    { name: "Plush Drying Towel", category: "Supplies" as const },
+    { name: "Microfiber Applicator", category: "Supplies" as const },
+    { name: "Buffing Towel", category: "Supplies" as const },
+  ];
+
+  const exteriorChemicals = [
+    { name: "Dark Fury (4:1 light / 7:1 heavy)", category: "Chemicals" as const },
+    { name: "Dirt Buster / Muscle Magic", category: "Chemicals" as const },
+    { name: "Road Warrior (4:1)", category: "Chemicals" as const },
+    { name: "Meguiar's Gold Class / Cherry Foam (5:1)", category: "Chemicals" as const },
+    { name: "Formula 4 (20:1)", category: "Chemicals" as const },
+    { name: "Iron Remover", category: "Chemicals" as const },
+    { name: "Tar Remover", category: "Chemicals" as const },
+    { name: "Clay Lube", category: "Chemicals" as const },
+    { name: "drying aid/spray wax", category: "Chemicals" as const },
+    { name: "ceramic sealant/wax/coating", category: "Chemicals" as const },
+    { name: "Cover All Tire Dressing", category: "Chemicals" as const },
+  ];
+
+  const interiorToolsSupplies = [
+    { name: "Belongings Bag", category: "Supplies" as const },
+    { name: "Pre-Inspection Form", category: "Supplies" as const },
+    { name: "Air Blow Gun", category: "Tools" as const },
+    { name: "Tornador", category: "Tools" as const },
+    { name: "Shop Vac", category: "Tools" as const },
+    { name: "Carpet Scrub Brush", category: "Tools" as const },
+    { name: "Crevice Tool", category: "Tools" as const },
+    { name: "Drill Brush", category: "Tools" as const },
+    { name: "Detailing Brushes", category: "Supplies" as const },
+    { name: "Microfiber Towel", category: "Supplies" as const },
+    { name: "Horsehair Brush", category: "Tools" as const },
+    { name: "Hot Water Extractor", category: "Tools" as const },
+    { name: "Extractor Machine", category: "Tools" as const },
+    { name: "Glass Microfiber Towel", category: "Supplies" as const },
+    { name: "Reach Tool", category: "Tools" as const },
+    { name: "Microfiber Applicator Pad", category: "Supplies" as const },
+    { name: "Inspection Light", category: "Tools" as const },
+  ];
+
+  const interiorChemicals = [
+    { name: "Carpet Bomber (7:1 std / 5:1 heavy)", category: "Chemicals" as const },
+    { name: "Terminator / Zap It", category: "Chemicals" as const },
+    { name: "SP Does It All Enzyme Cleaner", category: "Chemicals" as const },
+    { name: "Pink Perfection (10:1)", category: "Chemicals" as const },
+    { name: "Green All", category: "Chemicals" as const },
+    { name: "P&S Xpress (3:1) / SP Cover All (4:1)", category: "Chemicals" as const },
+    { name: "Invisible Glass", category: "Chemicals" as const },
+  ];
+
+  let chemIdx = 0;
+  let supIdx = 0;
+  let toolIdx = 0;
+
+  const getDefaultLoc = (cat: "Chemicals" | "Supplies" | "Tools"): string => {
+    if (cat === "Chemicals") {
+      chemIdx++;
+      return chemIdx % 2 === 1 ? "Chemical Caddy 1" : "Chemical Caddy 2";
+    }
+    if (cat === "Supplies") {
+      supIdx++;
+      return supIdx % 2 === 1 ? "Driver Side Drawer" : "Passenger Side Compartment";
+    }
+    toolIdx++;
+    return "Rear Bed Skid";
+  };
+
+  const findMatch = (
+    itemName: string,
+    cat: "Chemicals" | "Supplies" | "Tools"
+  ): { location?: string; notes?: string } | null => {
+    const normItem = itemName.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+
+    if (cat === "Chemicals" && chemicals && chemicals.length > 0) {
+      const match = chemicals.find((c) => {
+        const cName = (c.name || "").toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+        const cBrand = (c.brand || "").toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+        const fullName = `${cBrand} ${cName}`.trim();
+        return (
+          (cName && normItem.includes(cName)) ||
+          (cName && cName.includes(normItem)) ||
+          (fullName && normItem.includes(fullName)) ||
+          (fullName && fullName.includes(normItem))
+        );
+      });
+      if (match) {
+        const loc = match.shelfLocation || match.shelf || "Chemical Caddy 1";
+        const ratioStr = match.dilutionRatios && match.dilutionRatios.length > 0
+          ? ` (${match.dilutionRatios.map(d => `${d.label}: ${d.ratio}`).join(', ')})`
+          : '';
+        return { location: loc, notes: `Linked Inventory: ${match.brand ? `${match.brand} ` : ''}${match.name}${ratioStr}` };
+      }
+    }
+
+    if (cat === "Supplies" && materials && materials.length > 0) {
+      const match = materials.find((m) => {
+        const mName = (m.name || "").toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+        return mName && (normItem.includes(mName) || mName.includes(normItem));
+      });
+      if (match) {
+        return { location: match.location || "Driver Side Drawer", notes: `Linked Inventory: ${match.name}` };
+      }
+    }
+
+    if (cat === "Tools" && tools && tools.length > 0) {
+      const match = tools.find((t) => {
+        const tName = (t.name || "").toLowerCase().replace(/[^a-z0-9]/g, ' ').trim();
+        return tName && (normItem.includes(tName) || tName.includes(normItem));
+      });
+      if (match) {
+        return { location: match.location || "Rear Bed Skid", notes: `Linked Inventory: ${match.name}` };
+      }
+    }
+
+    return null;
+  };
+
+  const buildItem = (
+    raw: { name: string; category: "Chemicals" | "Supplies" | "Tools" },
+    jobType: "exterior" | "interior" | "full_detail"
+  ): PreDepartureItem => {
+    const match = findMatch(raw.name, raw.category);
+    const cleanId = raw.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    return {
+      id: `sop-${jobType}-${cleanId}`,
+      name: raw.name,
+      category: raw.category,
+      location: match?.location || getDefaultLoc(raw.category),
+      checked: true,
+      jobType,
+      notes: match?.notes || `SOP Baseline Default (${jobType === 'full_detail' ? 'Full Detail' : jobType === 'exterior' ? 'Exterior Detail' : 'Interior Detail'})`
+    };
+  };
+
+  // 1. Exterior Loadout (24 items: 13 Tools/Supplies + 11 Chemicals)
+  exteriorToolsSupplies.forEach(raw => items.push(buildItem(raw, "exterior")));
+  exteriorChemicals.forEach(raw => items.push(buildItem(raw, "exterior")));
+
+  // 2. Interior Loadout (24 items: 17 Tools/Supplies + 7 Chemicals)
+  interiorToolsSupplies.forEach(raw => items.push(buildItem(raw, "interior")));
+  interiorChemicals.forEach(raw => items.push(buildItem(raw, "interior")));
+
+  // 3. Full Detail Loadout (48 items: Combined Exterior + Interior, no duplicates)
+  const fullCombined = [
+    ...exteriorToolsSupplies,
+    ...exteriorChemicals,
+    ...interiorToolsSupplies,
+    ...interiorChemicals
+  ];
+
+  const seenFullNames = new Set<string>();
+  fullCombined.forEach(raw => {
+    if (!seenFullNames.has(raw.name)) {
+      seenFullNames.add(raw.name);
+      items.push(buildItem(raw, "full_detail"));
+    }
+  });
+
+  return items;
 }
 
 const DEFAULT_PREDEPARTURE: PreDepartureItem[] = [
@@ -164,15 +346,77 @@ const MobileSetup = () => {
   const [media, setMedia] = useState<SetupMedia[]>([]);
   const [categories, setCategories] = useState<SetupCategory[]>([]);
 
-  // Pre-Departure & Rig Equipment State
-  const [checklist, setChecklist] = useState<PreDepartureItem[]>(() => {
+  // Source mode state: defaults to "sops"
+  const [checklistSourceMode, setChecklistSourceMode] = useState<"sops" | "inventory">(() => {
     try {
-      const saved = localStorage.getItem("f150_predeparture_checklist");
-      return saved ? JSON.parse(saved) : DEFAULT_PREDEPARTURE;
+      const saved = localStorage.getItem("f150_checklist_source_mode");
+      return (saved === "inventory" ? "inventory" : "sops") as "sops" | "inventory";
     } catch {
-      return DEFAULT_PREDEPARTURE;
+      return "sops";
     }
   });
+
+  // SOP-derived checklist state (DEFAULT)
+  const [sopChecklist, setSopChecklist] = useState<PreDepartureItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("f150_sop_predeparture_checklist");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return generateSopPreDepartureItems();
+  });
+
+  // Inventory-derived checklist state
+  const [inventoryChecklist, setInventoryChecklist] = useState<PreDepartureItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("f150_inventory_predeparture_checklist");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_PREDEPARTURE;
+  });
+
+  const checklist = checklistSourceMode === "sops" ? sopChecklist : inventoryChecklist;
+
+  const setChecklist = (updater: PreDepartureItem[] | ((prev: PreDepartureItem[]) => PreDepartureItem[])) => {
+    if (checklistSourceMode === "sops") {
+      setSopChecklist((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        try {
+          localStorage.setItem("f150_sop_predeparture_checklist", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    } else {
+      setInventoryChecklist((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        try {
+          localStorage.setItem("f150_inventory_predeparture_checklist", JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("f150_sop_predeparture_checklist", JSON.stringify(sopChecklist));
+    } catch (e) {
+      console.error("Failed to save SOP checklist to local storage", e);
+    }
+  }, [sopChecklist]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("f150_inventory_predeparture_checklist", JSON.stringify(inventoryChecklist));
+    } catch (e) {
+      console.error("Failed to save inventory checklist to local storage", e);
+    }
+  }, [inventoryChecklist]);
 
   // Dynamic custom rig locations list
   const [customRigLocations, setCustomRigLocations] = useState<string[]>(() => {
@@ -252,14 +496,6 @@ const MobileSetup = () => {
     fuelLevel: "full",
     conditionNote: "",
   });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("f150_predeparture_checklist", JSON.stringify(checklist));
-    } catch (e) {
-      console.error("Failed to save checklist to local storage", e);
-    }
-  }, [checklist]);
 
   // Master Inventory Search Results for adding to checklists
   const masterSearchResults = useMemo(() => {
@@ -625,6 +861,13 @@ const MobileSetup = () => {
       setTools(t);
       setMedia(savedMedia || []);
       setCategories(savedCats || []);
+
+      // Auto-link SOP pre-departure checklist against loaded inventory
+      const sopLinked = generateSopPreDepartureItems(c, m, t);
+      setSopChecklist(sopLinked);
+      try {
+        localStorage.setItem("f150_sop_predeparture_checklist", JSON.stringify(sopLinked));
+      } catch {}
       // Default to "all" to show the full list in natural order
       if (selectedCategoryForUpload === "none") {
         setSelectedCategoryForUpload("all");
@@ -1152,20 +1395,20 @@ const MobileSetup = () => {
                     align="start"
                     steps={[
                       {
-                        title: "1. Filter by Job Type",
+                        title: "1. Data Source Selection (SOPs vs Inventory)",
+                        desc: "Choose between 'My Custom List (From SOPs)' (Default, derived from procedural SOP step requirements) and 'Master Inventory Sync'."
+                      },
+                      {
+                        title: "2. Filter by Job Type",
                         desc: "Select Full Detail, Exterior, Interior, or Custom loadouts to view required chemicals, towels, and equipment."
                       },
                       {
-                        title: "2. Pre-Departure Verification",
+                        title: "3. Pre-Departure Verification",
                         desc: "Check off items as they are packed into the truck. Clear all or select all with one click."
                       },
                       {
-                        title: "3. Save My Loadout",
-                        desc: "Click 'Save My Loadout' to lock in your custom packing configuration as your saved shop default."
-                      },
-                      {
-                        title: "4. Reset Options",
-                        desc: "Restore your saved snapshot or revert to factory baseline loadouts anytime."
+                        title: "4. Save & Reset Options",
+                        desc: "Save your custom snapshot or click 'Reset to Original SOP Baseline' anytime to start over with pristine SOP step items."
                       }
                     ]}
                   />
@@ -1266,9 +1509,40 @@ const MobileSetup = () => {
                       <DropdownMenuItem onClick={resetToUserSavedSnapshot} className="text-xs font-bold cursor-pointer">
                         <RotateCcw className="h-3.5 w-3.5 mr-2 text-indigo-400" /> Reset to My Saved Snapshot
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={restoreFactoryDefaults} className="text-xs font-bold text-zinc-400 hover:text-white cursor-pointer">
-                        <RotateCcw className="h-3.5 w-3.5 mr-2 text-amber-400" /> Restore Factory Baseline
-                      </DropdownMenuItem>
+                      {checklistSourceMode === "sops" ? (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const fresh = generateSopPreDepartureItems(chemicals, materials, tools);
+                            setSopChecklist(fresh);
+                            try {
+                              localStorage.setItem("f150_sop_predeparture_checklist", JSON.stringify(fresh));
+                            } catch {}
+                            toast({
+                              title: "Restored to SOP Baseline",
+                              description: "Restored checklist to original SOP procedural specifications (Tools & Chemicals per step).",
+                            });
+                          }}
+                          className="text-xs font-bold text-indigo-300 hover:text-white cursor-pointer"
+                        >
+                          <Sparkles className="h-3.5 w-3.5 mr-2 text-indigo-400" /> Reset to Original SOP Baseline
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setInventoryChecklist(DEFAULT_PREDEPARTURE);
+                            try {
+                              localStorage.setItem("f150_inventory_predeparture_checklist", JSON.stringify(DEFAULT_PREDEPARTURE));
+                            } catch {}
+                            toast({
+                              title: "Restored to Inventory Baseline",
+                              description: "Restored checklist to original Master Inventory default loadouts.",
+                            });
+                          }}
+                          className="text-xs font-bold text-amber-400 hover:text-white cursor-pointer"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 mr-2 text-amber-400" /> Restore Factory Inventory Baseline
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
 
@@ -1286,6 +1560,55 @@ const MobileSetup = () => {
             {/* SUB-VIEW 1: PRE-DEPARTURE SERVICE CHECKLISTS */}
             {equipmentSubTab === "checklist" && (
               <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Checklist Data Source Selector Bar */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-zinc-950/90 p-3.5 rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-950/20">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-indigo-400 animate-pulse" />
+                      <span className="text-[11px] font-black uppercase tracking-wider text-zinc-300">
+                        Checklist Data Source:
+                      </span>
+                    </div>
+                    <Select
+                      value={checklistSourceMode}
+                      onValueChange={(val: "sops" | "inventory") => {
+                        setChecklistSourceMode(val);
+                        try {
+                          localStorage.setItem("f150_checklist_source_mode", val);
+                        } catch {}
+                        toast({
+                          title: "Checklist Data Source Changed",
+                          description: val === "sops"
+                            ? "Now showing My Custom List (SOP Standard) — Default"
+                            : "Now showing Master Inventory Sync list.",
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="bg-zinc-900 border-indigo-500/50 text-white font-bold h-9 text-xs px-3 min-w-[260px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-950 border-zinc-800 text-white">
+                        <SelectItem value="sops" className="font-bold text-indigo-400 cursor-pointer">
+                          ★ My Custom List (From SOPs) — DEFAULT
+                        </SelectItem>
+                        <SelectItem value="inventory" className="font-bold cursor-pointer">
+                          📦 Master Inventory Sync
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="text-[10px] font-bold tracking-wider text-right">
+                    {checklistSourceMode === "sops" ? (
+                      <span className="text-indigo-300 bg-indigo-500/10 px-2.5 py-1 rounded-lg border border-indigo-500/20">
+                        SOP Procedural Steps Mode (Tools & Chemicals per step)
+                      </span>
+                    ) : (
+                      <span className="text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                        Master Inventory Live Sync Mode
+                      </span>
+                    )}
+                  </div>
+                </div>
                 {/* Job Type Selector Pills */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-zinc-950/80 p-3 rounded-2xl border border-zinc-800/80">
                   <div className="flex flex-wrap items-center gap-2 flex-1">
