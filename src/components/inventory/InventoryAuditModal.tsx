@@ -11,7 +11,7 @@ import { Chemical, Material, Tool as Equipment, saveChemical, saveMaterial, save
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { getCurrentUser } from '@/lib/auth';
@@ -233,6 +233,11 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
   const [search, setSearch] = useState('');
   const [hideCounted, setHideCounted] = useState(false);
   const [globalDetailedMode, setGlobalDetailedMode] = useState(false);
+  const [customPrintCats, setCustomPrintCats] = useState<{ chemicals: boolean; supplies: boolean; equipment: boolean }>({
+    chemicals: true,
+    supplies: true,
+    equipment: true
+  });
   
   const handleGlobalDetailedModeToggle = (checked: boolean) => {
     setGlobalDetailedMode(checked);
@@ -678,201 +683,42 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
 
 
-  const handleExportPDF = (snapshot?: AuditSnapshot, groupBy: 'location' | 'category' = 'location') => {
-    const targetTab = snapshot ? snapshot.activeTab : activeTab;
+  const exportCustomReport = (
+    snapshot?: AuditSnapshot,
+    groupBy: 'location' | 'category' = 'location',
+    selectedCats: ('chemicals' | 'supplies' | 'equipment')[] = ['chemicals', 'supplies', 'equipment']
+  ) => {
     const targetChemAudit = snapshot ? snapshot.chemAudit : chemAudit;
     const targetSupplyAudit = snapshot ? snapshot.supplyAudit : supplyAudit;
     const targetEquipAudit = snapshot ? snapshot.equipAudit : equipAudit;
 
     const doc = new jsPDF();
     doc.setFontSize(20);
-    const titleCategory = targetTab.charAt(0).toUpperCase() + targetTab.slice(1);
-    doc.text(`Inventory Audit Checklist (${titleCategory} - By ${groupBy === 'category' ? 'Category' : 'Location'})`, 14, 22);
 
-    let subtitleParts: string[] = [];
-    subtitleParts.push(`Date: ${new Date().toLocaleString()}`);
+    let docTitle = 'Full Inventory Audit Report';
+    if (selectedCats.length === 1) {
+      const cName = selectedCats[0].charAt(0).toUpperCase() + selectedCats[0].slice(1);
+      docTitle = `Inventory Audit Checklist (${cName})`;
+    } else if (selectedCats.length < 3) {
+      const cNames = selectedCats.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(' & ');
+      docTitle = `Inventory Audit Report (${cNames})`;
+    }
+
+    doc.text(`${docTitle} (${groupBy === 'category' ? 'By Category' : 'By Location'})`, 14, 22);
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    let subtitleParts = [`Date: ${new Date().toLocaleString()}`];
     if (snapshot) {
       subtitleParts.push(`Snapshot from: ${new Date(snapshot.timestamp).toLocaleTimeString()}`);
     } else if (reviewMode) {
       subtitleParts.push(`Status: Audit Review`);
     }
-
-    let currentY = 35;
-    if (subtitleParts.length > 0) {
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(subtitleParts.join('  •  '), 14, 28);
-      doc.setTextColor(0, 0, 0);
-      currentY = 35;
-    }
-
-    if (targetTab === 'chemicals') {
-      const pdfGroups: Record<string, Chemical[]> = {};
-      const itemsToPrint = (snapshot || reviewMode) 
-        ? normalizedChemicals.filter(c => isChemCounted(c.id, targetChemAudit))
-        : filteredChemicals;
-
-      itemsToPrint.forEach(chem => {
-        const key = chem.shelfLocation || 'Unassigned / Unassigned';
-        if (!pdfGroups[key]) pdfGroups[key] = [];
-        pdfGroups[key].push(chem as Chemical);
-      });
-
-      const sortedGroupKeys = Object.keys(pdfGroups).sort(sortChemicalGroups);
-
-      sortedGroupKeys.forEach(groupName => {
-        const groupItems = pdfGroups[groupName].sort((a, b) => a.name.localeCompare(b.name));
-        if (groupItems.length === 0) return;
-        
-        if (currentY > 260) {
-          doc.addPage();
-          currentY = 20;
-        }
-
-        autoTable(doc, {
-          startY: currentY,
-          head: [[groupName, 'Size', 'Container Type', 'DB Qty', 'Actual Count']],
-          body: groupItems.map(c => {
-            const countedStr = isChemCounted(c.id, targetChemAudit) ? getChemTotalStock(c.id, c, targetChemAudit).toFixed(2) : '';
-            const containerType = (c as any).containerType || '';
-            return [
-              `${c.brand ? c.brand + ' / ' : ''}${c.name}`,
-              c.bottleSize || 'N/A',
-              containerType,
-              c.currentStock,
-              countedStr || (snapshot ? '0' : '')
-            ];
-          }),
-          theme: 'grid',
-          headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-          styles: { textColor: [0, 0, 0] },
-          columnStyles: {
-            0: { cellWidth: 'auto' },
-            1: { cellWidth: 25 },
-            2: { cellWidth: 35 },
-            3: { cellWidth: 20, halign: 'center' },
-            4: { cellWidth: 30 }
-          },
-          margin: { top: 10 }
-        });
-        currentY = (doc as any).lastAutoTable.finalY + 10;
-      });
-    } else {
-      const allItems = targetTab === 'supplies' ? supplies : equipment;
-      const targetAudit = targetTab === 'supplies' ? targetSupplyAudit : targetEquipAudit;
-      
-      const itemsToPrint = (snapshot || reviewMode)
-        ? allItems.filter(i => targetAudit[i.id]?.isCounted)
-        : (targetTab === 'supplies' ? filteredSupplies : filteredEquip);
-      
-      const pdfGroups: Record<string, any[]> = {};
-      itemsToPrint.forEach(item => {
-        if (groupBy === 'category') {
-          const cat = item.category || 'Unassigned';
-          if (!pdfGroups[cat]) pdfGroups[cat] = [];
-          pdfGroups[cat].push(item);
-        } else {
-          const baseLoc = (item as any).location || 'Unassigned';
-          const containerLoc = (item as any).containerLocation || '';
-          const loc = containerLoc ? `${baseLoc} - ${containerLoc}` : baseLoc;
-          if (!pdfGroups[loc]) pdfGroups[loc] = [];
-          pdfGroups[loc].push(item);
-        }
-      });
-
-      const sortedGroupKeys = groupBy === 'category'
-        ? Object.keys(pdfGroups).sort((a, b) => a.localeCompare(b))
-        : Object.keys(pdfGroups).sort(sortLocationGroups);
-
-      sortedGroupKeys.forEach(groupName => {
-        const groupItems = pdfGroups[groupName].sort((a, b) => a.name.localeCompare(b.name));
-        if (groupItems.length === 0) return;
-
-        if (currentY > 260) {
-          doc.addPage();
-          currentY = 20;
-        }
-
-        let head: string[][];
-        let columnStyles: any;
-
-        if (groupBy === 'category') {
-          if (targetTab === 'supplies') {
-            head = [[`Category: ${groupName}`, 'Location', 'Last Used', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
-          } else {
-            head = [[`Category: ${groupName}`, 'Location', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 40 }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 25 } };
-          }
-        } else {
-          if (targetTab === 'supplies') {
-            head = [[`Location: ${groupName}`, 'Category', 'Last Used', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
-          } else {
-            head = [[`Location: ${groupName}`, 'Category', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 25 } };
-          }
-        }
-
-        autoTable(doc, {
-          startY: currentY,
-          head,
-          body: groupItems.map((item: any) => {
-            const counted = targetAudit[item.id]?.counted;
-            const itemLoc = (item as any).containerLocation ? `${(item as any).location || 'Unassigned'} - ${(item as any).containerLocation}` : ((item as any).location || 'Unassigned');
-            const itemCat = item.category || 'Unassigned';
-
-            if (targetTab === 'supplies') {
-              const metaStr = localStorage.getItem(`supply_item_meta_${item.id}`);
-              const meta = metaStr ? JSON.parse(metaStr) : {};
-              const lastUsed = meta.lastUsedDate ? new Date(meta.lastUsedDate).toLocaleDateString() : 'N/A';
-              const col2Val = groupBy === 'category' ? itemLoc : itemCat;
-              return [
-                item.name,
-                col2Val,
-                lastUsed,
-                item.quantity || 1,
-                counted !== undefined ? String(counted) : (snapshot ? '0' : '')
-              ];
-            } else {
-              const col2Val = groupBy === 'category' ? itemLoc : itemCat;
-              return [
-                item.name,
-                col2Val,
-                item.quantity || 1,
-                counted !== undefined ? String(counted) : (snapshot ? '0' : '')
-              ];
-            }
-          }),
-          theme: 'grid',
-          headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-          styles: { textColor: [0, 0, 0] },
-          columnStyles,
-          margin: { top: 10 }
-        });
-        currentY = (doc as any).lastAutoTable.finalY + 10;
-      });
-    }
-
-    doc.save(`Inventory_Audit_${targetTab}_${groupBy}_${new Date().toISOString().split('T')[0]}.pdf`);
-  };
-
-  const handleExportFullReport = (snapshot?: AuditSnapshot, groupBy: 'location' | 'category' = 'location') => {
-    const targetChemAudit = snapshot ? snapshot.chemAudit : chemAudit;
-    const targetSupplyAudit = snapshot ? snapshot.supplyAudit : supplyAudit;
-    const targetEquipAudit = snapshot ? snapshot.equipAudit : equipAudit;
-
-    const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text(`Full Inventory Audit Report (${groupBy === 'category' ? 'By Category' : 'By Location'})`, 14, 22);
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Date: ${new Date().toLocaleString()}`, 14, 28);
+    doc.text(subtitleParts.join('  •  '), 14, 28);
     doc.setTextColor(0, 0, 0);
 
     let currentY = 40;
 
-    const renderCategory = (categoryName: string, items: any[], auditState: any) => {
+    const renderCategorySection = (categoryName: 'Chemicals' | 'Supplies' | 'Equipment', items: any[], auditState: any) => {
       if (items.length === 0) return;
       if (currentY > 240) {
         doc.addPage();
@@ -895,9 +741,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         } else if (groupBy === 'category') {
           groupKey = item.category || 'Unassigned';
         } else {
-          const baseLoc = item.location || 'Unassigned';
-          const containerLoc = item.containerLocation || '';
-          groupKey = containerLoc ? `${baseLoc} - ${containerLoc}` : baseLoc;
+          groupKey = item.location || 'Unassigned';
         }
         if (!pdfGroups[groupKey]) pdfGroups[groupKey] = [];
         pdfGroups[groupKey].push(item);
@@ -905,7 +749,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
       const sortedGroupKeys = (categoryName !== 'Chemicals' && groupBy === 'category')
         ? Object.keys(pdfGroups).sort((a, b) => a.localeCompare(b))
-        : Object.keys(pdfGroups).sort(sortLocationGroups);
+        : (categoryName === 'Chemicals' ? Object.keys(pdfGroups).sort(sortChemicalGroups) : Object.keys(pdfGroups).sort(sortLocationGroups));
 
       let totalItems = items.length;
       let totalCounted = 0;
@@ -921,25 +765,16 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
         let head: string[][];
         let columnStyles: any;
+
         if (categoryName === 'Chemicals') {
           head = [[`Location: ${groupName}`, 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
           columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
         } else if (groupBy === 'category') {
-          if (categoryName === 'Supplies') {
-            head = [[`Category: ${groupName}`, 'Location', 'Last Used', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
-          } else {
-            head = [[`Category: ${groupName}`, 'Location', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 40 }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 25 } };
-          }
+          head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'DB Qty', 'Actual Count']];
+          columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
         } else {
-          if (categoryName === 'Supplies') {
-            head = [[`Location: ${groupName}`, 'Category', 'Last Used', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
-          } else {
-            head = [[`Location: ${groupName}`, 'Category', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 25 } };
-          }
+          head = [[`Primary Location: ${groupName}`, 'Category', 'Secondary Location', 'DB Qty', 'Actual Count']];
+          columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
         }
 
         autoTable(doc, {
@@ -962,27 +797,25 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               const counted = auditState[item.id]?.counted;
               const isCounted = auditState[item.id]?.isCounted;
               if (isCounted) totalCounted++;
-              const itemLoc = (item as any).containerLocation ? `${(item as any).location || 'Unassigned'} - ${(item as any).containerLocation}` : ((item as any).location || 'Unassigned');
+              const primaryLoc = item.location || 'Unassigned';
+              const secondaryLoc = item.containerLocation || 'N/A';
               const itemCat = item.category || 'Unassigned';
-              const col2Val = groupBy === 'category' ? itemLoc : itemCat;
 
-              if (categoryName === 'Supplies') {
-                const metaStr = localStorage.getItem(`supply_item_meta_${item.id}`);
-                const meta = metaStr ? JSON.parse(metaStr) : {};
-                const lastUsed = meta.lastUsedDate ? new Date(meta.lastUsedDate).toLocaleDateString() : 'N/A';
+              if (groupBy === 'category') {
                 return [
                   item.name,
-                  col2Val,
-                  lastUsed,
+                  primaryLoc,
+                  secondaryLoc,
                   item.quantity || 1,
-                  isCounted ? String(counted) : ''
+                  isCounted ? String(counted) : (snapshot ? '0' : '')
                 ];
               } else {
                 return [
                   item.name,
-                  col2Val,
+                  itemCat,
+                  secondaryLoc,
                   item.quantity || 1,
-                  isCounted ? String(counted) : ''
+                  isCounted ? String(counted) : (snapshot ? '0' : '')
                 ];
               }
             }
@@ -1004,11 +837,38 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       currentY += 20;
     };
 
-    renderCategory('Chemicals', normalizedChemicals, targetChemAudit);
-    renderCategory('Supplies', supplies, targetSupplyAudit);
-    renderCategory('Equipment', equipment, targetEquipAudit);
+    if (selectedCats.includes('chemicals')) {
+      const chemItems = (snapshot || reviewMode)
+        ? normalizedChemicals.filter(c => isChemCounted(c.id, targetChemAudit))
+        : filteredChemicals;
+      renderCategorySection('Chemicals', chemItems, targetChemAudit);
+    }
 
-    doc.save(`Full_IAC_Report_${groupBy}_${new Date().toISOString().split('T')[0]}.pdf`);
+    if (selectedCats.includes('supplies')) {
+      const supplyItems = (snapshot || reviewMode)
+        ? supplies.filter(s => targetSupplyAudit[s.id]?.isCounted)
+        : filteredSupplies;
+      renderCategorySection('Supplies', supplyItems, targetSupplyAudit);
+    }
+
+    if (selectedCats.includes('equipment')) {
+      const equipItems = (snapshot || reviewMode)
+        ? equipment.filter(e => targetEquipAudit[e.id]?.isCounted)
+        : filteredEquip;
+      renderCategorySection('Equipment', equipItems, targetEquipAudit);
+    }
+
+    const filePrefix = selectedCats.length === 3 ? 'Full_IAC_Report' : `IAC_Report_${selectedCats.join('_')}`;
+    doc.save(`${filePrefix}_${groupBy}_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const handleExportPDF = (snapshot?: AuditSnapshot, groupBy: 'location' | 'category' = 'location') => {
+    const targetTab = snapshot ? snapshot.activeTab : activeTab;
+    exportCustomReport(snapshot, groupBy, [targetTab]);
+  };
+
+  const handleExportFullReport = (snapshot?: AuditSnapshot, groupBy: 'location' | 'category' = 'location') => {
+    exportCustomReport(snapshot, groupBy, ['chemicals', 'supplies', 'equipment']);
   };
 
   const handleConfirmUpdate = async () => {
@@ -2581,24 +2441,114 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                       <ChevronDown className="h-3.5 w-3.5 opacity-70 ml-0.5" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-zinc-200 z-[99999]" align="start">
-                    <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
-                      Full IAC Report Options
+                  <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-zinc-200 z-[99999] w-64 p-2" align="start">
+                    <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                      All 3 Categories (Full Report)
                     </div>
                     <DropdownMenuItem
-                      className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
-                      onClick={() => handleExportFullReport(viewingSnapshot || undefined, 'location')}
+                      className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 py-1.5 focus:bg-zinc-800 focus:text-white"
+                      onClick={() => exportCustomReport(viewingSnapshot || undefined, 'location', ['chemicals', 'supplies', 'equipment'])}
                     >
                       <MapPin className="h-3.5 w-3.5 text-blue-400" />
                       By Location (Standard)
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
-                      onClick={() => handleExportFullReport(viewingSnapshot || undefined, 'category')}
+                      className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 py-1.5 focus:bg-zinc-800 focus:text-white"
+                      onClick={() => exportCustomReport(viewingSnapshot || undefined, 'category', ['chemicals', 'supplies', 'equipment'])}
                     >
                       <FolderTree className="h-3.5 w-3.5 text-purple-400" />
                       By Category
                     </DropdownMenuItem>
+
+                    <DropdownMenuSeparator className="bg-zinc-800 my-1.5" />
+
+                    <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                      Single Category Reports
+                    </div>
+                    <DropdownMenuItem
+                      className="cursor-pointer hover:bg-zinc-800 text-xs font-medium flex items-center gap-2 py-1.5 focus:bg-zinc-800 focus:text-white"
+                      onClick={() => exportCustomReport(viewingSnapshot || undefined, 'location', ['chemicals'])}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+                      Chemicals Only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer hover:bg-zinc-800 text-xs font-medium flex items-center gap-2 py-1.5 focus:bg-zinc-800 focus:text-white"
+                      onClick={() => exportCustomReport(viewingSnapshot || undefined, 'location', ['supplies'])}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-blue-400"></span>
+                      Supplies Only
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer hover:bg-zinc-800 text-xs font-medium flex items-center gap-2 py-1.5 focus:bg-zinc-800 focus:text-white"
+                      onClick={() => exportCustomReport(viewingSnapshot || undefined, 'location', ['equipment'])}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-amber-400"></span>
+                      Equipment Only
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator className="bg-zinc-800 my-1.5" />
+
+                    <div className="px-2 py-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                      Custom Category Mix & Print
+                    </div>
+                    <div className="p-2 bg-zinc-900/90 rounded border border-zinc-800 space-y-2 mt-1">
+                      <div className="space-y-1.5 text-xs text-zinc-300">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={customPrintCats.chemicals}
+                            onChange={(e) => setCustomPrintCats(prev => ({ ...prev, chemicals: e.target.checked }))}
+                            className="rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-0"
+                          />
+                          <span>Chemicals</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={customPrintCats.supplies}
+                            onChange={(e) => setCustomPrintCats(prev => ({ ...prev, supplies: e.target.checked }))}
+                            className="rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-0"
+                          />
+                          <span>Supplies</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={customPrintCats.equipment}
+                            onChange={(e) => setCustomPrintCats(prev => ({ ...prev, equipment: e.target.checked }))}
+                            className="rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-0"
+                          />
+                          <span>Equipment</span>
+                        </label>
+                      </div>
+                      <div className="flex gap-1.5 pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] flex-1 bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-200"
+                          onClick={() => {
+                            const selected = (Object.keys(customPrintCats) as ('chemicals'|'supplies'|'equipment')[]).filter(k => customPrintCats[k]);
+                            if (selected.length === 0) return;
+                            exportCustomReport(viewingSnapshot || undefined, 'location', selected);
+                          }}
+                        >
+                          By Location
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] flex-1 bg-zinc-800 border-zinc-700 hover:bg-zinc-700 text-zinc-200"
+                          onClick={() => {
+                            const selected = (Object.keys(customPrintCats) as ('chemicals'|'supplies'|'equipment')[]).filter(k => customPrintCats[k]);
+                            if (selected.length === 0) return;
+                            exportCustomReport(viewingSnapshot || undefined, 'category', selected);
+                          }}
+                        >
+                          By Category
+                        </Button>
+                      </div>
+                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
