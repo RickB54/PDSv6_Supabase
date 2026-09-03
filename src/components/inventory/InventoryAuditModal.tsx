@@ -773,7 +773,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'DB Qty', 'Actual Count']];
           columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
         } else {
-          head = [[`Primary Location: ${groupName}`, 'Category', 'Secondary Location', 'DB Qty', 'Actual Count']];
+          head = [[`Primary Location: ${groupName}`, 'Secondary Location', 'Category', 'DB Qty', 'Actual Count']];
           columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
         }
 
@@ -812,8 +812,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               } else {
                 return [
                   item.name,
-                  itemCat,
                   secondaryLoc,
+                  itemCat,
                   item.quantity || 1,
                   isCounted ? String(counted) : (snapshot ? '0' : '')
                 ];
