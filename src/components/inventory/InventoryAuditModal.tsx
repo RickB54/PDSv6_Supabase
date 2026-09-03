@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle, Edit, Eye, Archive, FileText, Calendar, Heart, Link2 } from 'lucide-react';
+import { Printer, X, Plus, Minus, Search, Filter, CheckCircle, ChevronDown, ChevronUp, Info, HelpCircle, ArrowDownUp, Check, Download, Save, History, RotateCcw, Trash2, AlertTriangle, Edit, Eye, Archive, FileText, Calendar, Heart, Link2, MapPin, FolderTree } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -676,62 +676,38 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
 
 
-  const handleExportPDF = (snapshot?: AuditSnapshot) => {
+
+
+  const handleExportPDF = (snapshot?: AuditSnapshot, groupBy: 'location' | 'category' = 'location') => {
+    const targetTab = snapshot ? snapshot.activeTab : activeTab;
     const targetChemAudit = snapshot ? snapshot.chemAudit : chemAudit;
     const targetSupplyAudit = snapshot ? snapshot.supplyAudit : supplyAudit;
     const targetEquipAudit = snapshot ? snapshot.equipAudit : equipAudit;
-    const targetTab = snapshot ? snapshot.activeTab : activeTab;
-    const dateTitle = snapshot 
-      ? new Date(snapshot.timestamp).toLocaleString()
-      : new Date().toLocaleDateString();
 
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    const categoryName = targetTab.charAt(0).toUpperCase() + targetTab.slice(1);
-    
-    let mainTitle = `Inventory Audit Checklist for ${categoryName}`;
-    if (targetTab === 'chemicals' && filterShelves.length > 0) {
-      mainTitle = `IAC for ${categoryName}: ${filterShelves.join(', ')}`;
-    } else if (targetTab !== 'chemicals' && filterLocations.length > 0) {
-      mainTitle = `IAC for ${categoryName}: ${filterLocations.join(', ')}`;
-    }
-    
-    doc.text(mainTitle, 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Date: ${dateTitle}`, 140, 22);
+    doc.setFontSize(20);
+    const titleCategory = targetTab.charAt(0).toUpperCase() + targetTab.slice(1);
+    doc.text(`Inventory Audit Checklist (${titleCategory} - By ${groupBy === 'category' ? 'Category' : 'Location'})`, 14, 22);
 
-    let currentY = 30;
-
-    // Build descriptive subtitle based on filters/sort
     let subtitleParts: string[] = [];
-    if (targetTab === 'chemicals') {
-      if (filterShelves.length > 0) subtitleParts.push(`Shelves: ${filterShelves.join(', ')}`);
-      if (filterBrands.length > 0) subtitleParts.push(`Brands: ${filterBrands.join(', ')}`);
-      const sort = sortBy[0] || 'shelfLocation';
-      if (sort.startsWith('shelfLocation')) subtitleParts.push('Sorted By Location');
-      else if (sort.startsWith('brand')) subtitleParts.push('Sorted By Brand');
-    } else {
-      if (filterLocations.length > 0) subtitleParts.push(`Locations: ${filterLocations.join(', ')}`);
-      const sort = sortBy[0] || 'location';
-      if (sort.startsWith('location')) subtitleParts.push('Sorted By Location');
-      else if (sort.startsWith('category')) subtitleParts.push('Sorted By Category');
+    subtitleParts.push(`Date: ${new Date().toLocaleString()}`);
+    if (snapshot) {
+      subtitleParts.push(`Snapshot from: ${new Date(snapshot.timestamp).toLocaleTimeString()}`);
+    } else if (reviewMode) {
+      subtitleParts.push(`Status: Audit Review`);
     }
-    
+
+    let currentY = 35;
     if (subtitleParts.length > 0) {
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.text(subtitleParts.join('  •  '), 14, 28);
-      doc.setTextColor(0, 0, 0); // reset
+      doc.setTextColor(0, 0, 0);
       currentY = 35;
     }
 
     if (targetTab === 'chemicals') {
-
-
       const pdfGroups: Record<string, Chemical[]> = {};
-      
-      // If snapshot or review mode, we only show items that were counted, 
-      // or if live on main view, show all filtered items for checklist printing
       const itemsToPrint = (snapshot || reviewMode) 
         ? normalizedChemicals.filter(c => isChemCounted(c.id, targetChemAudit))
         : filteredChemicals;
@@ -742,7 +718,6 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         pdfGroups[key].push(chem as Chemical);
       });
 
-      // Sort groups logically by shelf then section using the single source of truth
       const sortedGroupKeys = Object.keys(pdfGroups).sort(sortChemicalGroups);
 
       sortedGroupKeys.forEach(groupName => {
@@ -766,7 +741,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               containerType,
               c.currentStock,
               countedStr || (snapshot ? '0' : '')
-            ]
+            ];
           }),
           theme: 'grid',
           headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
@@ -792,17 +767,25 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       
       const pdfGroups: Record<string, any[]> = {};
       itemsToPrint.forEach(item => {
-        const baseLoc = (item as any).location || 'Unassigned';
-        const containerLoc = (item as any).containerLocation || '';
-        const loc = containerLoc ? `${baseLoc} - ${containerLoc}` : baseLoc;
-        if (!pdfGroups[loc]) pdfGroups[loc] = [];
-        pdfGroups[loc].push(item);
+        if (groupBy === 'category') {
+          const cat = item.category || 'Unassigned';
+          if (!pdfGroups[cat]) pdfGroups[cat] = [];
+          pdfGroups[cat].push(item);
+        } else {
+          const baseLoc = (item as any).location || 'Unassigned';
+          const containerLoc = (item as any).containerLocation || '';
+          const loc = containerLoc ? `${baseLoc} - ${containerLoc}` : baseLoc;
+          if (!pdfGroups[loc]) pdfGroups[loc] = [];
+          pdfGroups[loc].push(item);
+        }
       });
 
-      const sortedLocs = Object.keys(pdfGroups).sort(sortLocationGroups);
+      const sortedGroupKeys = groupBy === 'category'
+        ? Object.keys(pdfGroups).sort((a, b) => a.localeCompare(b))
+        : Object.keys(pdfGroups).sort(sortLocationGroups);
 
-      sortedLocs.forEach(loc => {
-        const groupItems = pdfGroups[loc].sort((a, b) => a.name.localeCompare(b.name));
+      sortedGroupKeys.forEach(groupName => {
+        const groupItems = pdfGroups[groupName].sort((a, b) => a.name.localeCompare(b.name));
         if (groupItems.length === 0) return;
 
         if (currentY > 260) {
@@ -810,42 +793,78 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           currentY = 20;
         }
 
+        let head: string[][];
+        let columnStyles: any;
+
+        if (groupBy === 'category') {
+          if (targetTab === 'supplies') {
+            head = [[`Category: ${groupName}`, 'Location', 'Last Used', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
+          } else {
+            head = [[`Category: ${groupName}`, 'Location', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 40 }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 25 } };
+          }
+        } else {
+          if (targetTab === 'supplies') {
+            head = [[`Location: ${groupName}`, 'Category', 'Last Used', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
+          } else {
+            head = [[`Location: ${groupName}`, 'Category', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 25 } };
+          }
+        }
+
         autoTable(doc, {
           startY: currentY,
-          head: [[`Location: ${loc}`, 'DB Qty', 'Actual Count']],
+          head,
           body: groupItems.map((item: any) => {
             const counted = targetAudit[item.id]?.counted;
-            return [
-              item.name,
-              item.quantity || 1,
-              counted !== undefined ? String(counted) : (snapshot ? '0' : '')
-            ];
+            const itemLoc = (item as any).containerLocation ? `${(item as any).location || 'Unassigned'} - ${(item as any).containerLocation}` : ((item as any).location || 'Unassigned');
+            const itemCat = item.category || 'Unassigned';
+
+            if (targetTab === 'supplies') {
+              const metaStr = localStorage.getItem(`supply_item_meta_${item.id}`);
+              const meta = metaStr ? JSON.parse(metaStr) : {};
+              const lastUsed = meta.lastUsedDate ? new Date(meta.lastUsedDate).toLocaleDateString() : 'N/A';
+              const col2Val = groupBy === 'category' ? itemLoc : itemCat;
+              return [
+                item.name,
+                col2Val,
+                lastUsed,
+                item.quantity || 1,
+                counted !== undefined ? String(counted) : (snapshot ? '0' : '')
+              ];
+            } else {
+              const col2Val = groupBy === 'category' ? itemLoc : itemCat;
+              return [
+                item.name,
+                col2Val,
+                item.quantity || 1,
+                counted !== undefined ? String(counted) : (snapshot ? '0' : '')
+              ];
+            }
           }),
           theme: 'grid',
           headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
           styles: { textColor: [0, 0, 0] },
-          columnStyles: {
-            0: { cellWidth: 'auto' },
-            1: { cellWidth: 30, halign: 'center' },
-            2: { cellWidth: 40 }
-          },
+          columnStyles,
           margin: { top: 10 }
         });
         currentY = (doc as any).lastAutoTable.finalY + 10;
       });
     }
 
-    doc.save(`Inventory_Audit_${targetTab}_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Inventory_Audit_${targetTab}_${groupBy}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const handleExportFullReport = (snapshot?: AuditSnapshot) => {
+  const handleExportFullReport = (snapshot?: AuditSnapshot, groupBy: 'location' | 'category' = 'location') => {
     const targetChemAudit = snapshot ? snapshot.chemAudit : chemAudit;
     const targetSupplyAudit = snapshot ? snapshot.supplyAudit : supplyAudit;
     const targetEquipAudit = snapshot ? snapshot.equipAudit : equipAudit;
 
     const doc = new jsPDF();
     doc.setFontSize(20);
-    doc.text(`Full Inventory Audit Report`, 14, 22);
+    doc.text(`Full Inventory Audit Report (${groupBy === 'category' ? 'By Category' : 'By Location'})`, 14, 22);
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     doc.text(`Date: ${new Date().toLocaleString()}`, 14, 28);
@@ -866,28 +885,33 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
       const pdfGroups: Record<string, any[]> = {};
       items.forEach(item => {
-        let loc = 'Unassigned';
+        let groupKey = 'Unassigned';
         if (categoryName === 'Chemicals') {
           const rawShelf = (item as any).shelf;
           const rawSection = (item as any).section;
           const shelf = (typeof rawShelf === 'string' && rawShelf.trim()) ? rawShelf.trim() : 'Unassigned';
           const section = (typeof rawSection === 'string' && rawSection.trim()) ? rawSection.trim() : 'Unassigned';
-          loc = `${shelf} - ${section}`;
+          groupKey = `${shelf} - ${section}`;
+        } else if (groupBy === 'category') {
+          groupKey = item.category || 'Unassigned';
         } else {
           const baseLoc = item.location || 'Unassigned';
           const containerLoc = item.containerLocation || '';
-          loc = containerLoc ? `${baseLoc} - ${containerLoc}` : baseLoc;
+          groupKey = containerLoc ? `${baseLoc} - ${containerLoc}` : baseLoc;
         }
-        if (!pdfGroups[loc]) pdfGroups[loc] = [];
-        pdfGroups[loc].push(item);
+        if (!pdfGroups[groupKey]) pdfGroups[groupKey] = [];
+        pdfGroups[groupKey].push(item);
       });
 
-      const sortedLocs = Object.keys(pdfGroups).sort(sortLocationGroups);
+      const sortedGroupKeys = (categoryName !== 'Chemicals' && groupBy === 'category')
+        ? Object.keys(pdfGroups).sort((a, b) => a.localeCompare(b))
+        : Object.keys(pdfGroups).sort(sortLocationGroups);
+
       let totalItems = items.length;
       let totalCounted = 0;
 
-      sortedLocs.forEach(loc => {
-        const groupItems = pdfGroups[loc].sort((a, b) => a.name.localeCompare(b.name));
+      sortedGroupKeys.forEach(groupName => {
+        const groupItems = pdfGroups[groupName].sort((a, b) => a.name.localeCompare(b.name));
         if (groupItems.length === 0) return;
 
         if (currentY > 260) {
@@ -898,14 +922,24 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         let head: string[][];
         let columnStyles: any;
         if (categoryName === 'Chemicals') {
-          head = [[`Location: ${loc}`, 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+          head = [[`Location: ${groupName}`, 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
           columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
-        } else if (categoryName === 'Supplies') {
-          head = [[`Location: ${loc}`, 'Condition', 'Last Used', 'DB Qty', 'Actual Count']];
-          columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
+        } else if (groupBy === 'category') {
+          if (categoryName === 'Supplies') {
+            head = [[`Category: ${groupName}`, 'Location', 'Last Used', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
+          } else {
+            head = [[`Category: ${groupName}`, 'Location', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 40 }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 25 } };
+          }
         } else {
-          head = [[`Location: ${loc}`, 'DB Qty', 'Actual Count']];
-          columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30, halign: 'center' }, 2: { cellWidth: 40 } };
+          if (categoryName === 'Supplies') {
+            head = [[`Location: ${groupName}`, 'Category', 'Last Used', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
+          } else {
+            head = [[`Location: ${groupName}`, 'Category', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 20, halign: 'center' }, 3: { cellWidth: 25 } };
+          }
         }
 
         autoTable(doc, {
@@ -924,30 +958,33 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                 item.currentStock?.toFixed(2) || '0',
                 countedStr
               ];
-            } else if (categoryName === 'Supplies') {
-              const counted = auditState[item.id]?.counted;
-              const isCounted = auditState[item.id]?.isCounted;
-              if (isCounted) totalCounted++;
-              const metaStr = localStorage.getItem(`supply_item_meta_${item.id}`);
-              const meta = metaStr ? JSON.parse(metaStr) : {};
-              const condition = meta.conditionStatus || 'N/A';
-              const lastUsed = meta.lastUsedDate ? new Date(meta.lastUsedDate).toLocaleDateString() : 'N/A';
-              return [
-                item.name,
-                condition,
-                lastUsed,
-                item.quantity || 1,
-                isCounted ? String(counted) : ''
-              ];
             } else {
               const counted = auditState[item.id]?.counted;
               const isCounted = auditState[item.id]?.isCounted;
               if (isCounted) totalCounted++;
-              return [
-                item.name,
-                item.quantity || 1,
-                isCounted ? String(counted) : ''
-              ];
+              const itemLoc = (item as any).containerLocation ? `${(item as any).location || 'Unassigned'} - ${(item as any).containerLocation}` : ((item as any).location || 'Unassigned');
+              const itemCat = item.category || 'Unassigned';
+              const col2Val = groupBy === 'category' ? itemLoc : itemCat;
+
+              if (categoryName === 'Supplies') {
+                const metaStr = localStorage.getItem(`supply_item_meta_${item.id}`);
+                const meta = metaStr ? JSON.parse(metaStr) : {};
+                const lastUsed = meta.lastUsedDate ? new Date(meta.lastUsedDate).toLocaleDateString() : 'N/A';
+                return [
+                  item.name,
+                  col2Val,
+                  lastUsed,
+                  item.quantity || 1,
+                  isCounted ? String(counted) : ''
+                ];
+              } else {
+                return [
+                  item.name,
+                  col2Val,
+                  item.quantity || 1,
+                  isCounted ? String(counted) : ''
+                ];
+              }
             }
           }),
           theme: 'grid',
@@ -971,7 +1008,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     renderCategory('Supplies', supplies, targetSupplyAudit);
     renderCategory('Equipment', equipment, targetEquipAudit);
 
-    doc.save(`Full_IAC_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Full_IAC_Report_${groupBy}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const handleConfirmUpdate = async () => {
@@ -2424,15 +2461,34 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         >
                           <Eye className="h-3.5 w-3.5" /> View
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-xs bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 gap-1"
-                          onClick={() => handleExportPDF(entry)}
-                          title="Save PDF"
-                        >
-                          <Download className="h-3.5 w-3.5" /> PDF
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-xs bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 gap-1"
+                              title="Save PDF"
+                            >
+                              <Download className="h-3.5 w-3.5" /> PDF <ChevronDown className="h-3 w-3 opacity-60" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-zinc-200 z-[99999]" align="end">
+                            <DropdownMenuItem
+                              className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
+                              onClick={() => handleExportPDF(entry, 'location')}
+                            >
+                              <MapPin className="h-3.5 w-3.5 text-blue-400" />
+                              By Location
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
+                              onClick={() => handleExportPDF(entry, 'category')}
+                            >
+                              <FolderTree className="h-3.5 w-3.5 text-purple-400" />
+                              By Category
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         {!isCompleted && (
                           <Button
                             size="sm"
@@ -2480,23 +2536,71 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             
             {!showHistory && (
               <>
-                <Button
-                  variant="outline"
-                  className="border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white px-3 sm:px-4 flex-none justify-center"
-                  onClick={() => handleExportPDF(viewingSnapshot || undefined)}
-                  title="Save PDF"
-                >
-                  <Download className="h-4 w-4 sm:mr-1.5" /> <span className="hidden sm:inline">PDF</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-blue-500/50 bg-blue-900/20 text-blue-300 hover:bg-blue-800/40 hover:text-white px-3 sm:px-4 flex-none justify-center gap-1.5"
-                  onClick={() => handleExportFullReport(viewingSnapshot || undefined)}
-                  title="Export Combined PDF Report"
-                >
-                  <FileText className="h-4 w-4" /> 
-                  <span className="hidden sm:inline">Full IAC Report</span>
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="border-zinc-700 bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white px-3 sm:px-4 flex-none justify-center gap-1"
+                      title="Save PDF"
+                    >
+                      <Download className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">PDF</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-70 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-zinc-200 z-[99999]" align="start">
+                    <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                      Export Single Tab PDF
+                    </div>
+                    <DropdownMenuItem
+                      className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
+                      onClick={() => handleExportPDF(viewingSnapshot || undefined, 'location')}
+                    >
+                      <MapPin className="h-3.5 w-3.5 text-blue-400" />
+                      By Location (Standard)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
+                      onClick={() => handleExportPDF(viewingSnapshot || undefined, 'category')}
+                    >
+                      <FolderTree className="h-3.5 w-3.5 text-purple-400" />
+                      By Category
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="border-blue-500/50 bg-blue-900/20 text-blue-300 hover:bg-blue-800/40 hover:text-white px-3 sm:px-4 flex-none justify-center gap-1.5"
+                      title="Export Combined PDF Report"
+                    >
+                      <FileText className="h-4 w-4" /> 
+                      <span className="hidden sm:inline">Full IAC Report</span>
+                      <ChevronDown className="h-3.5 w-3.5 opacity-70 ml-0.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-zinc-200 z-[99999]" align="start">
+                    <div className="px-2 py-1.5 text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                      Full IAC Report Options
+                    </div>
+                    <DropdownMenuItem
+                      className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
+                      onClick={() => handleExportFullReport(viewingSnapshot || undefined, 'location')}
+                    >
+                      <MapPin className="h-3.5 w-3.5 text-blue-400" />
+                      By Location (Standard)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
+                      onClick={() => handleExportFullReport(viewingSnapshot || undefined, 'category')}
+                    >
+                      <FolderTree className="h-3.5 w-3.5 text-purple-400" />
+                      By Category
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
           </div>
