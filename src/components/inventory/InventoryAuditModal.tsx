@@ -529,10 +529,20 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     return s.gallons.some(j => j.count > 0) || (s.detailedMode && s.bottles.length > 0);
   };
 
-  const getFilteredItems = <T extends { id: string; name: string; brand?: string; category?: string }>(items: T[], auditState: Record<string, any>, checkCounted: (id: string) => boolean) => {
+  const getFilteredItems = <T extends { id: string; name: string; brand?: string; category?: string; notes?: string; wherePurchased?: string; location?: string; containerLocation?: string }>(items: T[], auditState: Record<string, any>, checkCounted: (id: string) => boolean) => {
     return items.filter(item => {
-      if (search && !item.name.toLowerCase().includes(search.toLowerCase()) && !(item.brand && item.brand.toLowerCase().includes(search.toLowerCase())) && !(item.category && item.category.toLowerCase().includes(search.toLowerCase()))) {
-        return false;
+      if (search) {
+        const q = search.toLowerCase().trim();
+        const matchesName = (item.name || '').toLowerCase().includes(q);
+        const matchesBrand = !!item.brand && item.brand.toLowerCase().includes(q);
+        const matchesCategory = !!item.category && item.category.toLowerCase().includes(q);
+        const matchesNotes = !!item.notes && item.notes.toLowerCase().includes(q);
+        const matchesWherePurchased = !!item.wherePurchased && item.wherePurchased.toLowerCase().includes(q);
+        const matchesLocation = !!item.location && item.location.toLowerCase().includes(q);
+        const matchesContainerLoc = !!item.containerLocation && item.containerLocation.toLowerCase().includes(q);
+        if (!matchesName && !matchesBrand && !matchesCategory && !matchesNotes && !matchesWherePurchased && !matchesLocation && !matchesContainerLoc) {
+          return false;
+        }
       }
       if (hideCounted && checkCounted(item.id)) return false;
       return true;

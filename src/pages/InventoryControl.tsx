@@ -794,10 +794,21 @@ const InventoryControl = () => {
   });
 
   const getSortedChemicals = () => {
-    let baseFiltered = (chemicals || []).filter(c =>
-      c && ((c.name || '').toLowerCase().includes((chemicalSearch || '').toLowerCase()) ||
-      (c.brand && c.brand.toLowerCase().includes((chemicalSearch || '').toLowerCase())))
-    );
+    const searchLower = (chemicalSearch || '').toLowerCase().trim();
+    let baseFiltered = (chemicals || []).filter(c => {
+      if (!c) return false;
+      if (!searchLower) return true;
+      return (
+        (c.name || '').toLowerCase().includes(searchLower) ||
+        (c.brand && c.brand.toLowerCase().includes(searchLower)) ||
+        (c.notes && c.notes.toLowerCase().includes(searchLower)) ||
+        (c.category && c.category.toLowerCase().includes(searchLower)) ||
+        (c.wherePurchased && c.wherePurchased.toLowerCase().includes(searchLower)) ||
+        (c.shelf && c.shelf.toLowerCase().includes(searchLower)) ||
+        (c.section && c.section.toLowerCase().includes(searchLower)) ||
+        (c.tags && c.tags.some((t: string) => t.toLowerCase().includes(searchLower)))
+      );
+    });
 
     // BRAND FILTER: If a specific brand is selected from the Jump-to list
     const specialModes = ["brand", "alphabetical", "low_stock", "no_cost", "updated_at", "where_purchased"];
@@ -849,10 +860,20 @@ const InventoryControl = () => {
   };
 
   const getSortedSupplies = () => {
-    let filtered = (supplies || []).filter(s =>
-      s && ((s.name || '').toLowerCase().includes((supplySearch || '').toLowerCase()) ||
-      (s.category && s.category.toLowerCase().includes((supplySearch || '').toLowerCase())))
-    );
+    const searchLower = (supplySearch || '').toLowerCase().trim();
+    let filtered = (supplies || []).filter(s => {
+      if (!s) return false;
+      if (!searchLower) return true;
+      return (
+        (s.name || '').toLowerCase().includes(searchLower) ||
+        (s.category && s.category.toLowerCase().includes(searchLower)) ||
+        (s.notes && s.notes.toLowerCase().includes(searchLower)) ||
+        (s.wherePurchased && s.wherePurchased.toLowerCase().includes(searchLower)) ||
+        (s.location && s.location.toLowerCase().includes(searchLower)) ||
+        (s.containerLocation && s.containerLocation.toLowerCase().includes(searchLower)) ||
+        ((s as any).subtype && (s as any).subtype.toLowerCase().includes(searchLower))
+      );
+    });
     
     // Vendor filtering (Jump to Vendor)
     if (!["name", "category", "low_stock", "no_cost", "updated_at", "where_purchased"].includes(supplySort)) {
@@ -902,9 +923,20 @@ const InventoryControl = () => {
   };
 
   const getSortedEquipment = () => {
-    let filtered = (equipment || []).filter(e =>
-      e && (e.name || '').toLowerCase().includes((equipmentSearch || '').toLowerCase())
-    );
+    const searchLower = (equipmentSearch || '').toLowerCase().trim();
+    let filtered = (equipment || []).filter(e => {
+      if (!e) return false;
+      if (!searchLower) return true;
+      return (
+        (e.name || '').toLowerCase().includes(searchLower) ||
+        (e.category && e.category.toLowerCase().includes(searchLower)) ||
+        (e.notes && e.notes.toLowerCase().includes(searchLower)) ||
+        (e.wherePurchased && e.wherePurchased.toLowerCase().includes(searchLower)) ||
+        (e.location && e.location.toLowerCase().includes(searchLower)) ||
+        (e.containerLocation && e.containerLocation.toLowerCase().includes(searchLower)) ||
+        ((e as any).brand && (e as any).brand.toLowerCase().includes(searchLower))
+      );
+    });
 
     // Vendor filtering (Jump to Vendor)
     if (!["name", "purchaseDate", "low_stock", "no_cost", "updated_at", "where_purchased"].includes(equipmentSort)) {

@@ -270,8 +270,13 @@ export default function MaterialInventoryPickerModal({
     let list = chemicals.filter(c => isChemicalCategoryMatch(c, 'exterior'));
     
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(c => c.name.toLowerCase().includes(q) || (c.brand && c.brand.toLowerCase().includes(q)));
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(c => 
+        c.name.toLowerCase().includes(q) || 
+        (c.brand && c.brand.toLowerCase().includes(q)) || 
+        (c.notes && c.notes.toLowerCase().includes(q)) ||
+        (c.wherePurchased && c.wherePurchased.toLowerCase().includes(q))
+      );
     }
 
     // Apply Sorting
@@ -306,8 +311,13 @@ export default function MaterialInventoryPickerModal({
     let list = chemicals.filter(c => isChemicalCategoryMatch(c, 'interior'));
 
     if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(c => c.name.toLowerCase().includes(q) || (c.brand && c.brand.toLowerCase().includes(q)));
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(c => 
+        c.name.toLowerCase().includes(q) || 
+        (c.brand && c.brand.toLowerCase().includes(q)) || 
+        (c.notes && c.notes.toLowerCase().includes(q)) ||
+        (c.wherePurchased && c.wherePurchased.toLowerCase().includes(q))
+      );
     }
 
     // Apply Sorting
@@ -339,7 +349,15 @@ export default function MaterialInventoryPickerModal({
   // Filtered & Sorted Supplies
   const filteredMaterials = useMemo(() => {
     let list = materials.filter(m => {
-      if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase()) && !(m.category && m.category.toLowerCase().includes(searchQuery.toLowerCase()))) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesName = m.name.toLowerCase().includes(q);
+        const matchesCat = !!m.category && m.category.toLowerCase().includes(q);
+        const matchesNotes = !!m.notes && m.notes.toLowerCase().includes(q);
+        const matchesPurchased = !!(m as any).wherePurchased && (m as any).wherePurchased.toLowerCase().includes(q);
+        const matchesLoc = !!(m as any).location && (m as any).location.toLowerCase().includes(q);
+        if (!matchesName && !matchesCat && !matchesNotes && !matchesPurchased && !matchesLoc) return false;
+      }
       return true;
     });
 
@@ -362,7 +380,15 @@ export default function MaterialInventoryPickerModal({
   // Filtered & Sorted Tools & Equipment
   const filteredTools = useMemo(() => {
     let list = tools.filter(t => {
-      if (searchQuery && !t.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesName = t.name.toLowerCase().includes(q);
+        const matchesNotes = !!t.notes && t.notes.toLowerCase().includes(q);
+        const matchesPurchased = !!(t as any).wherePurchased && (t as any).wherePurchased.toLowerCase().includes(q);
+        const matchesLoc = !!(t as any).location && (t as any).location.toLowerCase().includes(q);
+        const matchesBrand = !!(t as any).brand && (t as any).brand.toLowerCase().includes(q);
+        if (!matchesName && !matchesNotes && !matchesPurchased && !matchesLoc && !matchesBrand) return false;
+      }
       return true;
     });
 

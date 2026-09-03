@@ -857,6 +857,8 @@ export async function getTools(): Promise<Tool[]> {
             createdAt: item.created_at,
             updatedAt: item.updated_at,
             wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
+            actualPrice: item.actual_price,
+            salePrice: item.sale_price,
             location: loc,
             containerLocation: cl,
             hideFromIac: item.hide_from_iac || false
