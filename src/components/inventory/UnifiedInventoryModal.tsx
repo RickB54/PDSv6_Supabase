@@ -1315,7 +1315,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                          <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                          <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                             {availablePurchased.map(source => (
                               <div key={source} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                 <span 
@@ -1424,7 +1424,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                        <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                        <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                           {availableCategories.supply.map(cat => (
                             <div key={cat} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                               <span 
@@ -1530,7 +1530,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                        <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                        <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                           {availableSubtypes.map(sub => (
                             <div key={sub} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                               <span 
@@ -2007,7 +2007,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-56 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                              <div className="flex flex-col p-1 max-h-[260px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                              <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[260px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                                 <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                   <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].shelf = ""; setChemicalSizes(ns); }}>None</span>
                                   {!size.shelf && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
@@ -2046,7 +2046,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-56 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                              <div className="flex flex-col p-1 max-h-[260px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                              <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[260px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                                 <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                   <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].section = ""; setChemicalSizes(ns); }}>None</span>
                                   {!size.section && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
@@ -2124,7 +2124,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                                <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                                   <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                     <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...equipmentPurchases]; newP[index].location = ""; setEquipmentPurchases(newP); }}>None</span>
                                     {!purchase.location && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
@@ -2243,7 +2243,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                                <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                                   <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                     <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...equipmentPurchases]; newP[index].containerLocation = ""; setEquipmentPurchases(newP); }}>None</span>
                                     {!purchase.containerLocation && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
@@ -2571,7 +2571,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                                <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                                   <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                     <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...supplyPurchases]; newP[index].location = ""; setSupplyPurchases(newP); }}>None</span>
                                     {!purchase.location && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
@@ -2690,7 +2690,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                                <div className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                                   <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                     <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...supplyPurchases]; newP[index].containerLocation = ""; setSupplyPurchases(newP); }}>None</span>
                                     {!purchase.containerLocation && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}

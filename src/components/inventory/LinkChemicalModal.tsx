@@ -138,7 +138,7 @@ export function LinkChemicalModal({ open, onOpenChange, inventoryItem, onLinked 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
-                        <div className="max-h-48 overflow-y-auto border border-zinc-700 rounded-md bg-zinc-950">
+                        <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="max-h-48 overflow-y-auto border border-zinc-700 rounded-md bg-zinc-950">
                             {filteredOptions.length === 0 ? (
                                 <div className="p-3 text-sm text-zinc-500 text-center">No matches found.</div>
                             ) : (
