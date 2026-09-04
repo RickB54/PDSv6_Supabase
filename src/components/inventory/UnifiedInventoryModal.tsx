@@ -2314,7 +2314,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                         } else if (!currentSection) {
                                           ns[index].section = loc;
                                         } else {
-                                          // Replace section if both are filled
                                           ns[index].section = loc;
                                         }
                                         setChemicalSizes(ns); 
@@ -2322,6 +2321,35 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                     >
                                       <input type="checkbox" checked={isChecked} readOnly className="mr-3 cursor-pointer accent-blue-500" />
                                       <span className="flex-1 text-sm text-zinc-200">{loc}</span>
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all ml-2">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPendingEdit({
+                                              typeLabel: "Container Location",
+                                              fieldKind: "container_location",
+                                              oldValue: loc,
+                                              newValue: loc
+                                            });
+                                          }}
+                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                          title="Edit container location for ALL items"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteContainerLocation(e, loc);
+                                          }}
+                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                          title="Remove preset"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   );
                                 })}
@@ -2528,7 +2556,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   <input type="checkbox" checked={!purchase.containerLocation} readOnly className="mr-3 cursor-pointer accent-blue-500" />
                                   <span className="flex-1 text-sm text-zinc-200">None</span>
                                 </div>
-                                {getSecondaryLocationsForRack(purchase.location).map(loc => {
+                                {availableContainerLocations.map(loc => {
                                   const selections = (purchase.containerLocation || "").split(" - ").filter(Boolean);
                                   const isChecked = selections.includes(loc);
                                   return (
@@ -2550,6 +2578,35 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                     >
                                       <input type="checkbox" checked={isChecked} readOnly className="mr-3 cursor-pointer accent-blue-500" />
                                       <span className="flex-1 text-sm text-zinc-200">{loc}</span>
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all ml-2">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPendingEdit({
+                                              typeLabel: "Container Location",
+                                              fieldKind: "container_location",
+                                              oldValue: loc,
+                                              newValue: loc
+                                            });
+                                          }}
+                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                          title="Edit container location for ALL items"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteContainerLocation(e, loc);
+                                          }}
+                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                          title="Remove preset"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   );
                                 })}
@@ -2930,7 +2987,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   <input type="checkbox" checked={!purchase.containerLocation} readOnly className="mr-3 cursor-pointer accent-blue-500" />
                                   <span className="flex-1 text-sm text-zinc-200">None</span>
                                 </div>
-                                {getSecondaryLocationsForRack(purchase.location).map(loc => {
+                                {availableContainerLocations.map(loc => {
                                   const selections = (purchase.containerLocation || "").split(" - ").filter(Boolean);
                                   const isChecked = selections.includes(loc);
                                   return (
@@ -2952,6 +3009,35 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                     >
                                       <input type="checkbox" checked={isChecked} readOnly className="mr-3 cursor-pointer accent-blue-500" />
                                       <span className="flex-1 text-sm text-zinc-200">{loc}</span>
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all ml-2">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPendingEdit({
+                                              typeLabel: "Container Location",
+                                              fieldKind: "container_location",
+                                              oldValue: loc,
+                                              newValue: loc
+                                            });
+                                          }}
+                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                          title="Edit container location for ALL items"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteContainerLocation(e, loc);
+                                          }}
+                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                          title="Remove preset"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   );
                                 })}
