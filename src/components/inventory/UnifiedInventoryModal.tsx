@@ -699,10 +699,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
       const initialSubtype = (firstItem as any).subtype || "";
       const initialUnit = (firstItem as any).unitOfMeasure || "";
       const initialCat = (firstItem as any).category || "";
-      setCustomCategory(initialCat && 
-        (mode === 'equipment' || mode === 'tool' ? 
-          !availableCategories.equipment.includes(initialCat) : 
-          !availableCategories.supply.includes(initialCat)));
+      const initialChemCat = (firstItem as any).chemicalCategory || (firstItem as any).chemical_category || "";
+      setCustomCategory(mode === 'chemical' ? (initialChemCat ? !((availableCategories.chemical || DEFAULT_CATEGORIES.chemical).includes(initialChemCat)) : false) : (initialCat && (mode === 'equipment' || mode === 'tool' ? !availableCategories.equipment.includes(initialCat) : !availableCategories.supply.includes(initialCat))));
       setCustomSubtype(initialSubtype && !availableSubtypes.includes(initialSubtype));
       setCustomUnit(initialUnit && !getUnitOptions().includes(initialUnit));
       
@@ -719,6 +717,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         currentStock: firstItem?.currentStock ? String(firstItem.currentStock) : ((firstItem as any).currentStock || f.currentStock),
         threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : f.threshold),
         category: (firstItem as any).category || f.category,
+        chemicalCategory: initialChemCat || f.chemicalCategory || "",
         subtype: initialSubtype,
         quantity: firstItem?.quantity ? String(firstItem.quantity) : ((firstItem as any).quantity || f.quantity),
         costPerItem: firstItem?.costPerItem ? String(firstItem.costPerItem) : ((firstItem as any).costPerItem || ""),
@@ -1440,6 +1439,15 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               {mode === 'chemical' ? (
                 <div className="space-y-3">
                   <div>
+                    <Label className="text-xs text-zinc-400">Primary Location</Label>
+                    <Input
+                      value="Chemical Rack"
+                      readOnly
+                      disabled
+                      className="bg-zinc-900/80 border-zinc-700 text-zinc-300 h-9 text-sm font-medium cursor-not-allowed"
+                    />
+                  </div>
+                  <div>
                     <Label className="text-xs text-zinc-400">Where Purchased</Label>
                     {!customPurchased ? (
                       <Popover>
@@ -2133,10 +2141,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       </div>
 
 
-                      {/* Per-row Shelf & Section */}
+                      {/* Per-row Secondary Location (Shelf & Section) */}
                       <div className="col-span-2 grid grid-cols-2 gap-3 pt-1 mt-1 border-t border-emerald-800/20">
                         <div>
-                          <Label className="text-xs text-zinc-400">Shelf Location</Label>
+                          <Label className="text-xs text-zinc-400">Secondary Location (Shelf Level)</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
@@ -2150,7 +2158,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].shelf = ""; setChemicalSizes(ns); }}>None</span>
                                   {!size.shelf && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
                                 </div>
-                                {availableShelves.map(shelf => (
+                                {Array.from(new Set([...getSecondaryLocationsForRack("Chemical Rack"), ...availableShelves])).map(shelf => (
                                   <div key={shelf} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                     <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].shelf = shelf; setChemicalSizes(ns); }}>{shelf}</span>
                                     {size.shelf === shelf && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
