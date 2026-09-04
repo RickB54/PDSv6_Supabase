@@ -198,7 +198,15 @@ export async function getChemicals(): Promise<Chemical[]> {
             else if (rawSection) secLoc = rawSection;
         }
 
-        const rawCategory = item.category || '';
+        let rawCategory = item.category || '';
+        let chemLocation = item.location || 'Chemical Rack';
+
+        if (rawCategory.includes('|__L__|')) {
+            const parts = rawCategory.split('|__L__|');
+            rawCategory = parts[0];
+            chemLocation = parts[1] || 'Chemical Rack';
+        }
+
         let usageCategory = rawCategory;
         let chemCategory = item.chemical_category || item.chemicalCategory || '';
         if (rawCategory.includes('|__CC__|')) {
@@ -234,7 +242,7 @@ export async function getChemicals(): Promise<Chemical[]> {
             category: usageCategory,
             chemicalCategory: chemCategory || (['exterior', 'interior', 'both'].includes(usageCategory.toLowerCase()) ? 'General Chemicals' : (usageCategory || 'General Chemicals')),
             hideFromIac: item.hide_from_iac || false,
-            location: item.location || 'Chemical Rack',
+            location: chemLocation,
             containerLocation: secLoc
         };
     });
@@ -253,6 +261,9 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     let categoryToSave = chemical.category?.trim() || '';
     if (chemical.chemicalCategory && chemical.chemicalCategory.trim()) {
         categoryToSave = `${chemical.category?.trim() || ''}|__CC__|${chemical.chemicalCategory.trim()}`;
+    }
+    if (chemical.location && chemical.location !== 'Chemical Rack') {
+        categoryToSave = `${categoryToSave}|__L__|${chemical.location.trim()}`;
     }
 
     const dbData: any = {
@@ -277,7 +288,6 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         shelf_location: (chemical.shelfLocation || (chemical.shelf && chemical.section ? `${chemical.shelf} - ${chemical.section}` : (chemical.shelf || chemical.section || ''))) || null,
         shelf: chemical.shelf?.trim() || null,
         section: chemical.section?.trim() || null,
-        location: chemical.location || 'Chemical Rack',
         category: categoryToSave || null,
         hide_from_iac: chemical.hideFromIac ?? false,
         updated_at: new Date().toISOString()
