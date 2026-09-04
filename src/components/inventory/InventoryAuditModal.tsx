@@ -593,7 +593,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         key = c.tags && c.tags.length > 0 ? c.tags.join(', ') : 'Untagged';
       } else if (primarySort === 'name') {
         key = 'All Chemicals';
+      } else if (primarySort === 'shelfLocation') {
+        const primaryLoc = c.location || 'Chemical Rack';
+        const secondaryLoc = c.shelfLocation || '';
+        key = secondaryLoc ? `${primaryLoc} - ${secondaryLoc}` : primaryLoc;
       }
+      
       if (!groups[key]) groups[key] = [];
       groups[key].push(c);
     });
@@ -735,18 +740,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       doc.text(`${categoryName} Section`, 14, currentY);
       currentY += 10;
 
-      // For Chemicals By Location: print a single top-level "Chemical Rack" label, then group by Secondary Location.
-      // This prevents all 44 chemicals collapsing into one group (item.location is always 'Chemical Rack').
-      if (categoryName === 'Chemicals' && groupBy === 'location') {
-        if (currentY > 240) { doc.addPage(); currentY = 20; }
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(40, 80, 160);
-        doc.text('Primary Location: Chemical Rack', 14, currentY);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        currentY += 7;
-      }
+      // We no longer print a hardcoded "Chemical Rack" header here, 
+      // because we now group by the actual Primary Location dynamically.
 
       const pdfGroups: Record<string, any[]> = {};
       items.forEach(item => {
@@ -759,9 +754,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             groupKey = item.category ? (item.category.charAt(0).toUpperCase() + item.category.slice(1)) : 'Unassigned';
           }
         } else if (categoryName === 'Chemicals') {
-          // Group by Secondary Location (containerLocation = "4th Shelf - Left Side", etc.)
-          // NOT by item.location which is always 'Chemical Rack' for every item
-          groupKey = item.containerLocation || item.shelfLocation || 'Unassigned';
+          // Group by Primary Location
+          groupKey = item.location || 'Chemical Rack';
         } else {
           groupKey = item.location || 'Unassigned';
         }
@@ -771,10 +765,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
       const sortedGroupKeys = (groupBy === 'category')
         ? Object.keys(pdfGroups).sort((a, b) => a.localeCompare(b))
-        // Chemicals By Location: group keys are "4th Shelf - Left Side" etc. — use shelf sort, not rack sort
-        : (categoryName === 'Chemicals')
-          ? Object.keys(pdfGroups).sort(sortChemicalGroups)
-          : Object.keys(pdfGroups).sort(sortLocationGroups);
+        : Object.keys(pdfGroups).sort(sortLocationGroups);
 
       let totalItems = items.length;
       let totalCounted = 0;
@@ -799,9 +790,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
             columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30 }, 2: { cellWidth: 38 }, 3: { cellWidth: 26 }, 4: { cellWidth: 20 }, 5: { cellWidth: 16, halign: 'center' }, 6: { cellWidth: 20 } };
           } else {
-            // By Location: group header IS the secondary location — label columns accordingly
-            head = [[`Secondary Location: ${groupName}`, 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 26 }, 3: { cellWidth: 18, halign: 'center' }, 4: { cellWidth: 22 } };
+            // By Location: group header IS the primary location, add secondary location as a column
+            head = [[`Primary Location: ${groupName}`, 'Secondary Location', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 40 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20 }, 4: { cellWidth: 15, halign: 'center' }, 5: { cellWidth: 22 } };
           }
         } else if (groupBy === 'category') {
           head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'DB Qty', 'Actual Count']];
@@ -833,9 +824,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   countedStr
                 ];
               } else {
-                // By Location: secondary location is the group header, so only show item name + container type
                 return [
                   `${item.brand ? item.brand + ' / ' : ''}${item.name} (${item.bottleSize || 'N/A'})`,
+                  secLoc,
                   containerType,
                   percent,
                   item.currentStock?.toFixed(2) || '0',
