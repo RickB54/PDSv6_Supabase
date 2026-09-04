@@ -75,6 +75,7 @@ export interface Chemical {
     shelf?: string;
     section?: string;
     category?: string;
+    chemicalCategory?: string;
     hideFromIac?: boolean;
     location?: string;
     containerLocation?: string;
@@ -221,6 +222,7 @@ export async function getChemicals(): Promise<Chemical[]> {
             shelf: rawShelf,
             section: rawSection,
             category: item.category || '',
+            chemicalCategory: item.chemical_category || item.chemicalCategory || '',
             hideFromIac: item.hide_from_iac || false,
             location: 'Chemical Rack',
             containerLocation: secLoc
@@ -261,6 +263,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         shelf: chemical.shelf?.trim() || null,
         section: chemical.section?.trim() || null,
         category: chemical.category?.trim() || null,
+        chemical_category: chemical.chemicalCategory?.trim() || null,
         hide_from_iac: chemical.hideFromIac ?? false,
         updated_at: new Date().toISOString()
     };
@@ -851,14 +854,16 @@ export async function deleteMaterial(id: string): Promise<void> {
     if (error) throw error;
 }
 
-export async function batchUpdateCategory(oldCat: string, newCat: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool'): Promise<void> {
+export async function batchUpdateCategory(oldCat: string, newCat: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool' | 'chemical' | 'chemicals'): Promise<void> {
     if (isDemoActive()) return;
     const isSupply = targetMode === 'supply' || targetMode === 'material';
-    const table = isSupply ? 'materials' : 'tools';
+    const isChemical = targetMode === 'chemical' || targetMode === 'chemicals';
+    const table = isSupply ? 'materials' : isChemical ? 'chemicals' : 'tools';
+    const colName = isChemical ? 'chemical_category' : 'category';
     const { error } = await supabase
         .from(table)
-        .update({ category: newCat, updated_at: new Date().toISOString() })
-        .eq('category', oldCat);
+        .update({ [colName]: newCat, updated_at: new Date().toISOString() })
+        .eq(colName, oldCat);
 
     if (error) {
         console.error(`batchUpdateCategory error in ${table}:`, error);

@@ -24,6 +24,7 @@ export interface Chemical {
     name: string;
     brand?: string;
     category: ChemicalCategory;
+    chemicalCategory?: string;
     description: string;
     used_for: string[]; // Top 3-5 bullet points
 

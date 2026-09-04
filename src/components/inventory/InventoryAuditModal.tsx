@@ -738,7 +738,12 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       items.forEach(item => {
         let groupKey = 'Unassigned';
         if (groupBy === 'category') {
-          groupKey = item.category ? (item.category.charAt(0).toUpperCase() + item.category.slice(1)) : 'Unassigned';
+          if (categoryName === 'Chemicals') {
+            const cCat = item.chemicalCategory || item.category;
+            groupKey = cCat ? (cCat.charAt(0).toUpperCase() + cCat.slice(1)) : 'Unassigned';
+          } else {
+            groupKey = item.category ? (item.category.charAt(0).toUpperCase() + item.category.slice(1)) : 'Unassigned';
+          }
         } else {
           groupKey = item.location || (categoryName === 'Chemicals' ? 'Chemical Rack' : 'Unassigned');
         }
