@@ -276,8 +276,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_EQUIPMENT_UNITS = ["Units", "Pieces", "Sets"];
   const DEFAULT_PURCHASED = ["Amazon", "Home Depot", "Harbor Freight", "Lowe's", "Vevor", "Walmart", "Oreilly's Auto Parts", "Queensboro.com", "VistaPrint.com"];
   const DEFAULT_CATEGORIES = {
-    supply: ["Other", "Towels/Rags", "Bottle", "Business Item", "Safety Item", "Brush", "Tool", "Consumable", "Chemical", "PPE"],
-    equipment: ["Power Tool", "Hand Tool", "Equipment", "Accessory", "Vehicle", "Other"]
+    supply: ["Bottles & Containers", "Brushes & Applicators", "Business & Branding", "Clay & Decontamination", "Other", "Safety & PPE", "Tools & Accessories", "Towels & Microfiber"],
+    equipment: ["Accessories & Carts", "Hand Tools & Guns", "Power Equipment & Systems", "Security & Office", "Storage & Organizers"],
+    chemical: ["APCs & Degreasers", "Car Washes & Soaps", "Glass Cleaners", "Interior & Carpet Care", "Polishes & Protectants", "Wheel & Tire Care", "General Chemicals"]
   };
   const DEFAULT_SUBTYPES = ["Small", "Medium", "Large", "Extra Large"];
   const DEFAULT_SHELVES = ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy"];
@@ -377,9 +378,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     return DEFAULT_CONTAINER_LOCATIONS;
   });
 
-  const [availableCategories, setAvailableCategories] = useState<{supply: string[], equipment: string[]}>(() => {
+  const [availableCategories, setAvailableCategories] = useState<{supply: string[], equipment: string[], chemical?: string[]}>(() => {
     const saved = localStorage.getItem('inventory_preferred_categories');
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    const parsed = saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+    if (!parsed.chemical) parsed.chemical = DEFAULT_CATEGORIES.chemical;
+    return parsed;
   });
 
   const [availableSubtypes, setAvailableSubtypes] = useState<string[]>(() => {
@@ -430,7 +433,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [pendingDelete, setPendingDelete] = useState<{type: string, action: () => void} | null>(null);
   const [pendingEdit, setPendingEdit] = useState<{
     typeLabel: string;
-    fieldKind: 'category_supply' | 'category_equipment' | 'location' | 'container_location';
+    fieldKind: 'category_supply' | 'category_equipment' | 'category_chemical' | 'location' | 'container_location';
     oldValue: string;
     newValue: string;
   } | null>(null);
@@ -462,6 +465,14 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         await batchUpdateCategory(oldValue, newValue, 'equipment');
         if (form.category === oldValue) {
           setForm(prev => ({ ...prev, category: newValue }));
+        }
+      } else if (fieldKind === 'category_chemical') {
+        const chemCats = availableCategories.chemical || DEFAULT_CATEGORIES.chemical;
+        const updatedList = chemCats.map(c => c === oldValue ? newValue : c);
+        updateCategories({ ...availableCategories, chemical: Array.from(new Set(updatedList)).sort() });
+        await batchUpdateCategory(oldValue, newValue, 'chemical');
+        if (form.chemicalCategory === oldValue) {
+          setForm(prev => ({ ...prev, chemicalCategory: newValue }));
         }
       } else if (fieldKind === 'location') {
         const updatedList = availableLocations.map(l => l === oldValue ? newValue : l);
@@ -549,7 +560,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     });
   };
 
-  const updateCategories = (newList: {supply: string[], equipment: string[]}) => {
+  const updateCategories = (newList: {supply: string[], equipment: string[], chemical?: string[]}) => {
     setAvailableCategories(newList);
     localStorage.setItem('inventory_preferred_categories', JSON.stringify(newList));
   };
@@ -934,6 +945,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             shelf: size.shelf?.trim() || undefined,
             section: size.section?.trim() || undefined,
             category: form.category || undefined,
+            chemicalCategory: form.chemicalCategory || undefined,
             hideFromIac: form.hideFromIac,
           };
           
@@ -1299,14 +1311,125 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                   </div>
                 )}
                 {mode === 'chemical' && (
-                  <div>
-                    <Label className="text-xs text-zinc-400">Category</Label>
-                    <Input
-                      value={form.category || ""}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
-                      className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                      placeholder="e.g. Waxes & Sealants"
-                    />
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs text-zinc-400">Chemical Category (Functional Group)</Label>
+                      {!customCategory ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                            >
+                              <span className="truncate">{form.chemicalCategory || "Select Chemical Category..."}</span>
+                              <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                            <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                              {(availableCategories.chemical || DEFAULT_CATEGORIES.chemical).map(cat => (
+                                <div key={cat} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                  <span 
+                                    className="flex-1 text-sm text-zinc-200" 
+                                    onClick={() => setForm({...form, chemicalCategory: cat})}
+                                  >
+                                    {cat}
+                                  </span>
+                                  {form.chemicalCategory === cat && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                    <button 
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPendingEdit({
+                                          typeLabel: "Chemical Category",
+                                          fieldKind: "category_chemical",
+                                          oldValue: cat,
+                                          newValue: cat
+                                        });
+                                      }}
+                                      className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                      title="Edit category for ALL chemical items"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button 
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const chemCats = availableCategories.chemical || DEFAULT_CATEGORIES.chemical;
+                                        safeDeleteOption("category", () => updateCategories({ ...availableCategories, chemical: chemCats.filter(c => c !== cat) }));
+                                      }}
+                                      className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                      title="Remove from presets"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                              <div className="h-px bg-zinc-800 my-1" />
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  setCustomCategory(true);
+                                  setForm({...form, chemicalCategory: ""});
+                                }}
+                                className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                              >
+                                <Plus className="h-4 w-4" />
+                                Add Custom Category
+                              </button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Input
+                            value={form.chemicalCategory || ""}
+                            autoFocus
+                            onChange={(e) => setForm({ ...form, chemicalCategory: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                const chemCats = availableCategories.chemical || DEFAULT_CATEGORIES.chemical;
+                                if (form.chemicalCategory && !chemCats.includes(form.chemicalCategory)) {
+                                  updateCategories({ ...availableCategories, chemical: [...chemCats, form.chemicalCategory].sort() });
+                                }
+                                setCustomCategory(false);
+                              }
+                            }}
+                            className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                            placeholder="Enter custom chemical category..."
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const chemCats = availableCategories.chemical || DEFAULT_CATEGORIES.chemical;
+                              if (form.chemicalCategory && !chemCats.includes(form.chemicalCategory)) {
+                                updateCategories({ ...availableCategories, chemical: [...chemCats, form.chemicalCategory].sort() });
+                              }
+                              setCustomCategory(false);
+                            }}
+                            className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                            title="Save and Return"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs text-zinc-400">Usage Type (Exterior/Interior/Both)</Label>
+                      <Input
+                        value={form.category || ""}
+                        onChange={(e) => setForm({ ...form, category: e.target.value })}
+                        className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                        placeholder="e.g. exterior, interior, both"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
