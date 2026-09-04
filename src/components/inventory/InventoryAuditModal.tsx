@@ -754,8 +754,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             groupKey = item.category ? (item.category.charAt(0).toUpperCase() + item.category.slice(1)) : 'Unassigned';
           }
         } else if (categoryName === 'Chemicals') {
-          // Group by Primary Location
-          groupKey = item.location || 'Chemical Rack';
+          // Group by Primary Location + Secondary Location
+          const primLoc = item.location || 'Chemical Rack';
+          const secLoc = item.containerLocation || item.shelfLocation || 'N/A';
+          groupKey = `${primLoc}|${secLoc}`;
         } else {
           groupKey = item.location || 'Unassigned';
         }
@@ -765,7 +767,19 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
       const sortedGroupKeys = (groupBy === 'category')
         ? Object.keys(pdfGroups).sort((a, b) => a.localeCompare(b))
-        : Object.keys(pdfGroups).sort(sortLocationGroups);
+        : Object.keys(pdfGroups).sort((a, b) => {
+            if (categoryName === 'Chemicals') {
+              const [primA, secA] = a.split('|');
+              const [primB, secB] = b.split('|');
+              // Ensure Chemical Rack is always at the top
+              if (primA === 'Chemical Rack' && primB !== 'Chemical Rack') return -1;
+              if (primB === 'Chemical Rack' && primA !== 'Chemical Rack') return 1;
+              
+              if (primA !== primB) return primA.localeCompare(primB);
+              return sortChemicalGroups(secA || '', secB || '');
+            }
+            return sortLocationGroups(a, b);
+        });
 
       let totalItems = items.length;
       let totalCounted = 0;
@@ -790,9 +804,10 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
             head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
             columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30 }, 2: { cellWidth: 38 }, 3: { cellWidth: 26 }, 4: { cellWidth: 20 }, 5: { cellWidth: 16, halign: 'center' }, 6: { cellWidth: 20 } };
           } else {
-            // By Location: group header IS the primary location, add secondary location as a column
-            head = [[`Primary Location: ${groupName}`, 'Secondary Location', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 40 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20 }, 4: { cellWidth: 15, halign: 'center' }, 5: { cellWidth: 22 } };
+            // By Location: group header IS the primary & secondary location
+            const [primLoc, secLoc] = groupName.split('|');
+            head = [[`Primary: ${primLoc} | Sec: ${secLoc}`, 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 26 }, 3: { cellWidth: 18, halign: 'center' }, 4: { cellWidth: 22 } };
           }
         } else if (groupBy === 'category') {
           head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'DB Qty', 'Actual Count']];
@@ -824,9 +839,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                   countedStr
                 ];
               } else {
+                // SecLoc is in the header, so we omit it from the columns
                 return [
                   `${item.brand ? item.brand + ' / ' : ''}${item.name} (${item.bottleSize || 'N/A'})`,
-                  secLoc,
                   containerType,
                   percent,
                   item.currentStock?.toFixed(2) || '0',
@@ -1732,7 +1747,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                               <>
                                 <span className="w-1 h-1 bg-zinc-700 rounded-full shrink-0" />
                                 <span className="text-purple-400/80 break-words">
-                                  {c.shelf || 'No Shelf'} / {c.section || 'No Section'}
+                                  {c.section ? (c.shelf ? `${c.shelf} / ${c.section}` : c.section) : c.shelf}
                                 </span>
                               </>
                             )}
