@@ -2387,7 +2387,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       <div>
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <div>
-                            <Label className="text-xs text-zinc-400">Location</Label>
+                            <Label className="text-xs text-zinc-400">Primary Location</Label>
                           {!customLocationEquip[index] ? (
                             <Popover>
                               <PopoverTrigger asChild>
@@ -2506,7 +2506,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           )}
                         </div>
                         <div>
-                          <Label className="text-xs text-zinc-400">Container Location</Label>
+                          <Label className="text-xs text-zinc-400">Secondary Location</Label>
                           {!customContainerLocationEquip[index] ? (
                             <Popover>
                               <PopoverTrigger asChild>
@@ -2834,7 +2834,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       <div>
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <div>
-                            <Label className="text-xs text-zinc-400">Location</Label>
+                            <Label className="text-xs text-zinc-400">Primary Location</Label>
                           {!customLocationSupply[index] ? (
                             <Popover>
                               <PopoverTrigger asChild>
@@ -2953,7 +2953,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           )}
                         </div>
                         <div>
-                          <Label className="text-xs text-zinc-400">Container Location</Label>
+                          <Label className="text-xs text-zinc-400">Secondary Location</Label>
                           {!customContainerLocationSupply[index] ? (
                             <Popover>
                               <PopoverTrigger asChild>

@@ -809,8 +809,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           } else {
             // By Location: group header IS the primary & secondary location
             const [primLoc, secLoc] = groupName.split('|');
-            head = [[`Primary: ${primLoc} | Sec: ${secLoc}`, 'Size', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 18 }, 2: { cellWidth: 32 }, 3: { cellWidth: 24 }, 4: { cellWidth: 16, halign: 'center' }, 5: { cellWidth: 22 } };
+            head = [[`Primary: ${primLoc} | Sec: ${secLoc}`, 'Size', 'Category', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 16 }, 2: { cellWidth: 26 }, 3: { cellWidth: 22 }, 4: { cellWidth: 18 }, 5: { cellWidth: 14, halign: 'center' }, 6: { cellWidth: 18 } };
           }
         } else if (groupBy === 'category') {
           head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'DB Qty', 'Actual Count']];
@@ -833,6 +833,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               const primLoc = item.location || 'Chemical Rack';
               const sizeStr = item.bottleSize || 'N/A';
               const nameStr = `${item.brand ? item.brand + ' / ' : ''}${item.name}`;
+              const catStr = item.chemicalCategory || (item as any).chemical_category || item.category || 'N/A';
               
               if (groupBy === 'category') {
                 return [
@@ -850,6 +851,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                 return [
                   nameStr,
                   sizeStr,
+                  catStr,
                   containerType,
                   percent,
                   item.currentStock?.toFixed(2) || '0',
