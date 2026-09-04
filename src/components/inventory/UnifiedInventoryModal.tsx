@@ -2507,122 +2507,77 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Secondary Location</Label>
-                          {!customContainerLocationEquip[index] ? (
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                                >
-                                  <span className="truncate">{purchase.containerLocation || "Select container..."}</span>
-                                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                                <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                                  <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                    <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...equipmentPurchases]; newP[index].containerLocation = ""; setEquipmentPurchases(newP); }}>None</span>
-                                    {!purchase.containerLocation && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                  </div>
-                                  {getSecondaryLocationsForRack(purchase.location).map(loc => (
-                                    <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                      <span 
-                                        className="flex-1 text-sm text-zinc-200" 
-                                        onClick={() => {
-                                          const newP = [...equipmentPurchases];
-                                          newP[index].containerLocation = loc;
-                                          setEquipmentPurchases(newP);
-                                        }}
-                                      >
-                                        {loc}
-                                      </span>
-                                      {purchase.containerLocation === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                        <button 
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setPendingEdit({
-                                              typeLabel: "Container Location",
-                                              fieldKind: "container_location",
-                                              oldValue: loc,
-                                              newValue: loc
-                                            });
-                                          }}
-                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
-                                          title="Edit container location for ALL items"
-                                        >
-                                          <Pencil className="h-3.5 w-3.5" />
-                                        </button>
-                                        <button 
-                                          type="button"
-                                          onClick={(e) => {
-                                            handleDeleteContainerLocation(e, loc);
-                                          }}
-                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                          title="Remove preset"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  <div className="h-px bg-zinc-800 my-1" />
-                                  <button 
-                                    type="button"
-                                    onClick={() => {
-                                      setCustomContainerLocationEquip({ ...customContainerLocationEquip, [index]: true });
-                                      const newP = [...equipmentPurchases];
-                                      newP[index].containerLocation = "";
-                                      setEquipmentPurchases(newP);
-                                    }}
-                                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                    Add Custom Container
-                                  </button>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          ) : (
-                            <div className="flex gap-2">
-                              <Input
-                                value={purchase.containerLocation || ""}
-                                autoFocus
-                                onChange={(e) => {
-                                  const newP = [...equipmentPurchases];
-                                  newP[index].containerLocation = e.target.value;
-                                  setEquipmentPurchases(newP);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    if (purchase.containerLocation && !availableContainerLocations.includes(purchase.containerLocation)) {
-                                      updateContainerLocations([...availableContainerLocations, purchase.containerLocation].sort());
-                                    }
-                                    setCustomContainerLocationEquip({ ...customContainerLocationEquip, [index]: false });
-                                  }
-                                }}
-                                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                                placeholder="e.g. Interior Carry Bag"
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  if (purchase.containerLocation && !availableContainerLocations.includes(purchase.containerLocation)) {
-                                    updateContainerLocations([...availableContainerLocations, purchase.containerLocation].sort());
-                                  }
-                                  setCustomContainerLocationEquip({ ...customContainerLocationEquip, [index]: false });
-                                }}
-                                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                                title="Save and Return"
-                              >
-                                <Check className="h-4 w-4" />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                                <span className="truncate">
+                                  {purchase.containerLocation || "Select container..."}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
                               </Button>
-                            </div>
-                          )}
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                              <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                <div className="px-2 py-1.5 text-xs text-zinc-400 font-medium bg-zinc-800/50 rounded-sm mb-1">
+                                  Select up to 2 items
+                                </div>
+                                <div 
+                                  className="flex items-center group hover:bg-zinc-800 rounded px-2 py-2 cursor-pointer transition-colors"
+                                  onClick={() => { const newP = [...equipmentPurchases]; newP[index].containerLocation = ""; setEquipmentPurchases(newP); }}
+                                >
+                                  <input type="checkbox" checked={!purchase.containerLocation} readOnly className="mr-3 cursor-pointer accent-blue-500" />
+                                  <span className="flex-1 text-sm text-zinc-200">None</span>
+                                </div>
+                                {getSecondaryLocationsForRack(purchase.location).map(loc => {
+                                  const selections = (purchase.containerLocation || "").split(" - ").filter(Boolean);
+                                  const isChecked = selections.includes(loc);
+                                  return (
+                                    <div 
+                                      key={loc} 
+                                      className="flex items-center group hover:bg-zinc-800 rounded px-2 py-2 cursor-pointer transition-colors"
+                                      onClick={() => { 
+                                        const newP = [...equipmentPurchases]; 
+                                        let newSelections = [...selections];
+                                        if (isChecked) {
+                                          newSelections = newSelections.filter(s => s !== loc);
+                                        } else {
+                                          if (newSelections.length >= 2) newSelections.shift();
+                                          newSelections.push(loc);
+                                        }
+                                        newP[index].containerLocation = newSelections.join(" - ");
+                                        setEquipmentPurchases(newP); 
+                                      }}
+                                    >
+                                      <input type="checkbox" checked={isChecked} readOnly className="mr-3 cursor-pointer accent-blue-500" />
+                                      <span className="flex-1 text-sm text-zinc-200">{loc}</span>
+                                    </div>
+                                  );
+                                })}
+                                <div className="h-px bg-zinc-800 my-2" />
+                                <div className="px-2 pb-1">
+                                  <Input
+                                    placeholder="+ Custom location (Press Enter)..."
+                                    className="bg-zinc-800 border-zinc-700 text-white h-8 text-xs"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        const v = (e.target as HTMLInputElement).value.trim();
+                                        if (v) { 
+                                          if (!availableContainerLocations.includes(v)) updateContainerLocations([...availableContainerLocations, v].sort()); 
+                                          const newP = [...equipmentPurchases]; 
+                                          const selections = (newP[index].containerLocation || "").split(" - ").filter(Boolean);
+                                          if (selections.length >= 2) selections.shift();
+                                          selections.push(v);
+                                          newP[index].containerLocation = selections.join(" - ");
+                                          setEquipmentPurchases(newP); 
+                                          (e.target as HTMLInputElement).value = ""; 
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -2954,122 +2909,77 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Secondary Location</Label>
-                          {!customContainerLocationSupply[index] ? (
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                                >
-                                  <span className="truncate">{purchase.containerLocation || "Select container..."}</span>
-                                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                                <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                                  <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                    <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...supplyPurchases]; newP[index].containerLocation = ""; setSupplyPurchases(newP); }}>None</span>
-                                    {!purchase.containerLocation && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                  </div>
-                                  {getSecondaryLocationsForRack(purchase.location).map(loc => (
-                                    <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                      <span 
-                                        className="flex-1 text-sm text-zinc-200" 
-                                        onClick={() => {
-                                          const newP = [...supplyPurchases];
-                                          newP[index].containerLocation = loc;
-                                          setSupplyPurchases(newP);
-                                        }}
-                                      >
-                                        {loc}
-                                      </span>
-                                      {purchase.containerLocation === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                                        <button 
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setPendingEdit({
-                                              typeLabel: "Container Location",
-                                              fieldKind: "container_location",
-                                              oldValue: loc,
-                                              newValue: loc
-                                            });
-                                          }}
-                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
-                                          title="Edit container location for ALL items"
-                                        >
-                                          <Pencil className="h-3.5 w-3.5" />
-                                        </button>
-                                        <button 
-                                          type="button"
-                                          onClick={(e) => {
-                                            handleDeleteContainerLocation(e, loc);
-                                          }}
-                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                          title="Remove preset"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  <div className="h-px bg-zinc-800 my-1" />
-                                  <button 
-                                    type="button"
-                                    onClick={() => {
-                                      setCustomContainerLocationSupply({ ...customContainerLocationSupply, [index]: true });
-                                      const newP = [...supplyPurchases];
-                                      newP[index].containerLocation = "";
-                                      setSupplyPurchases(newP);
-                                    }}
-                                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                    Add Custom Container
-                                  </button>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          ) : (
-                            <div className="flex gap-2">
-                              <Input
-                                value={purchase.containerLocation || ""}
-                                autoFocus
-                                onChange={(e) => {
-                                  const newP = [...supplyPurchases];
-                                  newP[index].containerLocation = e.target.value;
-                                  setSupplyPurchases(newP);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    if (purchase.containerLocation && !availableContainerLocations.includes(purchase.containerLocation)) {
-                                      updateContainerLocations([...availableContainerLocations, purchase.containerLocation].sort());
-                                    }
-                                    setCustomContainerLocationSupply({ ...customContainerLocationSupply, [index]: false });
-                                  }
-                                }}
-                                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                                placeholder="e.g. Interior Carry Bag"
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  if (purchase.containerLocation && !availableContainerLocations.includes(purchase.containerLocation)) {
-                                    updateContainerLocations([...availableContainerLocations, purchase.containerLocation].sort());
-                                  }
-                                  setCustomContainerLocationSupply({ ...customContainerLocationSupply, [index]: false });
-                                }}
-                                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                                title="Save and Return"
-                              >
-                                <Check className="h-4 w-4" />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                                <span className="truncate">
+                                  {purchase.containerLocation || "Select container..."}
+                                </span>
+                                <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
                               </Button>
-                            </div>
-                          )}
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                              <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                <div className="px-2 py-1.5 text-xs text-zinc-400 font-medium bg-zinc-800/50 rounded-sm mb-1">
+                                  Select up to 2 items
+                                </div>
+                                <div 
+                                  className="flex items-center group hover:bg-zinc-800 rounded px-2 py-2 cursor-pointer transition-colors"
+                                  onClick={() => { const newP = [...supplyPurchases]; newP[index].containerLocation = ""; setSupplyPurchases(newP); }}
+                                >
+                                  <input type="checkbox" checked={!purchase.containerLocation} readOnly className="mr-3 cursor-pointer accent-blue-500" />
+                                  <span className="flex-1 text-sm text-zinc-200">None</span>
+                                </div>
+                                {getSecondaryLocationsForRack(purchase.location).map(loc => {
+                                  const selections = (purchase.containerLocation || "").split(" - ").filter(Boolean);
+                                  const isChecked = selections.includes(loc);
+                                  return (
+                                    <div 
+                                      key={loc} 
+                                      className="flex items-center group hover:bg-zinc-800 rounded px-2 py-2 cursor-pointer transition-colors"
+                                      onClick={() => { 
+                                        const newP = [...supplyPurchases]; 
+                                        let newSelections = [...selections];
+                                        if (isChecked) {
+                                          newSelections = newSelections.filter(s => s !== loc);
+                                        } else {
+                                          if (newSelections.length >= 2) newSelections.shift();
+                                          newSelections.push(loc);
+                                        }
+                                        newP[index].containerLocation = newSelections.join(" - ");
+                                        setSupplyPurchases(newP); 
+                                      }}
+                                    >
+                                      <input type="checkbox" checked={isChecked} readOnly className="mr-3 cursor-pointer accent-blue-500" />
+                                      <span className="flex-1 text-sm text-zinc-200">{loc}</span>
+                                    </div>
+                                  );
+                                })}
+                                <div className="h-px bg-zinc-800 my-2" />
+                                <div className="px-2 pb-1">
+                                  <Input
+                                    placeholder="+ Custom location (Press Enter)..."
+                                    className="bg-zinc-800 border-zinc-700 text-white h-8 text-xs"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        const v = (e.target as HTMLInputElement).value.trim();
+                                        if (v) { 
+                                          if (!availableContainerLocations.includes(v)) updateContainerLocations([...availableContainerLocations, v].sort()); 
+                                          const newP = [...supplyPurchases]; 
+                                          const selections = (newP[index].containerLocation || "").split(" - ").filter(Boolean);
+                                          if (selections.length >= 2) selections.shift();
+                                          selections.push(v);
+                                          newP[index].containerLocation = selections.join(" - ");
+                                          setSupplyPurchases(newP); 
+                                          (e.target as HTMLInputElement).value = ""; 
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

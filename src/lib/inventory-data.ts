@@ -665,10 +665,9 @@ export function sanitizeSupplyEquipmentLocation(rawLoc: string = '', rawCl: stri
         return { location: '', containerLocation: '' };
     }
 
-    const validShelves = SUPPLIES_EQUIPMENT_TAXONOMY[loc] || [];
-    if (!validShelves.includes(cl)) {
-        cl = '';
-    }
+    // We no longer strictly enforce validShelves because the user can add custom container locations 
+    // that are not in SUPPLIES_EQUIPMENT_TAXONOMY.
+
 
     return { location: loc, containerLocation: cl };
 }
