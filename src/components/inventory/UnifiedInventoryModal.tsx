@@ -316,19 +316,21 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   ];
 
   const getSecondaryLocationsForRack = (rackName?: string): string[] => {
+    const customLocs = availableContainerLocations.filter(loc => !DEFAULT_CONTAINER_LOCATIONS.includes(loc));
+    
     if (rackName === "Medium Grey Rack") {
-      return ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "5th Shelf", "Top Shelf"];
+      return Array.from(new Set(["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "5th Shelf", "Top Shelf", ...customLocs])).sort();
     }
     if (rackName === "Small Brown Rack") {
-      return ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "Top Shelf"];
+      return Array.from(new Set(["Bottom Shelf", "2nd Shelf", "3rd Shelf", "Top Shelf", ...customLocs])).sort();
     }
     if (rackName === "1 x 4 Back Wall Shelf") {
-      return ["Bottom Shelf", "Top Shelf"];
+      return Array.from(new Set(["Bottom Shelf", "Top Shelf", ...customLocs])).sort();
     }
     if (rackName === "Chemical Rack") {
-      return ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf"];
+      return Array.from(new Set(["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf", ...customLocs])).sort();
     }
-    return DEFAULT_CONTAINER_LOCATIONS;
+    return availableContainerLocations;
   };
 
   const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
@@ -371,8 +373,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     if (saved) {
       try {
         const parsed: string[] = JSON.parse(saved);
-        const valid = parsed.filter(l => DEFAULT_LOCATIONS.includes(l));
-        return Array.from(new Set([...DEFAULT_LOCATIONS, ...valid]));
+        return Array.from(new Set([...DEFAULT_LOCATIONS, ...parsed]));
       } catch {
         return DEFAULT_LOCATIONS;
       }
@@ -385,8 +386,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     if (saved) {
       try {
         const parsed: string[] = JSON.parse(saved);
-        const valid = parsed.filter(c => DEFAULT_CONTAINER_LOCATIONS.includes(c));
-        return Array.from(new Set([...DEFAULT_CONTAINER_LOCATIONS, ...valid]));
+        return Array.from(new Set([...DEFAULT_CONTAINER_LOCATIONS, ...parsed]));
       } catch {
         return DEFAULT_CONTAINER_LOCATIONS;
       }
