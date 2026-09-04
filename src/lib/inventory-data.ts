@@ -71,12 +71,13 @@ export interface Chemical {
     salePrice?: number;
     notes?: string;
     isConcentrate?: boolean;
-    tags?: string[];
     shelfLocation?: string;
     shelf?: string;
     section?: string;
     category?: string;
     hideFromIac?: boolean;
+    location?: string;
+    containerLocation?: string;
 }
 
 export interface Material {
@@ -186,33 +187,44 @@ export async function getChemicals(): Promise<Chemical[]> {
             ct = parts[1] || ct;
         }
 
+        const rawShelf = item.shelf || '';
+        const rawSection = item.section || '';
+        let secLoc = item.shelf_location || '';
+        if (!secLoc || secLoc === rawShelf) {
+            if (rawShelf && rawSection) secLoc = `${rawShelf} - ${rawSection}`;
+            else if (rawShelf) secLoc = rawShelf;
+            else if (rawSection) secLoc = rawSection;
+        }
+
         return {
             id: item.id,
             name: item.name,
             brand: item.brand, // NEW: Map brand
             bottleSize: bs,
             containerType: ct,
-        costPerBottle: item.cost_per_bottle || 0,
-        threshold: item.threshold || 0,
-        currentStock: item.current_stock || 0,
-        imageUrl: item.image_url,
-        chemicalLibraryId: item.chemical_library_id,
-        createdAt: item.created_at,
-        updatedAt: item.updated_at,
-        dilutionRatios: item.dilution_ratios || [],
-        wherePurchased: item.where_purchased,
-        purchaseDate: item.purchase_date,
-        actualPrice: item.actual_price,
-        salePrice: item.sale_price,
-        notes: item.notes,
-        isConcentrate: item.is_concentrate ?? true,
-        tags: item.tags || [],
-        shelfLocation: item.shelf_location || '',
-        shelf: item.shelf || '',
-        section: item.section || '',
-        category: item.category || '',
-        hideFromIac: item.hide_from_iac || false
-    };
+            costPerBottle: item.cost_per_bottle || 0,
+            threshold: item.threshold || 0,
+            currentStock: item.current_stock || 0,
+            imageUrl: item.image_url,
+            chemicalLibraryId: item.chemical_library_id,
+            createdAt: item.created_at,
+            updatedAt: item.updated_at,
+            dilutionRatios: item.dilution_ratios || [],
+            wherePurchased: item.where_purchased,
+            purchaseDate: item.purchase_date,
+            actualPrice: item.actual_price,
+            salePrice: item.sale_price,
+            notes: item.notes,
+            isConcentrate: item.is_concentrate ?? true,
+            tags: item.tags || [],
+            shelfLocation: secLoc,
+            shelf: rawShelf,
+            section: rawSection,
+            category: item.category || '',
+            hideFromIac: item.hide_from_iac || false,
+            location: 'Chemical Rack',
+            containerLocation: secLoc
+        };
     });
 }
 
@@ -245,7 +257,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         notes: chemical.notes || null,
         is_concentrate: chemical.isConcentrate ?? true,
         tags: chemical.tags || [],
-        shelf_location: chemical.shelfLocation?.trim() || null,
+        shelf_location: (chemical.shelfLocation || (chemical.shelf && chemical.section ? `${chemical.shelf} - ${chemical.section}` : (chemical.shelf || chemical.section || ''))) || null,
         shelf: chemical.shelf?.trim() || null,
         section: chemical.section?.trim() || null,
         category: chemical.category?.trim() || null,

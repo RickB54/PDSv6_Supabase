@@ -39,7 +39,7 @@ const LOCATION_RANK_ORDER = [
 ];
 
 const SHELF_RANK_ORDER = [
-  "Top Shelf", "2nd Shelf", "3rd Shelf", "Bottom Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy", "Unassigned"
+  "Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy", "Unassigned"
 ];
 
 const SECTION_RANK_ORDER = [
@@ -47,8 +47,8 @@ const SECTION_RANK_ORDER = [
 ];
 
 const sortChemicalGroups = (a: string, b: string) => {
-  const [shelfA = 'Unassigned', sectionA = 'Unassigned'] = a.split(' / ').map(s => s.trim());
-  const [shelfB = 'Unassigned', sectionB = 'Unassigned'] = b.split(' / ').map(s => s.trim());
+  const [shelfA = 'Unassigned', sectionA = 'Unassigned'] = a.split(/\s*[\/\-]\s*/).map(s => s.trim());
+  const [shelfB = 'Unassigned', sectionB = 'Unassigned'] = b.split(/\s*[\/\-]\s*/).map(s => s.trim());
   
   let rankShelfA = SHELF_RANK_ORDER.indexOf(shelfA);
   let rankShelfB = SHELF_RANK_ORDER.indexOf(shelfB);
