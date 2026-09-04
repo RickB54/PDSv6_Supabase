@@ -706,15 +706,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     const doc = new jsPDF();
     doc.setFontSize(20);
 
-    let docTitle = 'Full Inventory Audit Report';
-    if (selectedCats.length === 1) {
-      const cName = selectedCats[0].charAt(0).toUpperCase() + selectedCats[0].slice(1);
-      docTitle = `Inventory Audit Checklist (${cName})`;
-    } else if (selectedCats.length < 3) {
-      const cNames = selectedCats.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(' & ');
-      docTitle = `Inventory Audit Report (${cNames})`;
-    }
-
+    const docTitle = 'Inventory Audit Checklist';
+    
     doc.text(`${docTitle} (${groupBy === 'category' ? 'By Category' : 'By Location'})`, 14, 22);
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
@@ -736,13 +729,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         currentY = 20;
       }
       doc.setFontSize(16);
-      if (categoryName === 'Chemicals') {
-        doc.setTextColor(40, 80, 160); // Blue for Chemicals
-        doc.text(`Chemicals`, 14, currentY);
-      } else {
-        doc.setTextColor(0, 0, 0);
-        doc.text(`${categoryName} Section`, 14, currentY);
-      }
+      doc.setTextColor(40, 80, 160); // Blue for all headers
+      doc.text(categoryName, 14, currentY);
       doc.setTextColor(0, 0, 0); // Reset
       currentY += 10;
 
