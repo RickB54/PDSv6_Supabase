@@ -708,7 +708,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
     const docTitle = 'Inventory Audit Checklist';
     
-    doc.text(`${docTitle} (${groupBy === 'category' ? 'By Category' : 'By Location'})`, 14, 22);
+    doc.text(docTitle, 14, 22);
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
     let subtitleParts = [`Date: ${new Date().toLocaleString()}`];
@@ -730,7 +730,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       }
       doc.setFontSize(16);
       doc.setTextColor(40, 80, 160); // Blue for all headers
-      doc.text(categoryName, 14, currentY);
+      doc.text(`${categoryName} (${groupBy === 'category' ? 'By Category' : 'By Location'})`, 14, currentY);
       doc.setTextColor(0, 0, 0); // Reset
       currentY += 10;
 
