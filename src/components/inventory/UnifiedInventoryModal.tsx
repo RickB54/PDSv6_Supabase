@@ -130,6 +130,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const [customLocationSupply, setCustomLocationSupply] = useState<Record<number, boolean>>({});
   const [customLocationEquip, setCustomLocationEquip] = useState<Record<number, boolean>>({});
+  const [customLocationChem, setCustomLocationChem] = useState<Record<number, boolean>>({});
   const [customContainerLocationEquip, setCustomContainerLocationEquip] = useState<Record<number, boolean>>({});
   const [customContainerLocationSupply, setCustomContainerLocationSupply] = useState<Record<number, boolean>>({});
 
@@ -1452,43 +1453,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               </div>
               {mode === 'chemical' ? (
                 <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs text-zinc-400">Primary Location</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                        >
-                          <span className="truncate">{chemicalSizes[0]?.location || "Chemical Rack"}</span>
-                          <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-56 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                        <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[200px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                          {DEFAULT_LOCATIONS.map(rack => (
-                            <div
-                              key={rack}
-                              className="flex items-center justify-between hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors"
-                              onClick={() => {
-                                // Apply selected rack to ALL chemical size rows; clear shelf/section when changing rack
-                                setChemicalSizes(prev => prev.map(s => ({
-                                  ...s,
-                                  location: rack,
-                                  // Clear shelf+section when rack changes so stale values don't carry over
-                                  shelf: s.location === rack ? s.shelf : "",
-                                  section: s.location === rack ? s.section : "",
-                                })));
-                              }}
-                            >
-                              <span className="flex-1 text-sm text-zinc-200">{rack}</span>
-                              {(chemicalSizes[0]?.location || "Chemical Rack") === rack && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                            </div>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                  {/* Primary Location moved to per-row Stock & Pricing */}
                   <div>
                     <Label className="text-xs text-zinc-400">Where Purchased</Label>
                     {!customPurchased ? (
@@ -2183,8 +2148,129 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       </div>
 
 
-                      {/* Per-row Secondary Location */}
-                      <div className="pt-1 mt-1 border-t border-emerald-800/20">
+                      {/* Per-row Primary & Secondary Location */}
+                      <div className="col-span-2 grid grid-cols-2 gap-3 pt-1 mt-1 border-t border-emerald-800/20">
+                        <div>
+                          <Label className="text-xs text-zinc-400">Primary Location</Label>
+                          {!customLocationChem[index] ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                                >
+                                  <span className="truncate">{size.location || "Select location..."}</span>
+                                  <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                                <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                  <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                    <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newS = [...chemicalSizes]; newS[index].location = ""; setChemicalSizes(newS); }}>None</span>
+                                    {!size.location && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                  </div>
+                                  {availableLocations.map(loc => (
+                                    <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                      <span 
+                                        className="flex-1 text-sm text-zinc-200" 
+                                        onClick={() => {
+                                          const newS = [...chemicalSizes];
+                                          newS[index].location = loc;
+                                          newS[index].shelf = ""; // clear secondary location on change
+                                          newS[index].section = "";
+                                          setChemicalSizes(newS);
+                                        }}
+                                      >
+                                        {loc}
+                                      </span>
+                                      {size.location === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPendingEdit({
+                                              typeLabel: "Location",
+                                              fieldKind: "location",
+                                              oldValue: loc,
+                                              newValue: loc
+                                            });
+                                          }}
+                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                          title="Edit location for ALL items"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            handleDeleteLocation(e, loc);
+                                          }}
+                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                          title="Remove preset"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  <div className="h-px bg-zinc-800 my-1" />
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      setCustomLocationChem({ ...customLocationChem, [index]: true });
+                                      const newS = [...chemicalSizes];
+                                      newS[index].location = "";
+                                      setChemicalSizes(newS);
+                                    }}
+                                    className="flex items-center gap-2 px-2 py-1.5 text-sm text-blue-400 hover:bg-zinc-800 rounded font-medium transition-colors"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Add Custom Location
+                                  </button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Input
+                                value={size.location || ""}
+                                autoFocus
+                                onChange={(e) => {
+                                  const newS = [...chemicalSizes];
+                                  newS[index].location = e.target.value;
+                                  setChemicalSizes(newS);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (size.location && !availableLocations.includes(size.location)) {
+                                      updateLocations([...availableLocations, size.location].sort());
+                                    }
+                                    setCustomLocationChem({ ...customLocationChem, [index]: false });
+                                  }
+                                }}
+                                className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
+                                placeholder="Enter custom location..."
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (size.location && !availableLocations.includes(size.location)) {
+                                    updateLocations([...availableLocations, size.location].sort());
+                                  }
+                                  setCustomLocationChem({ ...customLocationChem, [index]: false });
+                                }}
+                                className="h-9 px-3 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                                title="Save and Return"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                         <div>
                           <Label className="text-xs text-zinc-400">Secondary Location</Label>
                           <Popover>
