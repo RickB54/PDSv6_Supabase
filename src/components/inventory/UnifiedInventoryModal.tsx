@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import localforage from "localforage";
-import { Trash2, Upload, X, ImageIcon, Info, Save, Camera, Beaker, ExternalLink, Plus as PlusIcon, RefreshCw, Sparkles, HelpCircle, AlertTriangle } from "lucide-react";
+import { Trash2, Upload, X, ImageIcon, Info, Save, Camera, Beaker, ExternalLink, Plus as PlusIcon, RefreshCw, Sparkles, HelpCircle, AlertTriangle, Pencil } from "lucide-react";
 import { compressImageForUpload } from "@/lib/image-compression";
 import { supabase } from "@/lib/supa-data";
 import { getChemicals as getLibraryChemicals, getChemicalById } from "@/lib/chemicals";
@@ -417,6 +417,75 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   };
 
   const [pendingDelete, setPendingDelete] = useState<{type: string, action: () => void} | null>(null);
+  const [pendingEdit, setPendingEdit] = useState<{
+    typeLabel: string;
+    fieldKind: 'category_supply' | 'category_equipment' | 'location' | 'container_location';
+    oldValue: string;
+    newValue: string;
+  } | null>(null);
+  const [isBatchUpdating, setIsBatchUpdating] = useState(false);
+
+  const handleConfirmBatchEdit = async () => {
+    if (!pendingEdit || !pendingEdit.newValue.trim() || pendingEdit.newValue.trim() === pendingEdit.oldValue) {
+      setPendingEdit(null);
+      return;
+    }
+
+    const { fieldKind, oldValue, newValue: rawNewValue } = pendingEdit;
+    const newValue = rawNewValue.trim();
+    setIsBatchUpdating(true);
+
+    try {
+      const { batchUpdateCategory, batchUpdateLocation, batchUpdateContainerLocation } = await import("@/lib/inventory-data");
+
+      if (fieldKind === 'category_supply') {
+        const updatedList = availableCategories.supply.map(c => c === oldValue ? newValue : c);
+        updateCategories({ ...availableCategories, supply: Array.from(new Set(updatedList)).sort() });
+        await batchUpdateCategory(oldValue, newValue, 'supply');
+        if (form.category === oldValue) {
+          setForm(prev => ({ ...prev, category: newValue }));
+        }
+      } else if (fieldKind === 'category_equipment') {
+        const updatedList = availableCategories.equipment.map(c => c === oldValue ? newValue : c);
+        updateCategories({ ...availableCategories, equipment: Array.from(new Set(updatedList)).sort() });
+        await batchUpdateCategory(oldValue, newValue, 'equipment');
+        if (form.category === oldValue) {
+          setForm(prev => ({ ...prev, category: newValue }));
+        }
+      } else if (fieldKind === 'location') {
+        const updatedList = availableLocations.map(l => l === oldValue ? newValue : l);
+        updateLocations(Array.from(new Set(updatedList)).sort());
+        await batchUpdateLocation(oldValue, newValue, mode);
+
+        if (mode === 'supply' || mode === 'material') {
+          setSupplyPurchases(prev => prev.map(p => p.location === oldValue ? { ...p, location: newValue } : p));
+        } else {
+          setEquipmentPurchases(prev => prev.map(p => p.location === oldValue ? { ...p, location: newValue } : p));
+        }
+        if (form.location === oldValue) setForm(prev => ({ ...prev, location: newValue }));
+      } else if (fieldKind === 'container_location') {
+        const updatedList = availableContainerLocations.map(c => c === oldValue ? newValue : c);
+        updateContainerLocations(Array.from(new Set(updatedList)).sort());
+        await batchUpdateContainerLocation(oldValue, newValue, mode);
+
+        if (mode === 'supply' || mode === 'material') {
+          setSupplyPurchases(prev => prev.map(p => p.containerLocation === oldValue ? { ...p, containerLocation: newValue } : p));
+        } else {
+          setEquipmentPurchases(prev => prev.map(p => p.containerLocation === oldValue ? { ...p, containerLocation: newValue } : p));
+        }
+      }
+
+      sessionStorage.removeItem('inventory-loaded');
+      if (onSaved) await onSaved();
+      toast.success(`Updated "${oldValue}" to "${newValue}" across all items`);
+    } catch (err: any) {
+      console.error("Batch update failed:", err);
+      toast.error("Failed to update items: " + (err.message || String(err)));
+    } finally {
+      setIsBatchUpdating(false);
+      setPendingEdit(null);
+    }
+  };
 
   const safeDeleteOption = (type: string, action: () => void) => {
     setPendingDelete({ type, action });
@@ -1365,17 +1434,35 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 {cat}
                               </span>
                               {form.category === cat && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                              <button 
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  safeDeleteOption("category", () => updateCategories({ ...availableCategories, supply: availableCategories.supply.filter(c => c !== cat) }));
-                                }}
-                                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                title="Remove from presets"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPendingEdit({
+                                      typeLabel: "Category",
+                                      fieldKind: "category_supply",
+                                      oldValue: cat,
+                                      newValue: cat
+                                    });
+                                  }}
+                                  className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                  title="Edit category for ALL items"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    safeDeleteOption("category", () => updateCategories({ ...availableCategories, supply: availableCategories.supply.filter(c => c !== cat) }));
+                                  }}
+                                  className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                  title="Remove from presets"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                           <div className="h-px bg-zinc-800 my-1" />
@@ -1546,17 +1633,35 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 {cat}
                               </span>
                               {form.category === cat && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                              <button 
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  safeDeleteOption("category", () => updateCategories({ ...availableCategories, equipment: availableCategories.equipment.filter(c => c !== cat) }));
-                                }}
-                                className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                title="Remove from presets"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPendingEdit({
+                                      typeLabel: "Category",
+                                      fieldKind: "category_equipment",
+                                      oldValue: cat,
+                                      newValue: cat
+                                    });
+                                  }}
+                                  className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                  title="Edit category for ALL items"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    safeDeleteOption("category", () => updateCategories({ ...availableCategories, equipment: availableCategories.equipment.filter(c => c !== cat) }));
+                                  }}
+                                  className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                  title="Remove from presets"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                           <div className="h-px bg-zinc-800 my-1" />
@@ -2037,16 +2142,34 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                         {loc}
                                       </span>
                                       {purchase.location === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                      <button 
-                                        type="button"
-                                        onClick={(e) => {
-                                          handleDeleteLocation(e, loc);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                        title="Remove preset"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPendingEdit({
+                                              typeLabel: "Location",
+                                              fieldKind: "location",
+                                              oldValue: loc,
+                                              newValue: loc
+                                            });
+                                          }}
+                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                          title="Edit location for ALL items"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            handleDeleteLocation(e, loc);
+                                          }}
+                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                          title="Remove preset"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   ))}
                                   <div className="h-px bg-zinc-800 my-1" />
@@ -2138,16 +2261,34 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                         {loc}
                                       </span>
                                       {purchase.containerLocation === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                      <button 
-                                        type="button"
-                                        onClick={(e) => {
-                                          handleDeleteContainerLocation(e, loc);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                        title="Remove preset"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPendingEdit({
+                                              typeLabel: "Container Location",
+                                              fieldKind: "container_location",
+                                              oldValue: loc,
+                                              newValue: loc
+                                            });
+                                          }}
+                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                          title="Edit container location for ALL items"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            handleDeleteContainerLocation(e, loc);
+                                          }}
+                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                          title="Remove preset"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   ))}
                                   <div className="h-px bg-zinc-800 my-1" />
@@ -2448,16 +2589,34 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                         {loc}
                                       </span>
                                       {purchase.location === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                      <button 
-                                        type="button"
-                                        onClick={(e) => {
-                                          handleDeleteLocation(e, loc);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                        title="Remove preset"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPendingEdit({
+                                              typeLabel: "Location",
+                                              fieldKind: "location",
+                                              oldValue: loc,
+                                              newValue: loc
+                                            });
+                                          }}
+                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                          title="Edit location for ALL items"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            handleDeleteLocation(e, loc);
+                                          }}
+                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                          title="Remove preset"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   ))}
                                   <div className="h-px bg-zinc-800 my-1" />
@@ -2549,16 +2708,34 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                         {loc}
                                       </span>
                                       {purchase.containerLocation === loc && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                      <button 
-                                        type="button"
-                                        onClick={(e) => {
-                                          handleDeleteContainerLocation(e, loc);
-                                        }}
-                                        className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all"
-                                        title="Remove preset"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </button>
+                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPendingEdit({
+                                              typeLabel: "Container Location",
+                                              fieldKind: "container_location",
+                                              oldValue: loc,
+                                              newValue: loc
+                                            });
+                                          }}
+                                          className="p-1 hover:text-amber-400 text-zinc-500 transition-all"
+                                          title="Edit container location for ALL items"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </button>
+                                        <button 
+                                          type="button"
+                                          onClick={(e) => {
+                                            handleDeleteContainerLocation(e, loc);
+                                          }}
+                                          className="p-1 hover:text-red-400 text-zinc-500 transition-all"
+                                          title="Remove preset"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   ))}
                                   <div className="h-px bg-zinc-800 my-1" />
@@ -3137,6 +3314,53 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
               }}
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!pendingEdit} onOpenChange={(open) => !open && setPendingEdit(null)}>
+        <AlertDialogContent className="bg-zinc-950 border-amber-500/40 text-white shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-amber-400 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-400" />
+              Batch Update {pendingEdit?.typeLabel}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-300 space-y-3 pt-2 text-sm">
+              <p>
+                Renaming <strong className="text-white">"{pendingEdit?.oldValue}"</strong> will update this {pendingEdit?.typeLabel.toLowerCase()} for <strong className="text-amber-300 font-semibold">ALL inventory items</strong> currently assigned to it across your database.
+              </p>
+              <div className="space-y-1.5 pt-2">
+                <Label className="text-xs font-semibold text-zinc-400">New {pendingEdit?.typeLabel} Name</Label>
+                <Input
+                  value={pendingEdit?.newValue || ""}
+                  onChange={(e) => setPendingEdit(prev => prev ? { ...prev, newValue: e.target.value } : null)}
+                  className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm focus:border-amber-500"
+                  placeholder="Enter new name..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleConfirmBatchEdit();
+                    }
+                  }}
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
+            <AlertDialogCancel className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-white">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isBatchUpdating || !pendingEdit?.newValue.trim() || pendingEdit?.newValue.trim() === pendingEdit?.oldValue}
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmBatchEdit();
+              }}
+              className="bg-amber-600 text-white hover:bg-amber-500 font-semibold shadow-md disabled:opacity-50"
+            >
+              {isBatchUpdating ? "Updating All Items..." : "Confirm & Update All Items"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

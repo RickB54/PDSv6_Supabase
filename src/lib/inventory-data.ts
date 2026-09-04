@@ -812,6 +812,90 @@ export async function deleteMaterial(id: string): Promise<void> {
     if (error) throw error;
 }
 
+export async function batchUpdateCategory(oldCat: string, newCat: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool'): Promise<void> {
+    if (isDemoActive()) return;
+    const isSupply = targetMode === 'supply' || targetMode === 'material';
+    const table = isSupply ? 'materials' : 'tools';
+    const { error } = await supabase
+        .from(table)
+        .update({ category: newCat, updated_at: new Date().toISOString() })
+        .eq('category', oldCat);
+
+    if (error) {
+        console.error(`batchUpdateCategory error in ${table}:`, error);
+        throw error;
+    }
+}
+
+export async function batchUpdateLocation(oldLoc: string, newLoc: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool'): Promise<void> {
+    if (isDemoActive()) return;
+    const isSupply = targetMode === 'supply' || targetMode === 'material';
+    const table = isSupply ? 'materials' : 'tools';
+
+    // Update direct location match
+    const { error: err1 } = await supabase
+        .from(table)
+        .update({ location: newLoc, updated_at: new Date().toISOString() })
+        .eq('location', oldLoc);
+
+    if (err1) {
+        console.error(`batchUpdateLocation direct error in ${table}:`, err1);
+    }
+
+    // Update combined location string "location|__CL__|containerLocation"
+    const { data: rows } = await supabase
+        .from(table)
+        .select('id, location')
+        .like('location', `${oldLoc}|__CL__|%`);
+
+    if (rows && rows.length > 0) {
+        for (const row of rows) {
+            const parts = (row.location || '').split('|__CL__|');
+            const cl = parts[1] || '';
+            const updatedLoc = `${newLoc}|__CL__|${cl}`;
+            await supabase
+                .from(table)
+                .update({ location: updatedLoc, updated_at: new Date().toISOString() })
+                .eq('id', row.id);
+        }
+    }
+}
+
+export async function batchUpdateContainerLocation(oldCl: string, newCl: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool'): Promise<void> {
+    if (isDemoActive()) return;
+    const isSupply = targetMode === 'supply' || targetMode === 'material';
+    const table = isSupply ? 'materials' : 'tools';
+
+    // Update container_location column if table supports it
+    try {
+        await supabase
+            .from(table)
+            .update({ container_location: newCl, updated_at: new Date().toISOString() })
+            .eq('container_location', oldCl);
+    } catch (e) {
+        console.warn('container_location update skipped/failed:', e);
+    }
+
+    // Update combined location string "location|__CL__|containerLocation"
+    const { data: rows } = await supabase
+        .from(table)
+        .select('id, location')
+        .like('location', `%|__CL__|${oldCl}`);
+
+    if (rows && rows.length > 0) {
+        for (const row of rows) {
+            const parts = (row.location || '').split('|__CL__|');
+            const baseLoc = parts[0] || 'Unassigned';
+            const updatedLoc = `${baseLoc}|__CL__|${newCl}`;
+            await supabase
+                .from(table)
+                .update({ location: updatedLoc, updated_at: new Date().toISOString() })
+                .eq('id', row.id);
+        }
+    }
+}
+
+
 // ============================================
 // TOOLS
 // ============================================
