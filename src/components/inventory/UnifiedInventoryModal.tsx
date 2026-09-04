@@ -288,28 +288,31 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     ...Array.from({ length: 8 }, (_, i) => `Specialty Caddy ${i + 1}`)
   ];
   const DEFAULT_LOCATIONS = [
-    // Bags & portable storage
-    "Detail Cart",
-    "Mobile Detail Bag",
-    "Small Extractor Bag",
-    "Medium Steamer/Drill Bag",
-    "Large Buffer Bag",
-    // Drawer towers (Parent Locations)
-    "D1", "D2", "D3", "D4",
-    // Brown shelf (bottom-up: B1=bottom, B3=top enclosed, B-Top=flat surface)
-    "B1", "B2", "B3", "B-Top",
-    // Wall shelf above mixing bench
-    "Wall Shelf (Top)", "Wall Shelf (Bottom)",
-    // General shop locations (existing)
-    "Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet",
+    "Medium Grey Rack",
+    "Small Brown Rack",
+    "1 x 4 Back Wall Shelf"
   ];
   const DEFAULT_CONTAINER_LOCATIONS: string[] = [
-    // Sub-drawers for towers
-    "D1-1", "D1-2", "D1-3", "D1-4",
-    "D2-1", "D2-2", "D2-3", "D2-4",
-    "D3-1", "D3-2", "D3-3", "D3-4",
-    "D4-1", "D4-2", "D4-3", "D4-4"
+    "Bottom Shelf",
+    "2nd Shelf",
+    "3rd Shelf",
+    "4th Shelf",
+    "5th Shelf",
+    "Top Shelf"
   ];
+
+  const getSecondaryLocationsForRack = (rackName?: string): string[] => {
+    if (rackName === "Medium Grey Rack") {
+      return ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "5th Shelf", "Top Shelf"];
+    }
+    if (rackName === "Small Brown Rack") {
+      return ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "Top Shelf"];
+    }
+    if (rackName === "1 x 4 Back Wall Shelf") {
+      return ["Bottom Shelf", "Top Shelf"];
+    }
+    return DEFAULT_CONTAINER_LOCATIONS;
+  };
 
   const [availableSizes, setAvailableSizes] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_sizes');
@@ -349,9 +352,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [availableLocations, setAvailableLocations] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_locations');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      // Merge defaults so new locations appear even for users with saved prefs
-      return Array.from(new Set([...DEFAULT_LOCATIONS, ...parsed]));
+      try {
+        const parsed: string[] = JSON.parse(saved);
+        const valid = parsed.filter(l => DEFAULT_LOCATIONS.includes(l));
+        return Array.from(new Set([...DEFAULT_LOCATIONS, ...valid]));
+      } catch {
+        return DEFAULT_LOCATIONS;
+      }
     }
     return DEFAULT_LOCATIONS;
   });
@@ -359,9 +366,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const [availableContainerLocations, setAvailableContainerLocations] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_container_locations');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      // Merge defaults so new locations appear even for users with saved prefs
-      return Array.from(new Set([...DEFAULT_CONTAINER_LOCATIONS, ...parsed]));
+      try {
+        const parsed: string[] = JSON.parse(saved);
+        const valid = parsed.filter(c => DEFAULT_CONTAINER_LOCATIONS.includes(c));
+        return Array.from(new Set([...DEFAULT_CONTAINER_LOCATIONS, ...valid]));
+      } catch {
+        return DEFAULT_CONTAINER_LOCATIONS;
+      }
     }
     return DEFAULT_CONTAINER_LOCATIONS;
   });
@@ -2248,7 +2259,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                     <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...equipmentPurchases]; newP[index].containerLocation = ""; setEquipmentPurchases(newP); }}>None</span>
                                     {!purchase.containerLocation && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
                                   </div>
-                                  {availableContainerLocations.map(loc => (
+                                  {getSecondaryLocationsForRack(purchase.location).map(loc => (
                                     <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                       <span 
                                         className="flex-1 text-sm text-zinc-200" 
@@ -2695,7 +2706,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                     <span className="flex-1 text-sm text-zinc-200" onClick={() => { const newP = [...supplyPurchases]; newP[index].containerLocation = ""; setSupplyPurchases(newP); }}>None</span>
                                     {!purchase.containerLocation && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
                                   </div>
-                                  {availableContainerLocations.map(loc => (
+                                  {getSecondaryLocationsForRack(purchase.location).map(loc => (
                                     <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
                                       <span 
                                         className="flex-1 text-sm text-zinc-200" 

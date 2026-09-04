@@ -32,11 +32,10 @@ interface InventoryAuditModalProps {
 type TabType = 'chemicals' | 'supplies' | 'equipment';
 
 const LOCATION_RANK_ORDER = [
-  "Detail Cart", "Mobile Detail Bag", "Small Extractor Bag", "Medium Steamer/Drill Bag", "Large Buffer Bag",
-  "D1", "D2", "D3", "D4",
-  "B-Top", "B3", "B2", "B1",
-  "Wall Shelf (Top)", "Wall Shelf (Bottom)",
-  "Truck 1", "Truck 2", "Warehouse", "Detail Bay", "Office", "Storage Cabinet", "Unassigned"
+  "Medium Grey Rack",
+  "Small Brown Rack",
+  "1 x 4 Back Wall Shelf",
+  "Unassigned"
 ];
 
 const SHELF_RANK_ORDER = [
@@ -676,7 +675,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     const locs = new Set<string>();
     supplies.forEach(s => s.location && locs.add(s.location));
     equipment.forEach(e => e.location && locs.add(e.location));
-    return Array.from(locs).sort();
+    ["Medium Grey Rack", "Small Brown Rack", "1 x 4 Back Wall Shelf"].forEach(r => locs.add(r));
+    return Array.from(locs).sort((a, b) => {
+      const indexA = LOCATION_RANK_ORDER.indexOf(a);
+      const indexB = LOCATION_RANK_ORDER.indexOf(b);
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      return a.localeCompare(b);
+    });
   }, [supplies, equipment]);
 
 
@@ -1103,7 +1108,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                         <h4 className="font-semibold text-purple-400 flex items-center gap-2"><Edit className="h-4 w-4" /> Organization & Assignment</h4>
                         <ul className="list-disc pl-4 space-y-1.5 text-zinc-300">
                           <li><strong>Chemicals (Shelf, Section, Category):</strong> Assigned via the edit modal. You can filter the audit list by these values to count one section at a time.</li>
-                          <li><strong>Supplies & Equipment (Location, Container Location):</strong> Uses a preset system to standardize where items live. For Supplies, the full set of locations (Detail Cart, bags, D1-D4 drawer towers, B1/B2/B3/B-Top, Wall Shelves) is available. You can filter the audit list by these locations.</li>
+                          <li><strong>Supplies & Equipment (Location, Container Location):</strong> Uses a preset system to standardize where items live. Racks include Medium Grey Rack, Small Brown Rack, and 1 x 4 Back Wall Shelf with shelf levels from Bottom Shelf to Top Shelf. You can filter the audit list by these locations.</li>
                           <li><strong>Supplies Details:</strong> Supplies feature expand-cards showing Condition/Wear Status, Last Used Date, and Compatible/Companion Items (which link bidirectionally to other items).</li>
                           <li><strong>hideFromIac:</strong> In any item's edit modal, check &quot;Do NOT Show in IAC&quot; to permanently exclude it from all audits and PDF reports.</li>
                         </ul>

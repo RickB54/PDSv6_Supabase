@@ -600,6 +600,40 @@ export async function cleanupInventoryDuplicates(): Promise<{ deleted: number; l
 }
 
 // ============================================
+// MATERIALS & EQUIPMENT LOCATION TAXONOMY
+// ============================================
+
+export const SUPPLIES_EQUIPMENT_TAXONOMY: Record<string, string[]> = {
+  "Medium Grey Rack": ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "5th Shelf", "Top Shelf"],
+  "Small Brown Rack": ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "Top Shelf"],
+  "1 x 4 Back Wall Shelf": ["Bottom Shelf", "Top Shelf"]
+};
+
+export const VALID_RACK_LOCATIONS = Object.keys(SUPPLIES_EQUIPMENT_TAXONOMY);
+
+export function sanitizeSupplyEquipmentLocation(rawLoc: string = '', rawCl: string = ''): { location: string; containerLocation: string } {
+    let loc = rawLoc;
+    let cl = rawCl;
+    if (loc.includes('|__CL__|')) {
+        const parts = loc.split('|__CL__|');
+        loc = parts[0];
+        cl = parts[1] || cl;
+        if (loc === 'Unassigned') loc = '';
+    }
+
+    if (!VALID_RACK_LOCATIONS.includes(loc)) {
+        return { location: '', containerLocation: '' };
+    }
+
+    const validShelves = SUPPLIES_EQUIPMENT_TAXONOMY[loc] || [];
+    if (!validShelves.includes(cl)) {
+        cl = '';
+    }
+
+    return { location: loc, containerLocation: cl };
+}
+
+// ============================================
 // MATERIALS
 // ============================================
 
@@ -623,14 +657,7 @@ export async function getMaterials(): Promise<Material[]> {
     console.log(`[InventoryData] getMaterials: Successfully loaded ${data?.length || 0} materials`);
 
     return (data || []).map(item => {
-        let loc = item.location || '';
-        let cl = item.container_location || '';
-        if (loc.includes('|__CL__|')) {
-            const parts = loc.split('|__CL__|');
-            loc = parts[0];
-            cl = parts[1] || cl;
-            if (loc === 'Unassigned') loc = '';
-        }
+        const { location: loc, containerLocation: cl } = sanitizeSupplyEquipmentLocation(item.location || '', item.container_location || '');
 
         return {
             id: item.id,
@@ -917,14 +944,7 @@ export async function getTools(): Promise<Tool[]> {
     }
 
     return (data || []).map(item => {
-        let loc = item.location || '';
-        let cl = item.container_location || '';
-        if (loc.includes('|__CL__|')) {
-            const parts = loc.split('|__CL__|');
-            loc = parts[0];
-            cl = parts[1] || cl;
-            if (loc === 'Unassigned') loc = '';
-        }
+        const { location: loc, containerLocation: cl } = sanitizeSupplyEquipmentLocation(item.location || '', item.container_location || '');
 
         return {
             id: item.id,
