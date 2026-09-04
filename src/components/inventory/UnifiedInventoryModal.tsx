@@ -46,6 +46,7 @@ interface ChemicalForm {
   shelf?: string;
   section?: string;
   category?: string;
+  chemicalCategory?: string;
 }
 
 // Renamed: Material → Supply
@@ -208,8 +209,13 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           const itemLocs = Array.from(new Set([...materials, ...tools].map(i => (i as any).location).filter(Boolean))) as string[];
           setAvailableLocations(prev => Array.from(new Set([...prev, ...itemLocs])).sort());
 
-          // Container Locations (Sub-drawers, specific spots)
-          const contLocs = Array.from(new Set([...materials, ...tools].map(i => (i as any).containerLocation).filter(Boolean))) as string[];
+          // Container Locations (Sub-drawers, specific spots, and chemical secondary locations)
+          const contLocs = Array.from(new Set([
+            ...materials.map(i => (i as any).containerLocation).filter(Boolean),
+            ...tools.map(i => (i as any).containerLocation).filter(Boolean),
+            ...chems.map(i => (i as any).shelf).filter(Boolean),
+            ...chems.map(i => (i as any).section).filter(Boolean)
+          ])) as string[];
           setAvailableContainerLocations(prev => Array.from(new Set([...prev, ...contLocs])).sort());
 
           // Units (merged with existing presets)
@@ -284,9 +290,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_SHELVES = ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy"];
   const DEFAULT_SECTIONS = [
     "Left Side", "Middle", "Right Side",
-    ...Array.from({ length: 8 }, (_, i) => `Interior Caddy ${i + 1}`),
-    ...Array.from({ length: 8 }, (_, i) => `Exterior Caddy ${i + 1}`),
-    ...Array.from({ length: 8 }, (_, i) => `Specialty Caddy ${i + 1}`)
+    "Interior Caddy", "Exterior Caddy", "Specialty Caddy"
   ];
   const DEFAULT_LOCATIONS = [
     "Medium Grey Rack",
@@ -300,7 +304,14 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     "3rd Shelf",
     "4th Shelf",
     "5th Shelf",
-    "Top Shelf"
+    "Top Shelf",
+    "Small Rack - Shelf 3",
+    "Specialty Caddy",
+    "Interior Caddy",
+    "Exterior Caddy",
+    "Left Side",
+    "Middle",
+    "Right Side"
   ];
 
   const getSecondaryLocationsForRack = (rackName?: string): string[] => {
@@ -640,7 +651,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           purchaseDate: c.purchaseDate || "",
           wherePurchased: c.wherePurchased || "",
           shelf: c.shelf || "",
-          section: c.section || ""
+          section: c.section || "",
+          location: c.location || "Chemical Rack"
         })));
       } else if (modeProp === 'chemical') {
         setChemicalSizes([{
@@ -654,7 +666,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
           wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || "",
           shelf: (firstItem as any).shelf || "",
-          section: (firstItem as any).section || ""
+          section: (firstItem as any).section || "",
+          location: (firstItem as any).location || "Chemical Rack"
         }]);
       } else if (modeProp === 'supply') {
         if (isGroup) {
@@ -775,7 +788,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         section: "",
         hideFromIac: false,
       });
-      setChemicalSizes([{ bottleSize: "", containerType: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "", shelf: "", section: "" }]);
+      setChemicalSizes([{ bottleSize: "", containerType: "", costPerBottle: "", actualPrice: "", currentStock: "1", threshold: "1", purchaseDate: "", wherePurchased: "", shelf: "", section: "", location: "Chemical Rack" }]);
       setSupplyPurchases([{ quantity: "1", costPerItem: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "", containerLocation: "" }]);
       setEquipmentPurchases([{ quantity: "1", price: "", actualPrice: "", threshold: "1", purchaseDate: "", wherePurchased: "", location: "", containerLocation: "" }]);
     }
@@ -947,6 +960,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             unitOfMeasure: form.unitOfMeasure,
             shelf: size.shelf?.trim() || undefined,
             section: size.section?.trim() || undefined,
+            location: size.location || "Chemical Rack",
             category: form.category || undefined,
             chemicalCategory: form.chemicalCategory || undefined,
             hideFromIac: form.hideFromIac,
@@ -1440,12 +1454,40 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                 <div className="space-y-3">
                   <div>
                     <Label className="text-xs text-zinc-400">Primary Location</Label>
-                    <Input
-                      value="Chemical Rack"
-                      readOnly
-                      disabled
-                      className="bg-zinc-900/80 border-zinc-700 text-zinc-300 h-9 text-sm font-medium cursor-not-allowed"
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
+                        >
+                          <span className="truncate">{chemicalSizes[0]?.location || "Chemical Rack"}</span>
+                          <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                        <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[200px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                          {DEFAULT_LOCATIONS.map(rack => (
+                            <div
+                              key={rack}
+                              className="flex items-center justify-between hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors"
+                              onClick={() => {
+                                // Apply selected rack to ALL chemical size rows; clear shelf/section when changing rack
+                                setChemicalSizes(prev => prev.map(s => ({
+                                  ...s,
+                                  location: rack,
+                                  // Clear shelf+section when rack changes so stale values don't carry over
+                                  shelf: s.location === rack ? s.shelf : "",
+                                  section: s.location === rack ? s.section : "",
+                                })));
+                              }}
+                            >
+                              <span className="flex-1 text-sm text-zinc-200">{rack}</span>
+                              {(chemicalSizes[0]?.location || "Chemical Rack") === rack && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <div>
                     <Label className="text-xs text-zinc-400">Where Purchased</Label>
@@ -1913,7 +1955,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                               />
                               <Button
                                 type="button"
-                                variant="icon"
+                                variant="outline"
                                 size="icon"
                                 className="h-9 w-9 bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700 shrink-0"
                                 onClick={() => {
@@ -2141,78 +2183,57 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       </div>
 
 
-                      {/* Per-row Secondary Location (Shelf & Section) */}
-                      <div className="col-span-2 grid grid-cols-2 gap-3 pt-1 mt-1 border-t border-emerald-800/20">
+                      {/* Per-row Secondary Location */}
+                      <div className="pt-1 mt-1 border-t border-emerald-800/20">
                         <div>
-                          <Label className="text-xs text-zinc-400">Secondary Location (Shelf Level)</Label>
+                          <Label className="text-xs text-zinc-400">Secondary Location</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
-                                <span className="truncate">{size.shelf || "None"}</span>
+                                <span className="truncate">
+                                  {size.shelf && size.section ? `${size.shelf} - ${size.section}` : (size.shelf || size.section || "None")}
+                                </span>
                                 <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-56 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
                               <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[260px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
                                 <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                  <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].shelf = ""; setChemicalSizes(ns); }}>None</span>
-                                  {!size.shelf && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                                  <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].shelf = ""; ns[index].section = ""; setChemicalSizes(ns); }}>None</span>
+                                  {!(size.shelf || size.section) && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
                                 </div>
-                                {Array.from(new Set([...getSecondaryLocationsForRack("Chemical Rack"), ...availableShelves])).map(shelf => (
-                                  <div key={shelf} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                    <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].shelf = shelf; setChemicalSizes(ns); }}>{shelf}</span>
-                                    {size.shelf === shelf && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); safeDeleteOption("shelf", () => updateShelves(availableShelves.filter(s => s !== shelf))); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
+                                {availableContainerLocations.map(loc => (
+                                  <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
+                                    <span 
+                                      className="flex-1 text-sm text-zinc-200" 
+                                      onClick={() => { 
+                                        const ns = [...chemicalSizes]; 
+                                        ns[index].shelf = loc; 
+                                        ns[index].section = ""; 
+                                        setChemicalSizes(ns); 
+                                      }}
+                                    >
+                                      {loc}
+                                    </span>
+                                    {(size.shelf === loc || size.section === loc || `${size.shelf} - ${size.section}` === loc) && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
                                   </div>
                                 ))}
                                 <div className="h-px bg-zinc-800 my-1" />
                                 <div className="px-2 py-1">
                                   <Input
-                                    placeholder="+ Custom shelf..."
+                                    placeholder="+ Custom location..."
                                     className="bg-zinc-800 border-zinc-700 text-white h-7 text-xs"
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         const v = (e.target as HTMLInputElement).value.trim();
-                                        if (v) { if (!availableShelves.includes(v)) updateShelves([...availableShelves, v].sort()); const ns = [...chemicalSizes]; ns[index].shelf = v; setChemicalSizes(ns); (e.target as HTMLInputElement).value = ""; }
-                                      }
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-zinc-400">Section</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
-                                <span className="truncate">{size.section || "None"}</span>
-                                <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-56 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                              <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[260px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                                <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                  <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].section = ""; setChemicalSizes(ns); }}>None</span>
-                                  {!size.section && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                </div>
-                                {availableSections.map(section => (
-                                  <div key={section} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                    <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].section = section; setChemicalSizes(ns); }}>{section}</span>
-                                    {size.section === section && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); safeDeleteOption("section", () => updateSections(availableSections.filter(s => s !== section))); }} className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-400 text-zinc-500 transition-all" title="Remove preset"><Trash2 className="h-3.5 w-3.5" /></button>
-                                  </div>
-                                ))}
-                                <div className="h-px bg-zinc-800 my-1" />
-                                <div className="px-2 py-1">
-                                  <Input
-                                    placeholder="+ Custom section..."
-                                    className="bg-zinc-800 border-zinc-700 text-white h-7 text-xs"
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        const v = (e.target as HTMLInputElement).value.trim();
-                                        if (v) { if (!availableSections.includes(v)) updateSections([...availableSections, v].sort()); const ns = [...chemicalSizes]; ns[index].section = v; setChemicalSizes(ns); (e.target as HTMLInputElement).value = ""; }
+                                        if (v) { 
+                                          if (!availableContainerLocations.includes(v)) updateContainerLocations([...availableContainerLocations, v].sort()); 
+                                          const ns = [...chemicalSizes]; 
+                                          ns[index].shelf = v; 
+                                          ns[index].section = ""; 
+                                          setChemicalSizes(ns); 
+                                          (e.target as HTMLInputElement).value = ""; 
+                                        }
                                       }
                                     }}
                                   />
@@ -2222,7 +2243,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           </Popover>
                         </div>
                       </div>
-
                     </div>
                   ))}
 
@@ -2231,7 +2251,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     type="button" 
                     variant="outline" 
                     className="w-full border-dashed border-emerald-700 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30 text-sm mt-2"
-                    onClick={() => setChemicalSizes([...chemicalSizes, { bottleSize: "", containerType: "", costPerBottle: "", currentStock: "1", threshold: "1", shelf: "", section: "" }])}
+                    onClick={() => setChemicalSizes([...chemicalSizes, { bottleSize: "", containerType: "", costPerBottle: "", currentStock: "1", threshold: "", shelf: "", section: "", location: chemicalSizes[0]?.location || "Chemical Rack" }])}
                   >
                     <PlusIcon className="w-4 h-4 mr-2" />
                     Add Another Bottle Size

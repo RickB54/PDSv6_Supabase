@@ -79,6 +79,7 @@ export interface Chemical {
     hideFromIac?: boolean;
     location?: string;
     containerLocation?: string;
+    tags?: string[];
 }
 
 export interface Material {
@@ -233,7 +234,7 @@ export async function getChemicals(): Promise<Chemical[]> {
             category: usageCategory,
             chemicalCategory: chemCategory || (['exterior', 'interior', 'both'].includes(usageCategory.toLowerCase()) ? 'General Chemicals' : (usageCategory || 'General Chemicals')),
             hideFromIac: item.hide_from_iac || false,
-            location: 'Chemical Rack',
+            location: item.location || 'Chemical Rack',
             containerLocation: secLoc
         };
     });
@@ -276,6 +277,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         shelf_location: (chemical.shelfLocation || (chemical.shelf && chemical.section ? `${chemical.shelf} - ${chemical.section}` : (chemical.shelf || chemical.section || ''))) || null,
         shelf: chemical.shelf?.trim() || null,
         section: chemical.section?.trim() || null,
+        location: chemical.location || 'Chemical Rack',
         category: categoryToSave || null,
         hide_from_iac: chemical.hideFromIac ?? false,
         updated_at: new Date().toISOString()
@@ -909,10 +911,11 @@ export async function batchUpdateCategory(oldCat: string, newCat: string, target
     }
 }
 
-export async function batchUpdateLocation(oldLoc: string, newLoc: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool'): Promise<void> {
+export async function batchUpdateLocation(oldLoc: string, newLoc: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool' | 'chemical'): Promise<void> {
     if (isDemoActive()) return;
     const isSupply = targetMode === 'supply' || targetMode === 'material';
-    const table = isSupply ? 'materials' : 'tools';
+    const isChem = targetMode === 'chemical';
+    const table = isChem ? 'chemicals' : (isSupply ? 'materials' : 'tools');
 
     // Update direct location match
     const { error: err1 } = await supabase
@@ -943,17 +946,30 @@ export async function batchUpdateLocation(oldLoc: string, newLoc: string, target
     }
 }
 
-export async function batchUpdateContainerLocation(oldCl: string, newCl: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool'): Promise<void> {
+export async function batchUpdateContainerLocation(oldCl: string, newCl: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool' | 'chemical'): Promise<void> {
     if (isDemoActive()) return;
     const isSupply = targetMode === 'supply' || targetMode === 'material';
-    const table = isSupply ? 'materials' : 'tools';
+    const isChem = targetMode === 'chemical';
+    const table = isChem ? 'chemicals' : (isSupply ? 'materials' : 'tools');
 
-    // Update container_location column if table supports it
+    // Update container_location or shelf column
     try {
-        await supabase
-            .from(table)
-            .update({ container_location: newCl, updated_at: new Date().toISOString() })
-            .eq('container_location', oldCl);
+        if (isChem) {
+            await supabase
+                .from(table)
+                .update({ shelf: newCl, updated_at: new Date().toISOString() })
+                .eq('shelf', oldCl);
+            
+            await supabase
+                .from(table)
+                .update({ section: newCl, updated_at: new Date().toISOString() })
+                .eq('section', oldCl);
+        } else {
+            await supabase
+                .from(table)
+                .update({ container_location: newCl, updated_at: new Date().toISOString() })
+                .eq('container_location', oldCl);
+        }
     } catch (e) {
         console.warn('container_location update skipped/failed:', e);
     }
