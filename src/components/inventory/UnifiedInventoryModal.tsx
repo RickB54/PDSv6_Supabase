@@ -2282,41 +2282,65 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                 <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-56 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
-                              <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[260px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
-                                <div className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                  <span className="flex-1 text-sm text-zinc-200" onClick={() => { const ns = [...chemicalSizes]; ns[index].shelf = ""; ns[index].section = ""; setChemicalSizes(ns); }}>None</span>
-                                  {!(size.shelf || size.section) && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
+                            <PopoverContent className="w-64 p-0 bg-zinc-900 border-zinc-700 shadow-xl" align="start">
+                              <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="flex flex-col p-1 max-h-[300px] overflow-auto scrollbar-thin scrollbar-thumb-zinc-700">
+                                <div className="px-2 py-1.5 text-xs text-zinc-400 font-medium bg-zinc-800/50 rounded-sm mb-1">
+                                  Select up to 2 items (e.g. Shelf & Side)
                                 </div>
-                                {availableContainerLocations.map(loc => (
-                                  <div key={loc} className="flex items-center justify-between group hover:bg-zinc-800 rounded px-2 py-1.5 cursor-pointer transition-colors">
-                                    <span 
-                                      className="flex-1 text-sm text-zinc-200" 
+                                <div 
+                                  className="flex items-center group hover:bg-zinc-800 rounded px-2 py-2 cursor-pointer transition-colors"
+                                  onClick={() => { const ns = [...chemicalSizes]; ns[index].shelf = ""; ns[index].section = ""; setChemicalSizes(ns); }}
+                                >
+                                  <input type="checkbox" checked={!(size.shelf || size.section)} readOnly className="mr-3 cursor-pointer accent-blue-500" />
+                                  <span className="flex-1 text-sm text-zinc-200">None</span>
+                                </div>
+                                {availableContainerLocations.map(loc => {
+                                  const isChecked = size.shelf === loc || size.section === loc;
+                                  return (
+                                    <div 
+                                      key={loc} 
+                                      className="flex items-center group hover:bg-zinc-800 rounded px-2 py-2 cursor-pointer transition-colors"
                                       onClick={() => { 
                                         const ns = [...chemicalSizes]; 
-                                        ns[index].shelf = loc; 
-                                        ns[index].section = ""; 
+                                        const currentShelf = ns[index].shelf || "";
+                                        const currentSection = ns[index].section || "";
+                                        if (currentShelf === loc) {
+                                          ns[index].shelf = currentSection;
+                                          ns[index].section = "";
+                                        } else if (currentSection === loc) {
+                                          ns[index].section = "";
+                                        } else if (!currentShelf) {
+                                          ns[index].shelf = loc;
+                                        } else if (!currentSection) {
+                                          ns[index].section = loc;
+                                        } else {
+                                          // Replace section if both are filled
+                                          ns[index].section = loc;
+                                        }
                                         setChemicalSizes(ns); 
                                       }}
                                     >
-                                      {loc}
-                                    </span>
-                                    {(size.shelf === loc || size.section === loc || `${size.shelf} - ${size.section}` === loc) && <Check className="h-3.5 w-3.5 text-blue-400 mr-2" />}
-                                  </div>
-                                ))}
-                                <div className="h-px bg-zinc-800 my-1" />
-                                <div className="px-2 py-1">
+                                      <input type="checkbox" checked={isChecked} readOnly className="mr-3 cursor-pointer accent-blue-500" />
+                                      <span className="flex-1 text-sm text-zinc-200">{loc}</span>
+                                    </div>
+                                  );
+                                })}
+                                <div className="h-px bg-zinc-800 my-2" />
+                                <div className="px-2 pb-1">
                                   <Input
-                                    placeholder="+ Custom location..."
-                                    className="bg-zinc-800 border-zinc-700 text-white h-7 text-xs"
+                                    placeholder="+ Custom location (Press Enter)..."
+                                    className="bg-zinc-800 border-zinc-700 text-white h-8 text-xs"
                                     onKeyDown={(e) => {
                                       if (e.key === 'Enter') {
                                         const v = (e.target as HTMLInputElement).value.trim();
                                         if (v) { 
                                           if (!availableContainerLocations.includes(v)) updateContainerLocations([...availableContainerLocations, v].sort()); 
                                           const ns = [...chemicalSizes]; 
-                                          ns[index].shelf = v; 
-                                          ns[index].section = ""; 
+                                          if (!ns[index].shelf) {
+                                            ns[index].shelf = v;
+                                          } else {
+                                            ns[index].section = v;
+                                          }
                                           setChemicalSizes(ns); 
                                           (e.target as HTMLInputElement).value = ""; 
                                         }

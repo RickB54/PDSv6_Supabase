@@ -736,12 +736,15 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         currentY = 20;
       }
       doc.setFontSize(16);
-      doc.setTextColor(0, 0, 0);
-      doc.text(`${categoryName} Section`, 14, currentY);
+      if (categoryName === 'Chemicals') {
+        doc.setTextColor(40, 80, 160); // Blue for Chemicals
+        doc.text(`Chemicals`, 14, currentY);
+      } else {
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${categoryName} Section`, 14, currentY);
+      }
+      doc.setTextColor(0, 0, 0); // Reset
       currentY += 10;
-
-      // We no longer print a hardcoded "Chemical Rack" header here, 
-      // because we now group by the actual Primary Location dynamically.
 
       const pdfGroups: Record<string, any[]> = {};
       items.forEach(item => {
@@ -801,13 +804,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
 
         if (categoryName === 'Chemicals') {
           if (groupBy === 'category') {
-            head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30 }, 2: { cellWidth: 38 }, 3: { cellWidth: 26 }, 4: { cellWidth: 20 }, 5: { cellWidth: 16, halign: 'center' }, 6: { cellWidth: 20 } };
+            head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'Size', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 26 }, 2: { cellWidth: 26 }, 3: { cellWidth: 16 }, 4: { cellWidth: 24 }, 5: { cellWidth: 20 }, 6: { cellWidth: 14, halign: 'center' }, 7: { cellWidth: 18 } };
           } else {
             // By Location: group header IS the primary & secondary location
             const [primLoc, secLoc] = groupName.split('|');
-            head = [[`Primary: ${primLoc} | Sec: ${secLoc}`, 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
-            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 26 }, 3: { cellWidth: 18, halign: 'center' }, 4: { cellWidth: 22 } };
+            head = [[`Primary: ${primLoc} | Sec: ${secLoc}`, 'Size', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 18 }, 2: { cellWidth: 32 }, 3: { cellWidth: 24 }, 4: { cellWidth: 16, halign: 'center' }, 5: { cellWidth: 22 } };
           }
         } else if (groupBy === 'category') {
           head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'DB Qty', 'Actual Count']];
@@ -828,11 +831,15 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               const percent = auditState[item.id] ? `${auditState[item.id].percentRemaining || 0}%` : '';
               const secLoc = item.containerLocation || item.shelfLocation || 'N/A';
               const primLoc = item.location || 'Chemical Rack';
+              const sizeStr = item.bottleSize || 'N/A';
+              const nameStr = `${item.brand ? item.brand + ' / ' : ''}${item.name}`;
+              
               if (groupBy === 'category') {
                 return [
-                  `${item.brand ? item.brand + ' / ' : ''}${item.name} (${item.bottleSize || 'N/A'})`,
+                  nameStr,
                   primLoc,
                   secLoc,
+                  sizeStr,
                   containerType,
                   percent,
                   item.currentStock?.toFixed(2) || '0',
@@ -841,7 +848,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               } else {
                 // SecLoc is in the header, so we omit it from the columns
                 return [
-                  `${item.brand ? item.brand + ' / ' : ''}${item.name} (${item.bottleSize || 'N/A'})`,
+                  nameStr,
+                  sizeStr,
                   containerType,
                   percent,
                   item.currentStock?.toFixed(2) || '0',
