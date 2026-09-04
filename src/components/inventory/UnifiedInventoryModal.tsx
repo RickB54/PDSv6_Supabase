@@ -278,7 +278,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_CATEGORIES = {
     supply: ["Bottles & Containers", "Brushes & Applicators", "Business & Branding", "Clay & Decontamination", "Other", "Safety & PPE", "Tools & Accessories", "Towels & Microfiber"],
     equipment: ["Accessories & Carts", "Hand Tools & Guns", "Power Equipment & Systems", "Security & Office", "Storage & Organizers"],
-    chemical: ["APCs & Degreasers", "Car Washes & Soaps", "Glass Cleaners", "Interior & Carpet Care", "Polishes & Protectants", "Wheel & Tire Care", "General Chemicals"]
+    chemical: ["APCs & Degreasers", "Bug Cleaners", "Car Washes & Soaps", "Dressings", "Floor Cleaners", "Glass Cleaners", "Interior & Carpet Care", "Polishes & Protectants", "Waterless & Rinseless", "Waxes & Sealants", "Wheel & Tire Care", "General Chemicals"]
   };
   const DEFAULT_SUBTYPES = ["Small", "Medium", "Large", "Extra Large"];
   const DEFAULT_SHELVES = ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy"];
@@ -291,7 +291,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_LOCATIONS = [
     "Medium Grey Rack",
     "Small Brown Rack",
-    "1 x 4 Back Wall Shelf"
+    "1 x 4 Back Wall Shelf",
+    "Chemical Rack"
   ];
   const DEFAULT_CONTAINER_LOCATIONS: string[] = [
     "Bottom Shelf",
@@ -311,6 +312,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     }
     if (rackName === "1 x 4 Back Wall Shelf") {
       return ["Bottom Shelf", "Top Shelf"];
+    }
+    if (rackName === "Chemical Rack") {
+      return ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf"];
     }
     return DEFAULT_CONTAINER_LOCATIONS;
   };

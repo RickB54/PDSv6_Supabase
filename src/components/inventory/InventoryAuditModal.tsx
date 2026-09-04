@@ -223,6 +223,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     const defaultShelfLoc = (c.shelf || c.section) ? `${c.shelf || 'Unassigned'} / ${c.section || 'Unassigned'}` : undefined;
     return {
       ...c,
+      chemicalCategory: c.chemicalCategory || (c as any).chemical_category || c.category || 'General Chemicals',
       shelfLocation: c.shelfLocation || (isCaddy ? c.shelf : defaultShelfLoc),
       bottleSize: normalizeSize(c.bottleSize)
     };
@@ -739,8 +740,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         let groupKey = 'Unassigned';
         if (groupBy === 'category') {
           if (categoryName === 'Chemicals') {
-            const cCat = item.chemicalCategory || item.category;
-            groupKey = cCat ? (cCat.charAt(0).toUpperCase() + cCat.slice(1)) : 'Unassigned';
+            const cCat = item.chemicalCategory || (item as any).chemical_category || 'General Chemicals';
+            groupKey = cCat || 'General Chemicals';
           } else {
             groupKey = item.category ? (item.category.charAt(0).toUpperCase() + item.category.slice(1)) : 'Unassigned';
           }

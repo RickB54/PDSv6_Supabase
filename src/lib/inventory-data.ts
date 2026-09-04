@@ -197,6 +197,15 @@ export async function getChemicals(): Promise<Chemical[]> {
             else if (rawSection) secLoc = rawSection;
         }
 
+        const rawCategory = item.category || '';
+        let usageCategory = rawCategory;
+        let chemCategory = item.chemical_category || item.chemicalCategory || '';
+        if (rawCategory.includes('|__CC__|')) {
+            const parts = rawCategory.split('|__CC__|');
+            usageCategory = parts[0] || '';
+            chemCategory = parts[1] || '';
+        }
+
         return {
             id: item.id,
             name: item.name,
@@ -221,8 +230,8 @@ export async function getChemicals(): Promise<Chemical[]> {
             shelfLocation: secLoc,
             shelf: rawShelf,
             section: rawSection,
-            category: item.category || '',
-            chemicalCategory: item.chemical_category || item.chemicalCategory || '',
+            category: usageCategory,
+            chemicalCategory: chemCategory || (['exterior', 'interior', 'both'].includes(usageCategory.toLowerCase()) ? 'General Chemicals' : (usageCategory || 'General Chemicals')),
             hideFromIac: item.hide_from_iac || false,
             location: 'Chemical Rack',
             containerLocation: secLoc
@@ -238,6 +247,11 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     let bsToSave = chemical.bottleSize;
     if (chemical.containerType && chemical.containerType.trim()) {
         bsToSave = `${chemical.bottleSize}|__CT__|${chemical.containerType.trim()}`;
+    }
+
+    let categoryToSave = chemical.category?.trim() || '';
+    if (chemical.chemicalCategory && chemical.chemicalCategory.trim()) {
+        categoryToSave = `${chemical.category?.trim() || ''}|__CC__|${chemical.chemicalCategory.trim()}`;
     }
 
     const dbData: any = {
@@ -262,8 +276,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         shelf_location: (chemical.shelfLocation || (chemical.shelf && chemical.section ? `${chemical.shelf} - ${chemical.section}` : (chemical.shelf || chemical.section || ''))) || null,
         shelf: chemical.shelf?.trim() || null,
         section: chemical.section?.trim() || null,
-        category: chemical.category?.trim() || null,
-        chemical_category: chemical.chemicalCategory?.trim() || null,
+        category: categoryToSave || null,
         hide_from_iac: chemical.hideFromIac ?? false,
         updated_at: new Date().toISOString()
     };
@@ -858,12 +871,37 @@ export async function batchUpdateCategory(oldCat: string, newCat: string, target
     if (isDemoActive()) return;
     const isSupply = targetMode === 'supply' || targetMode === 'material';
     const isChemical = targetMode === 'chemical' || targetMode === 'chemicals';
-    const table = isSupply ? 'materials' : isChemical ? 'chemicals' : 'tools';
-    const colName = isChemical ? 'chemical_category' : 'category';
+    if (isChemical) {
+        const { data: chems } = await supabase.from('chemicals').select('*');
+        if (chems) {
+            for (const c of chems) {
+                let rawCategory = c.category || '';
+                let usageCategory = rawCategory;
+                let chemCat = '';
+                if (rawCategory.includes('|__CC__|')) {
+                    const parts = rawCategory.split('|__CC__|');
+                    usageCategory = parts[0] || '';
+                    chemCat = parts[1] || '';
+                } else if (['exterior', 'interior', 'both'].includes(rawCategory.toLowerCase())) {
+                    chemCat = 'General Chemicals';
+                } else {
+                    chemCat = rawCategory;
+                }
+
+                if (chemCat === oldCat) {
+                    const newCategoryToSave = `${usageCategory}|__CC__|${newCat}`;
+                    await supabase.from('chemicals').update({ category: newCategoryToSave, updated_at: new Date().toISOString() }).eq('id', c.id);
+                }
+            }
+        }
+        return;
+    }
+
+    const table = isSupply ? 'materials' : 'tools';
     const { error } = await supabase
         .from(table)
-        .update({ [colName]: newCat, updated_at: new Date().toISOString() })
-        .eq(colName, oldCat);
+        .update({ category: newCat, updated_at: new Date().toISOString() })
+        .eq('category', oldCat);
 
     if (error) {
         console.error(`batchUpdateCategory error in ${table}:`, error);
