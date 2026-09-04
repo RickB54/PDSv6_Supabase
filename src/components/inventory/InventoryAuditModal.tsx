@@ -737,30 +737,33 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
       const pdfGroups: Record<string, any[]> = {};
       items.forEach(item => {
         let groupKey = 'Unassigned';
-        if (categoryName === 'Chemicals') {
-          const rawShelf = (item as any).shelf;
-          const rawSection = (item as any).section;
-          const shelf = (typeof rawShelf === 'string' && rawShelf.trim()) ? rawShelf.trim() : 'Unassigned';
-          const section = (typeof rawSection === 'string' && rawSection.trim()) ? rawSection.trim() : 'Unassigned';
-          groupKey = `${shelf} - ${section}`;
-        } else if (groupBy === 'category') {
-          groupKey = item.category || 'Unassigned';
+        if (groupBy === 'category') {
+          groupKey = item.category ? (item.category.charAt(0).toUpperCase() + item.category.slice(1)) : 'Unassigned';
         } else {
-          groupKey = item.location || 'Unassigned';
+          groupKey = item.location || (categoryName === 'Chemicals' ? 'Chemical Rack' : 'Unassigned');
         }
         if (!pdfGroups[groupKey]) pdfGroups[groupKey] = [];
         pdfGroups[groupKey].push(item);
       });
 
-      const sortedGroupKeys = (categoryName !== 'Chemicals' && groupBy === 'category')
+      const sortedGroupKeys = (groupBy === 'category')
         ? Object.keys(pdfGroups).sort((a, b) => a.localeCompare(b))
-        : (categoryName === 'Chemicals' ? Object.keys(pdfGroups).sort(sortChemicalGroups) : Object.keys(pdfGroups).sort(sortLocationGroups));
+        : Object.keys(pdfGroups).sort(sortLocationGroups);
 
       let totalItems = items.length;
       let totalCounted = 0;
 
       sortedGroupKeys.forEach(groupName => {
-        const groupItems = pdfGroups[groupName].sort((a, b) => a.name.localeCompare(b.name));
+        const groupItems = categoryName === 'Chemicals'
+          ? pdfGroups[groupName].sort((a, b) => {
+              const secA = a.containerLocation || a.shelfLocation || '';
+              const secB = b.containerLocation || b.shelfLocation || '';
+              const rankRes = sortChemicalGroups(secA, secB);
+              if (rankRes !== 0) return rankRes;
+              return (a.name || '').localeCompare(b.name || '');
+            })
+          : pdfGroups[groupName].sort((a, b) => a.name.localeCompare(b.name));
+
         if (groupItems.length === 0) return;
 
         if (currentY > 260) {
@@ -772,8 +775,13 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
         let columnStyles: any;
 
         if (categoryName === 'Chemicals') {
-          head = [[`Location: ${groupName}`, 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
-          columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 25 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
+          if (groupBy === 'category') {
+            head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 30 }, 2: { cellWidth: 38 }, 3: { cellWidth: 26 }, 4: { cellWidth: 20 }, 5: { cellWidth: 16, halign: 'center' }, 6: { cellWidth: 20 } };
+          } else {
+            head = [[`Primary Location: ${groupName}`, 'Secondary Location', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 40 }, 2: { cellWidth: 28 }, 3: { cellWidth: 22 }, 4: { cellWidth: 18, halign: 'center' }, 5: { cellWidth: 22 } };
+          }
         } else if (groupBy === 'category') {
           head = [[`Category: ${groupName}`, 'Primary Location', 'Secondary Location', 'DB Qty', 'Actual Count']];
           columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
@@ -791,13 +799,28 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               if (isChemCounted(item.id, auditState)) totalCounted++;
               const containerType = item.containerType || '';
               const percent = auditState[item.id] ? `${auditState[item.id].percentRemaining || 0}%` : '';
-              return [
-                `${item.brand ? item.brand + ' / ' : ''}${item.name} (${item.bottleSize || 'N/A'})`,
-                containerType,
-                percent,
-                item.currentStock?.toFixed(2) || '0',
-                countedStr
-              ];
+              const secLoc = item.containerLocation || item.shelfLocation || 'N/A';
+              const primLoc = item.location || 'Chemical Rack';
+              if (groupBy === 'category') {
+                return [
+                  `${item.brand ? item.brand + ' / ' : ''}${item.name} (${item.bottleSize || 'N/A'})`,
+                  primLoc,
+                  secLoc,
+                  containerType,
+                  percent,
+                  item.currentStock?.toFixed(2) || '0',
+                  countedStr
+                ];
+              } else {
+                return [
+                  `${item.brand ? item.brand + ' / ' : ''}${item.name} (${item.bottleSize || 'N/A'})`,
+                  secLoc,
+                  containerType,
+                  percent,
+                  item.currentStock?.toFixed(2) || '0',
+                  countedStr
+                ];
+              }
             } else {
               const counted = auditState[item.id]?.counted;
               const isCounted = auditState[item.id]?.isCounted;

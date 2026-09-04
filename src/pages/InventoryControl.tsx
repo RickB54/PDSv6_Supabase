@@ -1095,6 +1095,8 @@ const InventoryControl = () => {
       const body = category === 'chemicals' ? [
         ['Brand', item.brand || '-'],
         ['Product', item.name],
+        ['Primary Location', item.location || 'Chemical Rack'],
+        ['Secondary Location', item.containerLocation || item.shelfLocation || '-'],
         ['Bottle Size', item.bottleSize],
         ['Current Stock', `${item.currentStock} bottles`],
         ['Cost/Bottle', `$${(item.costPerBottle || 0).toFixed(2)}`],
@@ -1102,12 +1104,16 @@ const InventoryControl = () => {
         ['Total Value', `$${((item.costPerBottle || 0) * (item.currentStock || 0)).toFixed(2)}`]
       ] : category === 'supplies' ? [
         ['Name', item.name],
+        ['Primary Location', item.location || '-'],
+        ['Secondary Location', item.containerLocation || '-'],
         ['Category', item.category],
         ['Quantity', `${item.quantity} units`],
         ['Cost/Item', `$${(item.costPerItem || 0).toFixed(2)}`],
         ['Purchased From', item.wherePurchased || '-'],
       ] : [
         ['Name', item.name],
+        ['Primary Location', item.location || '-'],
+        ['Secondary Location', item.containerLocation || '-'],
         ['Price', `$${(item.price || 0).toFixed(2)}`],
         ['Quantity', `${item.quantity || 1}`],
         ['Purchased From', item.wherePurchased || '-'],
