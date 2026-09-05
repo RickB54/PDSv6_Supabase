@@ -661,14 +661,7 @@ export function sanitizeSupplyEquipmentLocation(rawLoc: string = '', rawCl: stri
         if (loc === 'Unassigned') loc = '';
     }
 
-    if (!VALID_RACK_LOCATIONS.includes(loc)) {
-        return { location: '', containerLocation: '' };
-    }
-
-    // We no longer strictly enforce validShelves because the user can add custom container locations 
-    // that are not in SUPPLIES_EQUIPMENT_TAXONOMY.
-
-
+    // We no longer strictly enforce taxonomy limits on read so that any valid location saved to the DB persists correctly in the UI.
     return { location: loc, containerLocation: cl };
 }
 
@@ -998,6 +991,63 @@ export async function batchUpdateContainerLocation(oldCl: string, newCl: string,
                 .from(table)
                 .update({ location: updatedLoc, updated_at: new Date().toISOString() })
                 .eq('id', row.id);
+        }
+    }
+}
+
+export async function globalDeleteLocation(loc: string): Promise<void> {
+    if (isDemoActive()) return;
+    const tables = ['chemicals', 'materials', 'tools'];
+    for (const table of tables) {
+        await supabase.from(table).update({ location: '' }).eq('location', loc);
+        const { data: rows } = await supabase.from(table).select('id, location').like('location', `${loc}|__CL__|%`);
+        if (rows) {
+            for (const r of rows) {
+                const parts = (r.location || '').split('|__CL__|');
+                const cl = parts[1] || '';
+                await supabase.from(table).update({ location: `|__CL__|${cl}` }).eq('id', r.id);
+            }
+        }
+    }
+}
+
+export async function globalDeleteContainerLocation(loc: string): Promise<void> {
+    if (isDemoActive()) return;
+    
+    // Chemicals
+    await supabase.from('chemicals').update({ shelf: '' }).eq('shelf', loc);
+    await supabase.from('chemicals').update({ section: '' }).eq('section', loc);
+    
+    const tables = ['materials', 'tools'];
+    for (const table of tables) {
+        await supabase.from(table).update({ container_location: '' }).eq('container_location', loc);
+        
+        const { data: rows } = await supabase.from(table).select('id, location, container_location');
+        if (rows) {
+            for (const r of rows) {
+                let updated = false;
+                let newClStr = r.container_location || '';
+                
+                if (newClStr.includes(loc)) {
+                    const parts = newClStr.split(' - ');
+                    const newParts = parts.filter(p => p !== loc);
+                    newClStr = newParts.join(' - ');
+                    updated = true;
+                    await supabase.from(table).update({ container_location: newClStr }).eq('id', r.id);
+                }
+                
+                let newLocStr = r.location || '';
+                if (newLocStr.includes(`|__CL__|`)) {
+                    const [base, cl] = newLocStr.split('|__CL__|');
+                    if (cl && cl.includes(loc)) {
+                        const parts = cl.split(' - ');
+                        const newParts = parts.filter(p => p !== loc);
+                        newLocStr = `${base}|__CL__|${newParts.join(' - ')}`;
+                        updated = true;
+                        await supabase.from(table).update({ location: newLocStr }).eq('id', r.id);
+                    }
+                }
+            }
         }
     }
 }

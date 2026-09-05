@@ -368,31 +368,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     return saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
   });
 
-  const [availableLocations, setAvailableLocations] = useState<string[]>(() => {
-    const saved = localStorage.getItem('inventory_preferred_locations');
-    if (saved) {
-      try {
-        const parsed: string[] = JSON.parse(saved);
-        return Array.from(new Set([...DEFAULT_LOCATIONS, ...parsed]));
-      } catch {
-        return DEFAULT_LOCATIONS;
-      }
-    }
-    return DEFAULT_LOCATIONS;
-  });
+  const [availableLocations, setAvailableLocations] = useState<string[]>(DEFAULT_LOCATIONS);
 
-  const [availableContainerLocations, setAvailableContainerLocations] = useState<string[]>(() => {
-    const saved = localStorage.getItem('inventory_preferred_container_locations');
-    if (saved) {
-      try {
-        const parsed: string[] = JSON.parse(saved);
-        return Array.from(new Set([...DEFAULT_CONTAINER_LOCATIONS, ...parsed]));
-      } catch {
-        return DEFAULT_CONTAINER_LOCATIONS;
-      }
-    }
-    return DEFAULT_CONTAINER_LOCATIONS;
-  });
+  const [availableContainerLocations, setAvailableContainerLocations] = useState<string[]>(DEFAULT_CONTAINER_LOCATIONS);
 
   const [availableCategories, setAvailableCategories] = useState<{supply: string[], equipment: string[], chemical?: string[]}>(() => {
     const saved = localStorage.getItem('inventory_preferred_categories');
@@ -443,7 +421,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const updateLocations = (newList: string[]) => {
     setAvailableLocations(newList);
-    localStorage.setItem('inventory_preferred_locations', JSON.stringify(newList));
   };
 
   const [pendingDelete, setPendingDelete] = useState<{type: string, action: () => void} | null>(null);
@@ -537,18 +514,11 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         const newLocs = availableLocations.filter(l => l !== loc);
         updateLocations(newLocs);
         
-        if (mode === 'supply') {
-          try {
-            await api.patch(`/api/materials/location`, { location: loc, newLocation: '' });
-          } catch (err) {
-            console.error(err);
-          }
-        } else {
-          try {
-            await api.patch(`/api/equipment/location`, { location: loc, newLocation: '' });
-          } catch (err) {
-            console.error(err);
-          }
+        try {
+          const { globalDeleteLocation } = await import("@/lib/inventory-data");
+          await globalDeleteLocation(loc);
+        } catch (err) {
+          console.error("Failed to delete location globally", err);
         }
       }
     });
@@ -556,7 +526,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const updateContainerLocations = (newList: string[]) => {
     setAvailableContainerLocations(newList);
-    localStorage.setItem('inventory_preferred_container_locations', JSON.stringify(newList));
   };
 
   const handleDeleteContainerLocation = async (e: React.MouseEvent, loc: string) => {
@@ -567,10 +536,29 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         const newLocs = availableContainerLocations.filter(l => l !== loc);
         updateContainerLocations(newLocs);
         
+        try {
+          const { globalDeleteContainerLocation } = await import("@/lib/inventory-data");
+          await globalDeleteContainerLocation(loc);
+        } catch (err) {
+          console.error("Failed to delete container location globally", err);
+        }
+        
         if (mode === 'supply') {
-          setSupplyPurchases(prev => prev.map(p => p.containerLocation === loc ? { ...p, containerLocation: "" } : p));
+          setSupplyPurchases(prev => prev.map(p => {
+             const newCl = (p.containerLocation || '').split(' - ').filter(x => x !== loc).join(' - ');
+             return { ...p, containerLocation: newCl };
+          }));
         } else if (mode === 'equipment' || mode === 'tool') {
-          setEquipmentPurchases(prev => prev.map(p => p.containerLocation === loc ? { ...p, containerLocation: "" } : p));
+          setEquipmentPurchases(prev => prev.map(p => {
+             const newCl = (p.containerLocation || '').split(' - ').filter(x => x !== loc).join(' - ');
+             return { ...p, containerLocation: newCl };
+          }));
+        } else {
+          setChemicalSizes(prev => prev.map(s => ({
+             ...s, 
+             shelf: s.shelf === loc ? '' : s.shelf,
+             section: s.section === loc ? '' : s.section
+          })));
         }
       }
     });
