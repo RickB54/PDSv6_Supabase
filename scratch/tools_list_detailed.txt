@@ -1,0 +1,80 @@
+Total tools in DB: 79
+1. [Power Equipment & Systems] 2500W High Pressure Steam Cleaner (qty: 1) id: 120f4a16-1c0a-4db6-862a-91fd9b458d48
+2. [Accessories & Carts] 3 Tier Utility Cart on Wheels (qty: 1) id: 8103e3aa-d340-461e-8d97-be5ec7bd9b97
+3. [Power Equipment & Systems] 3/4 Inch Garden Hose Quick Connects (qty: 1) id: 911ccbc3-27e8-4853-af1a-73ad2de750e7
+4. [Power Equipment & Systems] 3/4 Inch Male to Male Hose Adapters (qty: 1) id: df42e541-eec1-4283-b379-c74bdd4b4673
+5. [Power Equipment & Systems] 3PCS Car Detailing Brush Set (qty: 1) id: 5ef8675c-bca4-4c6f-af66-0d335f17989f
+6. [Power Equipment & Systems] 4 Gal. 5.0 Peak HP Shop Vacuum with Accessories and Car Cleaning Kit (qty: 1) id: fdff051c-09b0-4d43-abd2-6b384f13eb6c
+7. [Hand Tools & Guns] 5 Pack Pet Hair Removal Tools (qty: 1) id: b2ee1e83-92cb-4f30-8af2-c8647ed71484
+8. [Storage & Organizers] 5-Pocket Utility Tool Belt Pouch (qty: 1) id: c20996de-e480-4942-9782-6e4699ebf0ae
+9. [Power Equipment & Systems] 6 inch Orbital Polisher (qty: 1) id: a3b8da31-112a-4208-bfa2-bf7223517748
+10. [Storage & Organizers] 7 Pockets Waist Bag Belt (qty: 1) id: 6daa5e2b-8294-4db2-a96f-6a275b539813
+11. [Accessories & Carts] 8-in-1 USB C Hub Docking Station (qty: 1) id: aeadf0ee-1bdc-4e54-bcfc-8af0b7337fd4
+12. [Hand Tools & Guns] Air Blower Gun (qty: 1) id: 8a9726cc-a72f-4aa6-a055-86cca0ec54a1
+13. [Hand Tools & Guns] Air Spray Gun Auto Car Paint Sprayer (qty: 1) id: 9b36544f-91d9-4a24-bf33-ab0fccb09f5f
+14. [Hand Tools & Guns] AstroAI Foam Cannon (qty: 1) id: 8a553b02-abd5-4310-95ed-e4be9a6a9957
+15. [Power Equipment & Systems] Bauer Pressure Washer (1800 PSI / 1.2 GPM) (qty: 1) id: 2ca54a05-f1e0-49ea-aac9-6427ceccb141
+16. [Accessories & Carts] Buyers Products HBF8, 1/2 Inch NPT Breather Cap (qty: 1) id: bcd754b5-6b49-4f9f-9b30-c2a2840eeeb0
+17. [Power Equipment & Systems] CANTEX3/4 in. x 10 ft. Gray Non-Metallic PVC Schedule 40-Conduit (qty: 3) id: a196ccc2-b615-42a9-9a7e-0ab1bed118e7
+18. [Power Equipment & Systems] Car Port (13' x 20') (qty: 1) id: 8f175cfd-b273-4c0b-9a78-a7dc17038c22
+19. [Power Equipment & Systems] CENTRAL PNEUMATIC 3/8 in xc 50 ft. Air Compressor Reel & Hose (qty: 1) id: 0917c638-d647-4b42-a377-8d84119d1758
+20. [Hand Tools & Guns] CENTRAL PNEUMATIC Gravity-Feed Air Spray Gun (qty: 1) id: 295852cd-1d7c-41d8-9745-f288033a5040
+21. [Accessories & Carts] Chemical Guys Heavy Duty Detailing Buckets (qty: 1) id: 955772f1-5f11-4a7c-960f-300cacba6b6f
+22. [Hand Tools & Guns] DBR Tech® Foam Cannon (qty: 1) id: 0900f002-da1d-4397-bb5b-85b814626aa0
+23. [Power Equipment & Systems] Document Organizer Folder (qty: 1) id: 4b82e6be-291d-486e-a0e4-63817996a940
+24. [Accessories & Carts] Drill America - KFDRSD3/8X27/64 27/64 (qty: 1) id: 24c53344-d453-4b64-9efa-c19f756332cd
+25. [Power Equipment & Systems] ECO-WORTHY 33-Series Industrial Water Pressure Pump (qty: 1) id: 8dd0b5da-58f1-4fef-9a62-8dc286b81dcd
+26. [Hand Tools & Guns] Electrical Extension Reel & Cord (45 feet, 12 Gauge) (qty: 1) id: d99e5864-0b78-4402-a096-758c52e1117b
+27. [Hose] Flexzilla Garden Hose 5/8 in. x 50 ft (qty: 1) id: 8ca6f099-43c3-4a4e-9202-69f0878b83b7
+28. [Hand Tools & Guns] Foam Cannon (qty: 1) id: 64c6e346-77e8-41eb-ad70-27c5586366c1
+29. [Hand Tools & Guns] Foam Cannon for Pressure Washer (qty: 1) id: 37f4f9c5-6dca-43ea-b3da-c2d48a1606eb
+30. [Accessories & Carts] Garden Hose Adapter 3/4" GHT Female x 1/2" NPT Male (qty: 1) id: 442989a9-f0e3-4386-8de0-d446b57f64dd
+31. [Other] Gas Converter for Predator Generator (qty: 1) id: e142c094-5c5f-48c3-bde5-fa12cce4dd87
+32. [Power Equipment & Systems] HDX 56oz Handheld Multi-Purpose Pump Sprayer (qty: 2) id: 265c65fe-72dd-4e19-93d0-10fc8ef658da
+33. [Hand Tools & Guns] HDX2 1 Gallon Multi-Purpose Lawn and Garden Pump Sprayer (qty: 1) id: d1a34fe7-3373-40fc-8571-b98f2689b885
+34. [Hand Tools & Guns] HDX2 2 Gallon Multi-Purpose Lawn and Garden Pump Sprayer (qty: 1) id: d10ba22a-0dea-4a12-a4c3-74e1519cbeff
+35. [Hose] Hose (3 foot FlexZilla) (qty: 3) id: 37f110fe-44c0-4740-aae1-e2ae2a49ebf3
+36. [Hose] Hose (5 foot FlexZilla) (qty: 1) id: 81794f4f-c4a4-411d-b533-ebbf0ee1e9b0
+37. [Hose] Hose (50 ft) (qty: 1) id: 5f270513-e0ca-4182-bc60-b315332129bd
+38. [Hand Tools & Guns] Hromee Aluminium Car Cleaning Gun (qty: 1) id: 74d9875c-cb9c-4451-90c4-855426765c2f
+39. [Power Equipment & Systems] HUSKY Garage Flooring Roll Black with Diamond Plate texture (qty: 1) id: a2d4e42b-614a-465b-aa7a-638bcb418efe
+40. [Hand Tools & Guns] HUSKY18 in., 15 in. and 12 in. Tool Bag Combo (qty: 1) id: 3044205f-e6f3-45d2-a2c1-3255af27e731
+41. [Accessories & Carts] JESLED 5FT T5 T8 Extension Cords (qty: 1) id: a71f4878-ee28-452c-bf1d-53d669cb42a5
+42. [Security & Office] KANMABPC Wireless Bluetooth Mouse (qty: 1) id: 17ac59e6-5000-4b0d-8ab5-0c2c4e8d9b74
+43. [Storage & Organizers] Large Storage 3 drawer unit (qty: 1) id: 3284f4a2-1286-4be3-8b17-9089414dbf1a
+44. [Power Equipment & Systems] Linkable LED Shop Light (qty: 1) id: b4f7a10d-dd3b-438a-bb27-c834bbde7d05
+45. [Power Equipment & Systems] Pancake Air Compressor (qty: 1) id: 831613ff-177a-4dc1-9229-feb51f2e505f
+46. [Hand Tools & Guns] Pet Hair Remover, Block Roller (qty: 1) id: e05ac45e-a412-436b-9a0f-81720054130c
+47. [Power Equipment & Systems] Predator 5000 inverter / Generator (qty: 1) id: e1f598ef-d4ac-4e87-b4dc-1a76d986ea26
+48. [Hand Tools & Guns] Pressure Washer Gun (qty: 1) id: 908d3d39-0325-40bf-ad1f-154aee30b2eb
+49. [Power Equipment & Systems] Pressure Washer Gun and Hose Kit, 50FT (qty: 1) id: 4a1c32b6-5925-41ed-9a8e-bba7d86cc8b9
+50. [Hand Tools & Guns] Pressure Washer Gun with Swivel, 4000 PSI (qty: 1) id: 4268efc4-2346-4f82-9df7-3d0d9b28c340
+51. [Power Equipment & Systems] Pressure Washer Reel & Hose (60 feet) x2 (qty: 2) id: 6885d1fc-27a3-4b9f-b88e-ae75f05f5b12
+52. [Power Equipment & Systems] Respirator (qty: 1) id: 47fbe67e-30f4-42ad-b38a-9cf09c90bbd4
+53. [Power Equipment & Systems] Respirator Cartridges (qty: 1) id: 01045b5c-1828-472e-a09b-4d304b52ddfe
+54. [Power Equipment & Systems] Retractable Garden Hose Reel, 1/2 in x 100 ft (qty: 1) id: bcca83fe-aa2d-4522-a1cb-8f7a2c1333c9
+55. [Hand Tools & Guns] Retractable Hose Reel, 1/4" x 50 FT (qty: 1) id: 98937d92-a978-430f-865b-be5d78c31bd3
+56. [Power Equipment & Systems] RIDGID3 Gal. 5.0 Peak HP NXT Shop Vac (qty: 1) id: 8d13bf91-26c9-4075-9d65-6a5ecc115269
+57. [Power Equipment & Systems] Ryobi Pressure Washer (1800 PSI) (qty: 1) id: 0752cc46-f38f-48b4-826e-f00f7f65c1f4
+58. [Security & Office] Security Cameras (qty: 2) id: ceb222a7-45ef-480a-80ad-4cfb4f83fbc8
+59. [Hand Tools & Guns] Spray Bottle Carry Caddy (qty: 2) id: 0c87483d-2f1b-4862-9ffa-8061fec55280
+60. [Storage & Organizers] Storage Caddy (6 Pack) (qty: 1) id: 02bf6239-768e-4174-b1c2-01e2bfc8cfd3
+61. [Power Equipment & Systems] Stright Solar Powered String Light 100FT (qty: 1) id: c871be03-43a6-45ce-a151-0a08d4522923
+62. [Accessories & Carts] Supplies Organizer Tote (qty: 1) id: 07edfa15-a78e-4f44-b83a-696de43d1f75
+63. [Accessories & Carts] T5 T8 Extension Cords (qty: 1) id: 08dc96c2-bd11-44b5-81d2-d7f99c754697
+64. [Hand Tools & Guns] TDS Meter, Digital Water Tester (qty: 1) id: dc629d4f-7e1c-491c-852b-cd48b1b6eb96
+65. [Hand Tools & Guns] Tire Pressure Gauges (qty: 1) id: cdbcc92a-cbf2-4736-a643-2f6a3be45fb1
+66. [Hand Tools & Guns] Tornado Mini Air Gun (qty: 1) id: ae1fc909-388c-454a-8fa9-79d4a4e90b87
+67. [Hand Tools & Guns] Tornador Air Compressor Tool (qty: 1) id: c6c17426-6a97-4d13-b029-9c490c65ca5c
+68. [Power Equipment & Systems] TORVA 60 Gallon Fresh Water Tank (qty: 1) id: 34ad556e-2cbd-4150-ae7a-13ca571e091a
+69. [Power Equipment & Systems] TORVA 60 Gallon Fresh Water Tank (qty: 1) id: 56b5ee5a-d678-45a4-8975-1d6bae78f077
+70. [Hand Tools & Guns] TUTULUCK Short Pressure Washer Gun (qty: 1) id: cba5981f-2e7d-47a8-a2d9-2024775e58c9
+71. [Hand Tools & Guns] Undercarriage Cleaner for Pressure Washer (qty: 1) id: 9d949ba1-aa50-428a-b448-2d44d6643b4b
+72. [Hand Tools & Guns] Universal Compatible with Any Brand Shop Vac Extractor Hose Kit Attachmen (qty: 1) id: 3b54d9c4-5d1d-4e1f-8f26-c89f6e0251fa
+73. [Hand Tools & Guns] Vacuum Attachments Kit (qty: 1) id: c2edbf6c-acae-4cf1-9a45-c8fc80d28f9a
+74. [Power Equipment & Systems] VERANDA White Reversible PVC Trim/Sheet (qty: 1) id: 00cc54ea-2011-41ae-aa28-1a7d2c20a85f
+75. [Power Equipment & Systems] VEVOR 13 Gallon Air Compressor (qty: 1) id: 79469ca0-c2ee-4bdf-ae09-b1859c45aabe
+76. [Power Equipment & Systems] Water Bladder (Black, 60Gallon (qty: 1) id: 099a6430-0b07-4b9b-a888-4adb7a64a9c5
+77. [Power Equipment & Systems] Water Filter (qty: 1) id: 79b9a88f-47f3-47d6-b590-0f545c0189eb
+78. [Power Equipment & Systems] Water Spout bib (Installation & Parts) (qty: 1) id: eea6a66b-3b00-43b1-b5f9-3f3654a8603f
+79. [Power Equipment & Systems] YUKON 5-Tier Shelf, 36 in. x 18 in. x 72 in. (qty: 1) id: 2db35ad4-0798-489f-8399-7c5fa22d18bd

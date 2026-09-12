@@ -1,0 +1,1076 @@
+{
+  "materialsCount": 99,
+  "toolsCount": 79,
+  "materials": [
+    {
+      "id": "ceb3733a-5881-4200-8277-4e27a0a10355",
+      "name": "1 in. x 4 in. x 8 ft. Pine Lumber",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "6e82eccd-f4d1-43eb-9e72-c2e475438762",
+      "name": "2 Pack Brass Garden Hose Shut-Off Valves",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "d6127392-c99f-40e7-8f4a-3526f0dc6cab",
+      "name": "2 Pack Car Drying Towels (48\" x 24\")",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "a30dd4ea-61f5-4f99-b09c-729afeaeac58",
+      "name": "2 Pcs Spray Bottle Storage Rack",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "ab346328-4b45-4c1f-8a80-4d40643e21b9",
+      "name": "2 Set 3/4 Inch Rain Barrel Spigot Kit",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "3a1117d9-16a5-4de7-98e5-5c841ad75a82",
+      "name": "2-Pack 90-Degree Brass Hose Elbow Connector",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "15b503ab-574d-4eaf-b15b-e68593619732",
+      "name": "20 Pcs D-Ring Tie Downs",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "f8a8c6d9-53fe-4232-942c-5adb3e23c4e0",
+      "name": "20\" Wheel Brush",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "68437f26-75fb-4a56-ad7c-a9289a57b552",
+      "name": "24 oz Spray Bottles (Uinemo Professional Sprayer)",
+      "category": "Bottles & Containers",
+      "qty": 2
+    },
+    {
+      "id": "60981f79-d260-4286-9724-a8db72c1d37f",
+      "name": "26Pcs Car Detailing Brush Set",
+      "category": "Brushes & Applicators",
+      "qty": 1
+    },
+    {
+      "id": "baa91537-15f6-4a99-8ff4-8d5bcdfefed6",
+      "name": "3/4 Inch Male to Male Hose Adapter",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "e996f7c8-5088-4550-ba8c-b2694de7f2c0",
+      "name": "30 Pcs 4 Inches Ball Bungee",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "8c3a27ac-1a32-4538-b154-15dea3170b33",
+      "name": "32 oz Spray Bottles (Zep) x6",
+      "category": "Bottles & Containers",
+      "qty": 6
+    },
+    {
+      "id": "dda5b137-709b-4cda-ab69-5c8933b8c963",
+      "name": "4 PCS Car Detailing Brush Set",
+      "category": "Brushes & Applicators",
+      "qty": 1
+    },
+    {
+      "id": "11ff10f9-d6d7-4d3a-898b-4a43d85b8e1b",
+      "name": "5 Gallon Gas Tank",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "23b0e66a-3970-4f12-b2c8-de4dfa3526c1",
+      "name": "50 Pcs 9 Inches Ball Bungee",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "8596261c-a93c-48fd-82f7-94259061eaea",
+      "name": "6Pack Drill Brush Power Scrubber Kit",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "5d8eb870-8442-4074-9fc5-9e072a483d42",
+      "name": "7 Clothing T-shirts with logo (Order 2412285)",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "61fe5b73-52d8-41ea-b953-f999ddeba41d",
+      "name": "7 pc Brush set (Exterior)",
+      "category": "Brushes & Applicators",
+      "qty": 1
+    },
+    {
+      "id": "2a5a924e-62cf-498e-8867-5485e21bcbdf",
+      "name": "90 Degree Garden Hose Adapter",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "65e94037-f153-476c-9322-f2d25fd432e8",
+      "name": "Adam's Polishes EZ-Fill Threaded Funnel",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "cad36d21-bf5d-48a5-a39c-8dc6c3c3d79c",
+      "name": "AIDEA Car Wash Mitt x2",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "14d64fcf-fe75-4a8c-9686-1ba39f44dfa2",
+      "name": "Airlab Microfiber Towels (2 Large)",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "e0c101dd-2abe-4323-be25-5f775f58e0f6",
+      "name": "Airlab Microfiber Towels (4 Large)",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "ab741c1f-0c74-4a7a-9caf-1789e9f122fb",
+      "name": "AstroAI 32\" Ultra-Long Windshield Cleaner Tool",
+      "category": "Brushes & Applicators",
+      "qty": 1
+    },
+    {
+      "id": "a80e5307-d232-453e-8328-6e3cf49b6502",
+      "name": "Business Attire (Beanie)",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "e8b83929-c408-432f-8ad7-cc6fd977fe0e",
+      "name": "Business Attire (Hoodie)",
+      "category": "Business & Branding",
+      "qty": 4
+    },
+    {
+      "id": "66f37630-b548-4fda-8c97-33ad908c71d2",
+      "name": "Business Attire (T Shirt)",
+      "category": "Business & Branding",
+      "qty": 10
+    },
+    {
+      "id": "b71161b7-12c0-45f3-ae22-86b5820aadcc",
+      "name": "Business Cards Order number: VP_HZ9MRZQL",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "bced8b9b-a94f-45d8-a9a0-cd58d4bab160",
+      "name": "Business Cards Order number: VP_QKNFTDZB (1 of 3)",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "5f08bf2f-e7c2-44aa-b70c-8fdca45e0c49",
+      "name": "Business Cards Order number: VP_QKNFTDZB (1 of 3)",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "259a2a8b-ef04-42a3-b3b6-8eb7f19885da",
+      "name": "Business Cards Order number: VP_T7289GM9",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "1f84a3c7-1dc9-4b1f-9eb0-f78d9ac1434d",
+      "name": "Business Pens",
+      "category": "Business & Branding",
+      "qty": 5
+    },
+    {
+      "id": "c98b32b0-98ce-4f41-ad3b-ccad39784364",
+      "name": "Cap with logo",
+      "category": "Business & Branding",
+      "qty": 2
+    },
+    {
+      "id": "e63bfbb5-5a9c-4c6c-9f51-a14943fef8c5",
+      "name": "Car Detailing Brush Set",
+      "category": "Brushes & Applicators",
+      "qty": 1
+    },
+    {
+      "id": "5b54f653-9af9-45a0-aaa5-c3ed307f6acb",
+      "name": "Car Detailing Cleaning",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "95a53221-2f77-4728-8523-ba9dd315852a",
+      "name": "CERAKOTE Microfiber Towels (12 Pack)",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "14330c15-9f4b-4695-9e62-6a123460d0a1",
+      "name": "Chemical Guys Bucket Insert - Filter",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "9c24a5ee-743b-4dde-9d35-ca0a7521f3d9",
+      "name": "Clay Bar (Synthetic)",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "9bbde9fb-1a0e-45a5-a10b-0de133f3b2d7",
+      "name": "Clay Bar (Synthetic) Large Mitt",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "f51609d2-eb9f-4ebe-82b9-fd491cc77a6e",
+      "name": "Cleaning Microfiber Rags (Small)",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "989a0228-091c-4417-9fed-54ac252dc6a6",
+      "name": "Clothing 4 Polos & 1 Hat with logo (Order 2427827 )",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "0434361e-4e86-4292-981b-2f8dca71192e",
+      "name": "Clothing with my business logo (Order 2374389)",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "5c6197a2-3bfc-4817-b059-1b4bb9aab676",
+      "name": "Clothing with my business logo (Order 2376637)",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "3d9f6cd5-25d1-4315-a9ad-fc6a4b3d79c5",
+      "name": "Clothing with my business logo (Order 2376715)",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "2621b549-9fa1-4650-b967-300555010b0f",
+      "name": "Collapsible Traffic Pop Up Reflective Safety Cone",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "700fcdde-fea7-411f-9a81-986333951291",
+      "name": "Crevice Tool (Interior)",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "bb3f2076-79a4-4506-a3e1-ed3464b774ef",
+      "name": "Curveball Wide Detail Brush",
+      "category": "Brushes & Applicators",
+      "qty": 1
+    },
+    {
+      "id": "ae916440-f5be-431b-ba20-5ff2a0748800",
+      "name": "Custom Mugs Order number: VP_QKNFTDZB (2 of 3)",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "edbdf14b-a2ea-4e14-b1bf-c6ff36454219",
+      "name": "Deedlite Premium Car Drying Towel",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "db81bd51-10a7-49e4-ae14-0917312c979d",
+      "name": "Drying Towel, 36\"x 24\"",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "86feadf7-9a84-4051-810d-f5c604d88ed4",
+      "name": "Fevone No Kinking Water Hose 50 ft",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "ba6f0424-1fe3-4950-8d7e-d1d8d2358ff2",
+      "name": "Funnel (for Chemical mixing)",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "8358a675-e8d7-4338-98ff-fc501e4dff0f",
+      "name": "Funnel (for Generator)",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "c1ed05e5-c6d9-4df8-b9a5-18837fcb837f",
+      "name": "Garden Hose Quick Connectors",
+      "category": "Tools & Accessories",
+      "qty": 2
+    },
+    {
+      "id": "092b5fa4-a100-4c09-b05f-7359adf3319f",
+      "name": "Glass Cleaning Rags",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "bd134159-17b1-4bd3-9a66-ee8cfea7d483",
+      "name": "Hose 3 foot FlexZilla",
+      "category": "Tools & Accessories",
+      "qty": 3
+    },
+    {
+      "id": "7be6f9f1-33b1-479c-b774-430148129120",
+      "name": "Hose Splitter 2 Way",
+      "category": "Other",
+      "qty": 2
+    },
+    {
+      "id": "49ebf368-e5a1-497b-a911-032eda038e72",
+      "name": "HP Printer Paper 8.5 x 11",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "b5c34580-7c4f-4507-99ca-2953fb3dd189",
+      "name": "Insulated Lunch Box",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "8ca4cc9b-31c5-49d8-8bf6-03826711fb9b",
+      "name": "Invisible Glass Windshield Cleaning Tool",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "2a7e32aa-d3a8-4f20-9ae2-fbb90bdad24d",
+      "name": "Kneeling Pad",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "c8e9f31e-dc54-4a22-8024-9d6f702666d8",
+      "name": "Lilly Brush (Pet Hair Tool)",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "66a71893-cb86-4b91-b348-f5b8c5621ea9",
+      "name": "Long Bristle Horse Hair Brush",
+      "category": "Brushes & Applicators",
+      "qty": 1
+    },
+    {
+      "id": "6a72ccee-a7fb-46b7-99ae-b73a46b482cf",
+      "name": "Measuring Cup (35oz)",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "59d4a23c-a881-4080-9769-7d0c77c12788",
+      "name": "Meguiar's G191700 Smooth Surface Clay Kit",
+      "category": "Clay & Decontamination",
+      "qty": 1
+    },
+    {
+      "id": "b292899d-a6b9-4edf-8d99-2105fd42ff37",
+      "name": "Metal Garden Hose Splitter",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "1d274eec-095d-4780-b497-52533d260975",
+      "name": "Microfiber Drying Towels 16\" X 16\", 800 GSM, Pack of 4",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "d91762cd-71c1-41a1-8611-3eff50ef683f",
+      "name": "Microfiber Drying Towels 35\" X 24\", 500 GSM, Extra Large",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "0d90548b-75bc-4b1b-9677-819fe3dccac6",
+      "name": "Microfiber Towels x3 (24\" x 35\")",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "47cc9b8f-022e-4acb-ab8e-1d5ddfa4477b",
+      "name": "Mouse for NVR",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "a7fa4486-6ac9-48bc-b029-b7c8663ccaa3",
+      "name": "Ninja Cleaning Pads (Interior)",
+      "category": "Tools & Accessories",
+      "qty": 2
+    },
+    {
+      "id": "4a83821a-0906-48f7-981f-fe10e6a1968f",
+      "name": "Nitrile Gloves",
+      "category": "Safety & PPE",
+      "qty": 3
+    },
+    {
+      "id": "50f81316-f891-4d7a-9e64-160af97c9438",
+      "name": "Paper Towels",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "762c9046-8f26-4b0f-8658-34fae409a5b8",
+      "name": "Plastic Spray Bottle (24oz 3 Pack)",
+      "category": "Bottles & Containers",
+      "qty": 1
+    },
+    {
+      "id": "dc5b754b-62ac-42d8-9631-5fbcd34279aa",
+      "name": "PLYTANIUM19/32 in. x 4 ft. x 8 ft. Rtd Sheathing Syp",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "03eb4436-5c42-475e-8086-618a9e23f07f",
+      "name": "Premium Car Drying Towel",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "b7a1ecfe-9947-4cde-945f-75a3bc6a3e85",
+      "name": "Pressure Washer Quick Connect Kit",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "5ee94e21-9890-4cf0-bbff-48d90f8c161f",
+      "name": "Quick Connect Air Hose Fittings",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "2a50f075-a46f-43fa-a6c6-0a6a81b667d5",
+      "name": "Recycled Stainless Steel Double-Wall Tumbler – 30 oz. Order number: VP_QKNFTDZB (2 of 3)",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "b04ded78-951d-43e4-a1ed-a54864b403db",
+      "name": "Ryobi Battery 18V",
+      "category": "Tools & Accessories",
+      "qty": 6
+    },
+    {
+      "id": "7f09f115-3d24-41f3-ac54-ceb4adf1f1de",
+      "name": "Ryobi Battery Charger 18V",
+      "category": "Tools & Accessories",
+      "qty": 5
+    },
+    {
+      "id": "cc0bc1bd-9cb5-47f6-b8cb-d616cd523f1e",
+      "name": "Safety Glasses",
+      "category": "Safety & PPE",
+      "qty": 1
+    },
+    {
+      "id": "0f481df3-eda8-44ef-b7ae-103a10ef3865",
+      "name": "Safety Masks",
+      "category": "Safety & PPE",
+      "qty": 1
+    },
+    {
+      "id": "5197640b-e79a-4463-b745-b756951d1032",
+      "name": "SmilinFit Magic Sponge Erasers, 20 Pack",
+      "category": "Brushes & Applicators",
+      "qty": 1
+    },
+    {
+      "id": "99abe6d5-35cb-4de8-b288-11ba6f1c755d",
+      "name": "Spray Bottle (3 Pack, 24 Oz, 3 Colors)",
+      "category": "Other",
+      "qty": 2
+    },
+    {
+      "id": "f0a44e5f-0b0b-4d22-b01f-a080ec10784d",
+      "name": "Spray Bottles 16oz (Chemical Guys)",
+      "category": "Bottles & Containers",
+      "qty": 6
+    },
+    {
+      "id": "16beefd1-8e3a-4007-99a0-89f9f81952d7",
+      "name": "Storage Bins (for Supplies)",
+      "category": "Tools & Accessories",
+      "qty": 4
+    },
+    {
+      "id": "993c2923-1bbb-4955-b248-247fa83ae361",
+      "name": "Suds Lab WB Premium Detailing Wheel Brush",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "c84f1f0d-b11a-4bbb-be0a-adc8ebbc8fd1",
+      "name": "Sudz Budz® Premium Grid Car Wash Sponge 2pc",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "2c9c0d4f-46d1-44c4-830e-c5f731873167",
+      "name": "Super Absorbent Microfiber Car Drying Towel 36\"L x 25\"W",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "28aa5526-ddec-47ee-8204-5b9c199d732a",
+      "name": "The Rag Company - The Liquid8r",
+      "category": "Towels & Microfiber",
+      "qty": 1
+    },
+    {
+      "id": "7ea986c6-e352-4336-9630-1588e899d114",
+      "name": "Tire Dressing Applicator Pads",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "892ed50e-1302-4f01-92c2-b4292a2373d1",
+      "name": "TN760 Toner Cartridge Black",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "99705ac2-00c8-4dc0-81b5-ba76e5018f6d",
+      "name": "Trash Bags",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "3527ec62-6e37-46e0-bef0-30f890625ecc",
+      "name": "Twinkle Star Pressure Washer Adapter Set",
+      "category": "Tools & Accessories",
+      "qty": 1
+    },
+    {
+      "id": "335ce622-728b-4b5b-8a88-a4b78e43b9b7",
+      "name": "VistaPrint® Design Wrap Ballpoint Pen",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "e9011334-0c94-450c-9433-e9ccb11f174d",
+      "name": "White Shipping Labels, 2\" x 4\", 300 Labels",
+      "category": "Business & Branding",
+      "qty": 1
+    },
+    {
+      "id": "b89926e7-4278-402d-8956-63e8366f2d06",
+      "name": "YAMATIC Upgraded Flexible Pressure Washer Hose 50FT",
+      "category": "Tools & Accessories",
+      "qty": 1
+    }
+  ],
+  "tools": [
+    {
+      "id": "120f4a16-1c0a-4db6-862a-91fd9b458d48",
+      "name": "2500W High Pressure Steam Cleaner",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "8103e3aa-d340-461e-8d97-be5ec7bd9b97",
+      "name": "3 Tier Utility Cart on Wheels",
+      "category": "Accessories & Carts",
+      "qty": 1
+    },
+    {
+      "id": "911ccbc3-27e8-4853-af1a-73ad2de750e7",
+      "name": "3/4 Inch Garden Hose Quick Connects",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "df42e541-eec1-4283-b379-c74bdd4b4673",
+      "name": "3/4 Inch Male to Male Hose Adapters",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "5ef8675c-bca4-4c6f-af66-0d335f17989f",
+      "name": "3PCS Car Detailing Brush Set",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "fdff051c-09b0-4d43-abd2-6b384f13eb6c",
+      "name": "4 Gal. 5.0 Peak HP Shop Vacuum with Accessories and Car Cleaning Kit",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "b2ee1e83-92cb-4f30-8af2-c8647ed71484",
+      "name": "5 Pack Pet Hair Removal Tools",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "c20996de-e480-4942-9782-6e4699ebf0ae",
+      "name": "5-Pocket Utility Tool Belt Pouch",
+      "category": "Storage & Organizers",
+      "qty": 1
+    },
+    {
+      "id": "a3b8da31-112a-4208-bfa2-bf7223517748",
+      "name": "6 inch Orbital Polisher",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "6daa5e2b-8294-4db2-a96f-6a275b539813",
+      "name": "7 Pockets Waist Bag Belt",
+      "category": "Storage & Organizers",
+      "qty": 1
+    },
+    {
+      "id": "aeadf0ee-1bdc-4e54-bcfc-8af0b7337fd4",
+      "name": "8-in-1 USB C Hub Docking Station",
+      "category": "Accessories & Carts",
+      "qty": 1
+    },
+    {
+      "id": "8a9726cc-a72f-4aa6-a055-86cca0ec54a1",
+      "name": "Air Blower Gun",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "9b36544f-91d9-4a24-bf33-ab0fccb09f5f",
+      "name": "Air Spray Gun Auto Car Paint Sprayer",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "8a553b02-abd5-4310-95ed-e4be9a6a9957",
+      "name": "AstroAI Foam Cannon",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "2ca54a05-f1e0-49ea-aac9-6427ceccb141",
+      "name": "Bauer Pressure Washer (1800 PSI / 1.2 GPM)",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "bcd754b5-6b49-4f9f-9b30-c2a2840eeeb0",
+      "name": "Buyers Products HBF8, 1/2 Inch NPT Breather Cap",
+      "category": "Accessories & Carts",
+      "qty": 1
+    },
+    {
+      "id": "a196ccc2-b615-42a9-9a7e-0ab1bed118e7",
+      "name": "CANTEX3/4 in. x 10 ft. Gray Non-Metallic PVC Schedule 40-Conduit",
+      "category": "Power Equipment & Systems",
+      "qty": 3
+    },
+    {
+      "id": "8f175cfd-b273-4c0b-9a78-a7dc17038c22",
+      "name": "Car Port (13' x 20')",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "0917c638-d647-4b42-a377-8d84119d1758",
+      "name": "CENTRAL PNEUMATIC 3/8 in xc 50 ft. Air Compressor Reel & Hose",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "295852cd-1d7c-41d8-9745-f288033a5040",
+      "name": "CENTRAL PNEUMATIC Gravity-Feed Air Spray Gun",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "955772f1-5f11-4a7c-960f-300cacba6b6f",
+      "name": "Chemical Guys Heavy Duty Detailing Buckets",
+      "category": "Accessories & Carts",
+      "qty": 1
+    },
+    {
+      "id": "0900f002-da1d-4397-bb5b-85b814626aa0",
+      "name": "DBR Tech® Foam Cannon",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "4b82e6be-291d-486e-a0e4-63817996a940",
+      "name": "Document Organizer Folder",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "24c53344-d453-4b64-9efa-c19f756332cd",
+      "name": "Drill America - KFDRSD3/8X27/64 27/64",
+      "category": "Accessories & Carts",
+      "qty": 1
+    },
+    {
+      "id": "8dd0b5da-58f1-4fef-9a62-8dc286b81dcd",
+      "name": "ECO-WORTHY 33-Series Industrial Water Pressure Pump",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "d99e5864-0b78-4402-a096-758c52e1117b",
+      "name": "Electrical Extension Reel & Cord (45 feet, 12 Gauge)",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "8ca6f099-43c3-4a4e-9202-69f0878b83b7",
+      "name": "Flexzilla Garden Hose 5/8 in. x 50 ft",
+      "category": "Hose",
+      "qty": 1
+    },
+    {
+      "id": "64c6e346-77e8-41eb-ad70-27c5586366c1",
+      "name": "Foam Cannon",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "37f4f9c5-6dca-43ea-b3da-c2d48a1606eb",
+      "name": "Foam Cannon for Pressure Washer",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "442989a9-f0e3-4386-8de0-d446b57f64dd",
+      "name": "Garden Hose Adapter 3/4\" GHT Female x 1/2\" NPT Male",
+      "category": "Accessories & Carts",
+      "qty": 1
+    },
+    {
+      "id": "e142c094-5c5f-48c3-bde5-fa12cce4dd87",
+      "name": "Gas Converter for Predator Generator",
+      "category": "Other",
+      "qty": 1
+    },
+    {
+      "id": "265c65fe-72dd-4e19-93d0-10fc8ef658da",
+      "name": "HDX 56oz Handheld Multi-Purpose Pump Sprayer",
+      "category": "Power Equipment & Systems",
+      "qty": 2
+    },
+    {
+      "id": "d1a34fe7-3373-40fc-8571-b98f2689b885",
+      "name": "HDX2 1 Gallon Multi-Purpose Lawn and Garden Pump Sprayer",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "d10ba22a-0dea-4a12-a4c3-74e1519cbeff",
+      "name": "HDX2 2 Gallon Multi-Purpose Lawn and Garden Pump Sprayer",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "37f110fe-44c0-4740-aae1-e2ae2a49ebf3",
+      "name": "Hose (3 foot FlexZilla)",
+      "category": "Hose",
+      "qty": 3
+    },
+    {
+      "id": "81794f4f-c4a4-411d-b533-ebbf0ee1e9b0",
+      "name": "Hose (5 foot FlexZilla)",
+      "category": "Hose",
+      "qty": 1
+    },
+    {
+      "id": "5f270513-e0ca-4182-bc60-b315332129bd",
+      "name": "Hose (50 ft)",
+      "category": "Hose",
+      "qty": 1
+    },
+    {
+      "id": "74d9875c-cb9c-4451-90c4-855426765c2f",
+      "name": "Hromee Aluminium Car Cleaning Gun",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "a2d4e42b-614a-465b-aa7a-638bcb418efe",
+      "name": "HUSKY Garage Flooring Roll Black with Diamond Plate texture",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "3044205f-e6f3-45d2-a2c1-3255af27e731",
+      "name": "HUSKY18 in., 15 in. and 12 in. Tool Bag Combo",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "a71f4878-ee28-452c-bf1d-53d669cb42a5",
+      "name": "JESLED 5FT T5 T8 Extension Cords",
+      "category": "Accessories & Carts",
+      "qty": 1
+    },
+    {
+      "id": "17ac59e6-5000-4b0d-8ab5-0c2c4e8d9b74",
+      "name": "KANMABPC Wireless Bluetooth Mouse",
+      "category": "Security & Office",
+      "qty": 1
+    },
+    {
+      "id": "3284f4a2-1286-4be3-8b17-9089414dbf1a",
+      "name": "Large Storage 3 drawer unit",
+      "category": "Storage & Organizers",
+      "qty": 1
+    },
+    {
+      "id": "b4f7a10d-dd3b-438a-bb27-c834bbde7d05",
+      "name": "Linkable LED Shop Light",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "831613ff-177a-4dc1-9229-feb51f2e505f",
+      "name": "Pancake Air Compressor",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "e05ac45e-a412-436b-9a0f-81720054130c",
+      "name": "Pet Hair Remover, Block Roller",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "e1f598ef-d4ac-4e87-b4dc-1a76d986ea26",
+      "name": "Predator 5000 inverter / Generator",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "908d3d39-0325-40bf-ad1f-154aee30b2eb",
+      "name": "Pressure Washer Gun",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "4a1c32b6-5925-41ed-9a8e-bba7d86cc8b9",
+      "name": "Pressure Washer Gun and Hose Kit, 50FT",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "4268efc4-2346-4f82-9df7-3d0d9b28c340",
+      "name": "Pressure Washer Gun with Swivel, 4000 PSI",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "6885d1fc-27a3-4b9f-b88e-ae75f05f5b12",
+      "name": "Pressure Washer Reel & Hose (60 feet) x2",
+      "category": "Power Equipment & Systems",
+      "qty": 2
+    },
+    {
+      "id": "47fbe67e-30f4-42ad-b38a-9cf09c90bbd4",
+      "name": "Respirator",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "01045b5c-1828-472e-a09b-4d304b52ddfe",
+      "name": "Respirator Cartridges",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "bcca83fe-aa2d-4522-a1cb-8f7a2c1333c9",
+      "name": "Retractable Garden Hose Reel, 1/2 in x 100 ft",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "98937d92-a978-430f-865b-be5d78c31bd3",
+      "name": "Retractable Hose Reel, 1/4\" x 50 FT",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "8d13bf91-26c9-4075-9d65-6a5ecc115269",
+      "name": "RIDGID3 Gal. 5.0 Peak HP NXT Shop Vac",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "0752cc46-f38f-48b4-826e-f00f7f65c1f4",
+      "name": "Ryobi Pressure Washer (1800 PSI)",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "ceb222a7-45ef-480a-80ad-4cfb4f83fbc8",
+      "name": "Security Cameras",
+      "category": "Security & Office",
+      "qty": 2
+    },
+    {
+      "id": "0c87483d-2f1b-4862-9ffa-8061fec55280",
+      "name": "Spray Bottle Carry Caddy",
+      "category": "Hand Tools & Guns",
+      "qty": 2
+    },
+    {
+      "id": "02bf6239-768e-4174-b1c2-01e2bfc8cfd3",
+      "name": "Storage Caddy (6 Pack)",
+      "category": "Storage & Organizers",
+      "qty": 1
+    },
+    {
+      "id": "c871be03-43a6-45ce-a151-0a08d4522923",
+      "name": "Stright Solar Powered String Light 100FT",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "07edfa15-a78e-4f44-b83a-696de43d1f75",
+      "name": "Supplies Organizer Tote",
+      "category": "Accessories & Carts",
+      "qty": 1
+    },
+    {
+      "id": "08dc96c2-bd11-44b5-81d2-d7f99c754697",
+      "name": "T5 T8 Extension Cords",
+      "category": "Accessories & Carts",
+      "qty": 1
+    },
+    {
+      "id": "dc629d4f-7e1c-491c-852b-cd48b1b6eb96",
+      "name": "TDS Meter, Digital Water Tester",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "cdbcc92a-cbf2-4736-a643-2f6a3be45fb1",
+      "name": "Tire Pressure Gauges",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "ae1fc909-388c-454a-8fa9-79d4a4e90b87",
+      "name": "Tornado Mini Air Gun",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "c6c17426-6a97-4d13-b029-9c490c65ca5c",
+      "name": "Tornador Air Compressor Tool",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "34ad556e-2cbd-4150-ae7a-13ca571e091a",
+      "name": "TORVA 60 Gallon Fresh Water Tank",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "56b5ee5a-d678-45a4-8975-1d6bae78f077",
+      "name": "TORVA 60 Gallon Fresh Water Tank",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "cba5981f-2e7d-47a8-a2d9-2024775e58c9",
+      "name": "TUTULUCK Short Pressure Washer Gun",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "9d949ba1-aa50-428a-b448-2d44d6643b4b",
+      "name": "Undercarriage Cleaner for Pressure Washer",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "3b54d9c4-5d1d-4e1f-8f26-c89f6e0251fa",
+      "name": "Universal Compatible with Any Brand Shop Vac Extractor Hose Kit Attachmen",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "c2edbf6c-acae-4cf1-9a45-c8fc80d28f9a",
+      "name": "Vacuum Attachments Kit",
+      "category": "Hand Tools & Guns",
+      "qty": 1
+    },
+    {
+      "id": "00cc54ea-2011-41ae-aa28-1a7d2c20a85f",
+      "name": "VERANDA White Reversible PVC Trim/Sheet",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "79469ca0-c2ee-4bdf-ae09-b1859c45aabe",
+      "name": "VEVOR 13 Gallon Air Compressor",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "099a6430-0b07-4b9b-a888-4adb7a64a9c5",
+      "name": "Water Bladder (Black, 60Gallon",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "79b9a88f-47f3-47d6-b590-0f545c0189eb",
+      "name": "Water Filter",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "eea6a66b-3b00-43b1-b5f9-3f3654a8603f",
+      "name": "Water Spout bib (Installation & Parts)",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    },
+    {
+      "id": "2db35ad4-0798-489f-8399-7c5fa22d18bd",
+      "name": "YUKON 5-Tier Shelf, 36 in. x 18 in. x 72 in.",
+      "category": "Power Equipment & Systems",
+      "qty": 1
+    }
+  ]
+}

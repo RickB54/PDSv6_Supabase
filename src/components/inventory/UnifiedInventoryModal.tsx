@@ -183,12 +183,18 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           const brands = Array.from(new Set(chems.map(c => c.brand).filter(Boolean))) as string[];
           setUniqueBrands(brands.sort((a, b) => a.localeCompare(b)));
 
-          // Categories
           const materialCats = Array.from(new Set(materials.map(m => m.category).filter(Boolean))) as string[];
           const toolCats = Array.from(new Set(tools.map(t => t.category).filter(Boolean))) as string[];
+          const shared = Array.from(new Set([
+            ...availableCategories.supply,
+            ...availableCategories.equipment,
+            ...materialCats,
+            ...toolCats
+          ])).filter(c => c !== "Accessories & Carts" && c !== "Clay & Decontamination").sort();
           const newCats = { 
-            supply: Array.from(new Set([...availableCategories.supply, ...materialCats])).sort(),
-            equipment: Array.from(new Set([...availableCategories.equipment, ...toolCats])).sort()
+            ...availableCategories,
+            supply: shared,
+            equipment: shared
           };
           setAvailableCategories(newCats);
           localStorage.setItem('inventory_preferred_categories', JSON.stringify(newCats));
@@ -282,9 +288,24 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_SUPPLY_UNITS = ["Units", "Pieces", "Pads", "Sheets", "Rolls", "Boxes", "lbs", "kg"];
   const DEFAULT_EQUIPMENT_UNITS = ["Units", "Pieces", "Sets"];
   const DEFAULT_PURCHASED = ["Amazon", "Home Depot", "Harbor Freight", "Lowe's", "Vevor", "Walmart", "Oreilly's Auto Parts", "Queensboro.com", "VistaPrint.com"];
+  const SHARED_SUPPLY_EQUIPMENT_CATEGORIES = [
+    "Bottles & Containers",
+    "Brushes & Applicators",
+    "Business & Branding",
+    "Hand Tools & Guns",
+    "Hoses, Cords & Reels",
+    "Other",
+    "Power Equipment & Systems",
+    "Pump Sprayer & Foam Cannons",
+    "Safety & PPE",
+    "Security & Office",
+    "Storage & Organizers",
+    "Tools & Accessories",
+    "Towels & Microfiber"
+  ];
   const DEFAULT_CATEGORIES = {
-    supply: ["Bottles & Containers", "Brushes & Applicators", "Business & Branding", "Clay & Decontamination", "Other", "Safety & PPE", "Tools & Accessories", "Towels & Microfiber"],
-    equipment: ["Accessories & Carts", "Hand Tools & Guns", "Power Equipment & Systems", "Security & Office", "Storage & Organizers"],
+    supply: SHARED_SUPPLY_EQUIPMENT_CATEGORIES,
+    equipment: SHARED_SUPPLY_EQUIPMENT_CATEGORIES,
     chemical: ["APCs & Degreasers", "Bug Cleaners", "Car Washes & Soaps", "Dressings", "Floor Cleaners", "Glass Cleaners", "Interior & Carpet Care", "Polishes & Protectants", "Waterless & Rinseless", "Waxes & Sealants", "Wheel & Tire Care", "General Chemicals"]
   };
   const DEFAULT_SUBTYPES = ["Small", "Medium", "Large", "Extra Large"];
@@ -374,9 +395,21 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const [availableCategories, setAvailableCategories] = useState<{supply: string[], equipment: string[], chemical?: string[]}>(() => {
     const saved = localStorage.getItem('inventory_preferred_categories');
-    const parsed = saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
-    if (!parsed.chemical) parsed.chemical = DEFAULT_CATEGORIES.chemical;
-    return parsed;
+    let parsed: any = null;
+    if (saved) {
+      try { parsed = JSON.parse(saved); } catch (e) {}
+    }
+    const shared = Array.from(new Set([
+      ...SHARED_SUPPLY_EQUIPMENT_CATEGORIES,
+      ...(parsed?.supply || []),
+      ...(parsed?.equipment || [])
+    ])).filter(c => c !== "Accessories & Carts" && c !== "Clay & Decontamination").sort();
+
+    return {
+      supply: shared,
+      equipment: shared,
+      chemical: parsed?.chemical || DEFAULT_CATEGORIES.chemical
+    };
   });
 
   const [availableSubtypes, setAvailableSubtypes] = useState<string[]>(() => {
@@ -445,16 +478,12 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     try {
       const { batchUpdateCategory, batchUpdateLocation, batchUpdateContainerLocation } = await import("@/lib/inventory-data");
 
-      if (fieldKind === 'category_supply') {
-        const updatedList = availableCategories.supply.map(c => c === oldValue ? newValue : c);
-        updateCategories({ ...availableCategories, supply: Array.from(new Set(updatedList)).sort() });
+      if (fieldKind === 'category_supply' || fieldKind === 'category_equipment') {
+        const currentShared = Array.from(new Set([...availableCategories.supply, ...availableCategories.equipment]));
+        const updatedList = currentShared.map(c => c === oldValue ? newValue : c);
+        const nextShared = Array.from(new Set(updatedList)).sort();
+        updateCategories({ ...availableCategories, supply: nextShared, equipment: nextShared });
         await batchUpdateCategory(oldValue, newValue, 'supply');
-        if (form.category === oldValue) {
-          setForm(prev => ({ ...prev, category: newValue }));
-        }
-      } else if (fieldKind === 'category_equipment') {
-        const updatedList = availableCategories.equipment.map(c => c === oldValue ? newValue : c);
-        updateCategories({ ...availableCategories, equipment: Array.from(new Set(updatedList)).sort() });
         await batchUpdateCategory(oldValue, newValue, 'equipment');
         if (form.category === oldValue) {
           setForm(prev => ({ ...prev, category: newValue }));
@@ -1596,7 +1625,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    safeDeleteOption("category", () => updateCategories({ ...availableCategories, supply: availableCategories.supply.filter(c => c !== cat) }));
+                                    safeDeleteOption("category", () => {
+                                      const next = availableCategories.supply.filter(c => c !== cat);
+                                      updateCategories({ ...availableCategories, supply: next, equipment: next });
+                                    });
                                   }}
                                   className="p-1 hover:text-red-400 text-zinc-500 transition-all"
                                   title="Remove from presets"
@@ -1631,7 +1663,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           if (e.key === 'Enter') {
                             e.preventDefault();
                             if (form.category && !availableCategories.supply.includes(form.category)) {
-                              updateCategories({ ...availableCategories, supply: [...availableCategories.supply, form.category].sort() });
+                              const next = Array.from(new Set([...availableCategories.supply, form.category])).sort();
+                              updateCategories({ ...availableCategories, supply: next, equipment: next });
                             }
                             setCustomCategory(false);
                           }
@@ -1645,7 +1678,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         size="sm"
                         onClick={() => {
                           if (form.category && !availableCategories.supply.includes(form.category)) {
-                            updateCategories({ ...availableCategories, supply: [...availableCategories.supply, form.category].sort() });
+                            const next = Array.from(new Set([...availableCategories.supply, form.category])).sort();
+                            updateCategories({ ...availableCategories, supply: next, equipment: next });
                           }
                           setCustomCategory(false);
                         }}
@@ -1795,7 +1829,10 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    safeDeleteOption("category", () => updateCategories({ ...availableCategories, equipment: availableCategories.equipment.filter(c => c !== cat) }));
+                                    safeDeleteOption("category", () => {
+                                      const next = availableCategories.equipment.filter(c => c !== cat);
+                                      updateCategories({ ...availableCategories, supply: next, equipment: next });
+                                    });
                                   }}
                                   className="p-1 hover:text-red-400 text-zinc-500 transition-all"
                                   title="Remove from presets"
@@ -1830,7 +1867,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                           if (e.key === 'Enter') {
                             e.preventDefault();
                             if (form.category && !availableCategories.equipment.includes(form.category)) {
-                              updateCategories({ ...availableCategories, equipment: [...availableCategories.equipment, form.category].sort() });
+                              const next = Array.from(new Set([...availableCategories.equipment, form.category])).sort();
+                              updateCategories({ ...availableCategories, supply: next, equipment: next });
                             }
                             setCustomCategory(false);
                           }
@@ -1844,7 +1882,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                         size="sm"
                         onClick={() => {
                           if (form.category && !availableCategories.equipment.includes(form.category)) {
-                            updateCategories({ ...availableCategories, equipment: [...availableCategories.equipment, form.category].sort() });
+                            const next = Array.from(new Set([...availableCategories.equipment, form.category])).sort();
+                            updateCategories({ ...availableCategories, supply: next, equipment: next });
                           }
                           setCustomCategory(false);
                         }}

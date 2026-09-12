@@ -2574,6 +2574,18 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           />
                           <span>Equipment</span>
                         </label>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={customPrintCats.supplies && customPrintCats.equipment}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setCustomPrintCats(prev => ({ ...prev, supplies: checked, equipment: checked }));
+                            }}
+                            className="rounded border-zinc-700 bg-zinc-800 text-blue-500 focus:ring-0"
+                          />
+                          <span>Combined Supplies & Equipment</span>
+                        </label>
                       </div>
                       <div className="flex gap-1.5 pt-1">
                         <Button
