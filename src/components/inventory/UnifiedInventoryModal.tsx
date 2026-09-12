@@ -311,7 +311,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const DEFAULT_SUBTYPES = ["Small", "Medium", "Large", "Extra Large"];
   const DEFAULT_SHELVES = ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy"];
   const DEFAULT_SECTIONS = [
-    "Left Side", "Middle", "Right Side",
+    "Left Side", "Right Side",
     "Interior Caddy", "Exterior Caddy", "Specialty Caddy"
   ];
   const DEFAULT_LOCATIONS = [
@@ -332,7 +332,6 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
     "Interior Caddy",
     "Exterior Caddy",
     "Left Side",
-    "Middle",
     "Right Side"
   ];
 
@@ -386,7 +385,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
 
   const [availableSections, setAvailableSections] = useState<string[]>(() => {
     const saved = localStorage.getItem('inventory_preferred_sections');
-    return saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+    const list = saved ? JSON.parse(saved) : DEFAULT_SECTIONS;
+    return (Array.isArray(list) ? list : DEFAULT_SECTIONS).filter((s: string) => s !== 'Middle');
   });
 
   const [availableLocations, setAvailableLocations] = useState<string[]>(DEFAULT_LOCATIONS);

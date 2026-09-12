@@ -442,75 +442,6 @@ const InventoryControl = () => {
       }
     }
 
-    // ONE-TIME MIGRATION SCRIPT FOR SHELF/SECTION/CATEGORY POPULATION
-    if (!localStorage.getItem('did_populate_inventory_v3')) {
-      localStorage.setItem('did_populate_inventory_v3', 'true');
-      const performMigration = async () => {
-        try {
-          const { supabase } = await import('@/lib/supabase');
-          const { data } = await supabase.from('chemicals').select('*');
-          if (!data) return;
-          
-          const updates: any[] = [];
-          const notFound: string[] = [];
-          
-          const applyTo = (match: string, changes: any, maxCount: number = 1) => {
-            let count = 0;
-            for (const item of data) {
-            if ((item.name || '').toLowerCase().includes((match || '').toLowerCase())) {
-                if (count < maxCount && !updates.find(u => u.id === item.id)) {
-                   updates.push({ id: item.id, name: item.name, ...changes });
-                   count++;
-                }
-              }
-            }
-            if (count === 0) {
-              notFound.push(match);
-            }
-          };
-
-          // Top Shelf - Left - Upholstery
-          applyTo('does it all', { shelf: 'Top Shelf', section: 'Left Side', category: 'Upholstery Cleaning' });
-          applyTo('zap it', { shelf: 'Top Shelf', section: 'Left Side', category: 'Upholstery Cleaning' });
-          applyTo('carpet bomber', { shelf: 'Top Shelf', section: 'Left Side', category: 'Upholstery Cleaning' });
-          applyTo('terminator', { shelf: 'Top Shelf', section: 'Left Side', category: 'Upholstery Cleaning' });
-
-          // Top Shelf - Middle - APCs
-          applyTo('pink perfection', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' }, 1);
-          applyTo('green all', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' });
-          applyTo('road warrior', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' });
-          applyTo('apc', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' });
-          applyTo('express interior', { shelf: 'Top Shelf', section: 'Middle', category: 'APCs' });
-
-          // 2nd Shelf - Middle - Exterior
-          applyTo('cherry foam', { shelf: '2nd Shelf', section: 'Middle', category: 'Exterior Soaps & Protectants' }, 1);
-          applyTo('dirt buster', { shelf: '2nd Shelf', section: 'Middle', category: 'Exterior Soaps & Protectants' });
-          applyTo('spray wax', { shelf: '2nd Shelf', section: 'Middle', category: 'Exterior Soaps & Protectants' }, 2);
-          applyTo('super shine', { shelf: '2nd Shelf', section: 'Middle', category: 'Exterior Soaps & Protectants' });
-
-          // 2nd Shelf - Right - Wheels
-          applyTo('dark fury', { shelf: '2nd Shelf', section: 'Right Side', category: 'Wheels/Strong Chemicals' });
-          applyTo('muscle magic', { shelf: '2nd Shelf', section: 'Right Side', category: 'Wheels/Strong Chemicals' });
-          applyTo('wire wheel', { shelf: '2nd Shelf', section: 'Right Side', category: 'Wheels/Strong Chemicals' });
-          applyTo('purple x', { shelf: '2nd Shelf', section: 'Right Side', category: 'Wheels/Strong Chemicals' });
-
-          // 3rd Shelf - Right - Overflow
-          applyTo('pink perfection', { shelf: '3rd Shelf', section: 'Right Side', category: 'Overflow/Duplicate Stock' }, 1);
-          applyTo('cherry foam', { shelf: '3rd Shelf', section: 'Right Side', category: 'Overflow/Duplicate Stock' }, 1);
-
-          for (const u of updates) {
-            const sanitized = { shelf: u.shelf, section: u.section, category: u.category };
-            await supabase.from('chemicals').update(sanitized).eq('id', u.id);
-          }
-          console.log('Migrated', updates.length, 'chemicals! Not found:', notFound);
-          loadData();
-        } catch (e) {
-          console.error('Migration failed', e);
-        }
-      };
-      performMigration();
-    }
-
     // SESSION RECOVERY: Check if we were in the middle of an edit when the app reloaded
     // (Common on mobile after OS kills browser to free memory for the Camera app)
     const checkRecovery = () => {
@@ -632,42 +563,6 @@ const InventoryControl = () => {
       setUsageHistory(usage);
     } catch (error) {
       console.error('Error loading cached data:', error);
-    }
-  };
-
-  const handleMigrate = async () => {
-    try {
-      const { supabase } = await import('@/lib/supa-data');
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return toast({ title: 'Error', description: 'Not logged in' });
-
-      const updates = [
-        { names: ["Does It All Enzyme Cleaner", "Zap IT", "P&S Carpet Bomber", "P&S Terminator"], shelf: "Top Shelf", section: "Left Side", category: "Carpet & Upholstery" },
-        { names: ["Pink Perfection", "Green All", "Road Warrior", "McGuire's APC", "P&S Express Interior"], shelf: "Top Shelf", section: "Middle", category: "APC / Degreaser" },
-        { names: ["Cherry Foam", "Dirt Buster"], shelf: "Top Shelf", section: "Right Side", category: "Soaps" },
-        { names: ["Spray Wax", "Formula 4 Spray Wax", "Super Shine 2"], shelf: "2nd Shelf", section: "Left Side", category: "Waxes & Sealants" },
-        { names: ["Dark Fury", "Muscle Magic", "Wire Wheel Cleaner (Acid)"], shelf: "2nd Shelf", section: "Middle", category: "Wheels & Tires" },
-        { names: ["Purple X"], shelf: "2nd Shelf", section: "Right Side", category: "Iron Removers" }
-      ];
-      
-      let count = 0;
-      for (const group of updates) {
-        for (const name of group.names) {
-          const match = chemicals.find(c => (c.name || '').toLowerCase() === (name || '').toLowerCase());
-          if (match) {
-            await supabase.from('chemicals').update({
-              shelf: group.shelf,
-              section: group.section,
-              category: group.category
-            }).eq('id', match.id);
-            count++;
-          }
-        }
-      }
-      toast({ title: 'Migration Complete', description: `Updated ${count} items.` });
-      loadData();
-    } catch (e) {
-      console.error(e);
     }
   };
 
@@ -2594,7 +2489,7 @@ const InventoryControl = () => {
                 <Package className="h-8 w-8" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white" onDoubleClick={handleMigrate}>Inventory Summary</h2>
+                <h2 className="text-2xl font-bold text-white">Inventory Summary</h2>
                 <p className="text-zinc-400 text-sm">Overview of all assets and stock levels</p>
               </div>
             </div>

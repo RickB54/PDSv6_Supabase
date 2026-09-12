@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 dotenv.config({ path: '.env' });
 const supabase = createClient(process.env.VITE_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -368,15 +372,446 @@ async function main() {
       break;
     }
 
+    case 'dump-chems': {
+      const { data, error } = await supabase.from('chemicals').select('*').order('name');
+      if (error) {
+        console.error('Error fetching chemicals:', error);
+        return;
+      }
+      console.log(`Found ${data?.length} chemicals:`);
+      data?.forEach((c: any) => {
+        console.log(`[${c.name}] | size: ${c.bottle_size} | shelf: "${c.shelf}" | section: "${c.section}" | shelf_location: "${c.shelf_location}" | loc: "${c.location}" | cat: "${c.category}" | updated_at: ${c.updated_at}`);
+      });
+      break;
+    }
+
+    case 'audit-history': {
+      const { data, error } = await supabase.from('inventory_audit_history').select('*').order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error fetching inventory_audit_history:', error);
+        return;
+      }
+      console.log(`Found ${data?.length} audit history records:`);
+      data?.forEach((h: any) => {
+        console.log(`ID: ${h.id} | Date: ${h.timestamp || h.created_at} | Status: ${h.status} | Total: ${h.total_counted}`);
+        if (h.chem_audit) {
+          const chems = Array.isArray(h.chem_audit) ? h.chem_audit : Object.values(h.chem_audit);
+          console.log(`  chem_audit items count: ${chems.length}`);
+        }
+      });
+      break;
+    }
+
+    case 'restore-from-audit': {
+      const fs = await import('fs');
+      const auditPath = 'C:/Users/rberu/.gemini/antigravity/brain/6ff490f2-c76b-4cfd-82b1-6702100c1c51/scratch/final_chemical_location_audit.json';
+      const raw = fs.readFileSync(auditPath, 'utf8');
+      const auditList: any[] = JSON.parse(raw);
+
+      console.log(`Loaded ${auditList.length} items from final_chemical_location_audit.json`);
+
+      const { data: currentChems, error: cErr } = await supabase.from('chemicals').select('*');
+      if (cErr) throw cErr;
+
+      let updatedCount = 0;
+      for (const item of auditList) {
+        const current = currentChems.find(c => c.id === item.id);
+        if (!current) {
+          console.warn(`Item ${item.name} (${item.id}) not found in current chemicals!`);
+          continue;
+        }
+
+        // Parse afterLocation: e.g. "Chemical Rack | 4th Shelf - Left Side" or "Chemical Rack | -"
+        let shelf: string | null = null;
+        let section: string | null = null;
+        let shelfLocation: string | null = null;
+
+        const locParts = (item.afterLocation || '').split('|').map((s: string) => s.trim());
+        const primary = locParts[0] || 'Chemical Rack';
+        const sec = locParts[1] || '-';
+
+        if (sec && sec !== '-' && sec !== 'Unassigned') {
+          if (sec.includes(' - ')) {
+            const [sh, se] = sec.split(' - ').map((s: string) => s.trim());
+            shelf = sh;
+            section = se;
+            shelfLocation = `${sh} - ${se}`;
+          } else {
+            shelf = sec;
+            section = null;
+            shelfLocation = sec;
+          }
+        }
+
+        // Category format: usageType|__CC__|finalChemicalCategory
+        let catToSave = `${item.usageType || 'exterior'}|__CC__|${item.finalChemicalCategory || 'General Chemicals'}`;
+        // Preserve rack location if outside Chemical Rack (e.g. Small Brown Rack)
+        if (current.category && current.category.includes('|__L__|')) {
+          const rackPart = current.category.split('|__L__|')[1];
+          if (rackPart && rackPart !== 'Chemical Rack') {
+            catToSave = `${catToSave}|__L__|${rackPart}`;
+          }
+        }
+
+        const payload: any = {
+          shelf,
+          section,
+          category: catToSave,
+          updated_at: new Date().toISOString()
+        };
+
+        const { error: uErr } = await supabase.from('chemicals').update(payload).eq('id', item.id);
+        if (uErr) {
+          console.error(`Error updating ${item.name}:`, uErr);
+        } else {
+        }
+      }
+      console.log(`\nSuccessfully restored ${updatedCount} chemical records in Supabase!`);
+      break;
+    }
+
+    case 'fix-small-brown-rack': {
+      // Invisible Glass Cleaner -> Small Brown Rack, 2nd Shelf
+      await supabase.from('chemicals').update({
+        shelf: '2nd Shelf',
+        section: null,
+        updated_at: new Date().toISOString()
+      }).eq('id', 'b458c415-f15b-4b60-a9b6-b93cc5329870');
+
+      // Rain X -> Small Brown Rack, 3rd Shelf
+      await supabase.from('chemicals').update({
+        shelf: '3rd Shelf',
+        section: null,
+        updated_at: new Date().toISOString()
+      }).eq('id', 'e2f7f1b1-9970-48d8-99cb-b6f9e96f45f2');
+
+      console.log('Fixed Invisible Glass Cleaner (2nd Shelf) and Rain X (3rd Shelf) on Small Brown Rack.');
+      break;
+    }
+
+    case 'verify-chems': {
+      const { data, error } = await supabase.from('chemicals').select('*').order('name');
+      if (error) throw error;
+
+      console.log('\n=================== CHEMICALS VERIFICATION REPORT ===================');
+      console.log(`Total Chemicals: ${data?.length}\n`);
+
+      const gallons: any[] = [];
+      const goldClass: any[] = [];
+      const others: any[] = [];
+
+      data?.forEach((c: any) => {
+        let primLoc = 'Chemical Rack';
+        let rawCat = c.category || '';
+        if (rawCat.includes('|__L__|')) {
+          primLoc = rawCat.split('|__L__|')[1] || 'Chemical Rack';
+          rawCat = rawCat.split('|__L__|')[0];
+        }
+        let chemCat = rawCat;
+        if (rawCat.includes('|__CC__|')) {
+          chemCat = rawCat.split('|__CC__|')[1];
+        }
+
+        const secLoc = (c.shelf && c.section) ? `${c.shelf} - ${c.section}` : (c.shelf || c.section || 'None / Unassigned');
+
+        const itemObj = {
+          id: c.id,
+          name: c.name,
+          brand: c.brand || 'N/A',
+          size: c.bottle_size?.split('|__CT__|')[0] || c.bottle_size,
+          primLoc,
+          secLoc,
+          shelf: c.shelf,
+          section: c.section,
+          chemCat
+        };
+
+        const sizeLower = (itemObj.size || '').toLowerCase();
+        if (sizeLower.includes('gal')) {
+          gallons.push(itemObj);
+        } else if (itemObj.name.includes('Gold Class')) {
+          goldClass.push(itemObj);
+        } else {
+          others.push(itemObj);
+        }
+      });
+
+      console.log(`--- GALLON CHEMICALS (${gallons.length}) ---`);
+      gallons.sort((a, b) => a.secLoc.localeCompare(b.secLoc) || a.name.localeCompare(b.name)).forEach((g, i) => {
+        console.log(`${(i + 1).toString().padStart(2)}. [${g.secLoc}] ${g.brand} - ${g.name} (${g.size}) -> Category: ${g.chemCat}`);
+      });
+
+      console.log(`\n--- 64oz MEGUIAR'S GOLD CLASS (${goldClass.length}) ---`);
+      goldClass.forEach(gc => {
+        console.log(`    [${gc.secLoc}] ${gc.brand} - ${gc.name} (${gc.size}) -> Category: ${gc.chemCat}`);
+      });
+
+      console.log(`\n--- OTHER CHEMICALS (${others.length}) ---`);
+      others.sort((a, b) => a.primLoc.localeCompare(b.primLoc) || a.secLoc.localeCompare(b.secLoc) || a.name.localeCompare(b.name)).forEach((o, i) => {
+        console.log(`${(i + 1).toString().padStart(2)}. [${o.primLoc} | ${o.secLoc}] ${o.brand} - ${o.name} (${o.size}) -> Category: ${o.chemCat}`);
+      });
+
+      break;
+    }
+
+    case 'export-iac-pdf': {
+      console.log('Generating fresh IAC "By Location" PDF export...');
+
+      const LOCATION_RANK_ORDER = [
+        "Chemical Rack",
+        "Medium Grey Rack",
+        "Small Brown Rack",
+        "1 x 4 Back Wall Shelf",
+        "Unassigned"
+      ];
+
+      const SHELF_RANK_ORDER = [
+        "Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy", "Unassigned"
+      ];
+
+      const SECTION_RANK_ORDER = [
+        "Left Side", "Right Side", "Unassigned"
+      ];
+
+      const sortChemicalGroups = (a: string, b: string) => {
+        const [shelfA = 'Unassigned', sectionA = 'Unassigned'] = a.split(/\s*[\/\-]\s*/).map(s => s.trim());
+        const [shelfB = 'Unassigned', sectionB = 'Unassigned'] = b.split(/\s*[\/\-]\s*/).map(s => s.trim());
+        
+        let rankShelfA = SHELF_RANK_ORDER.indexOf(shelfA);
+        let rankShelfB = SHELF_RANK_ORDER.indexOf(shelfB);
+        if (rankShelfA === -1) rankShelfA = 999;
+        if (rankShelfB === -1) rankShelfB = 999;
+        if (rankShelfA !== rankShelfB) return rankShelfA - rankShelfB;
+        
+        let rankSectionA = SECTION_RANK_ORDER.indexOf(sectionA);
+        let rankSectionB = SECTION_RANK_ORDER.indexOf(sectionB);
+        if (rankSectionA === -1) rankSectionA = 999;
+        if (rankSectionB === -1) rankSectionB = 999;
+        if (rankSectionA !== rankSectionB) return rankSectionA - rankSectionB;
+        
+        return a.localeCompare(b);
+      };
+
+      const sortLocationGroups = (a: string, b: string) => {
+        let rankA = LOCATION_RANK_ORDER.indexOf(a.split(' - ')[0] || a);
+        let rankB = LOCATION_RANK_ORDER.indexOf(b.split(' - ')[0] || b);
+        if (rankA === -1) rankA = 999;
+        if (rankB === -1) rankB = 999;
+        if (rankA !== rankB) return rankA - rankB;
+        return a.localeCompare(b);
+      };
+
+      const normalizeSize = (size?: string) => {
+        if (!size) return '';
+        const lower = size.toLowerCase().trim();
+        if (lower.includes('gal')) return '1 Gallon';
+        const ozMatch = lower.match(/(\d+)\s*oz/);
+        if (ozMatch) return `${ozMatch[1]} oz`;
+        const numMatch = lower.match(/^(\d+)$/);
+        if (numMatch) return `${numMatch[1]} oz`;
+        return size.trim();
+      };
+
+      const { data: rawChems } = await supabase.from('chemicals').select('*');
+      const { data: rawSupplies } = await supabase.from('materials').select('*');
+      const { data: rawEquip } = await supabase.from('tools').select('*');
+
+      const chemicals = (rawChems || []).filter(c => !c.hide_from_iac && !c.hideFromIac).map(c => {
+        const isCaddy = (c.shelf || '').toLowerCase().includes('caddy');
+        const defaultShelfLoc = (c.shelf || c.section) ? `${c.shelf || 'Unassigned'} / ${c.section || 'Unassigned'}` : undefined;
+        let primLoc = 'Chemical Rack';
+        let rawCat = c.category || '';
+        if (rawCat.includes('|__L__|')) {
+          primLoc = rawCat.split('|__L__|')[1] || 'Chemical Rack';
+          rawCat = rawCat.split('|__L__|')[0];
+        }
+        let chemCat = rawCat;
+        if (rawCat.includes('|__CC__|')) {
+          chemCat = rawCat.split('|__CC__|')[1];
+        }
+
+        const rawSize = c.bottle_size?.split('|__CT__|')[0] || c.bottle_size;
+        const containerType = c.bottle_size?.includes('|__CT__|') ? c.bottle_size.split('|__CT__|')[1] : '';
+
+        return {
+          id: c.id,
+          name: c.name,
+          brand: c.brand,
+          location: c.location || primLoc,
+          shelfLocation: isCaddy ? c.shelf : defaultShelfLoc,
+          containerLocation: isCaddy ? c.shelf : defaultShelfLoc,
+          bottleSize: normalizeSize(rawSize),
+          chemicalCategory: chemCat || 'General Chemicals',
+          containerType,
+          currentStock: c.current_stock ?? c.quantity ?? 1
+        };
+      });
+
+      const supplies = (rawSupplies || []).filter(s => !s.hide_from_iac && !s.hideFromIac).map(s => ({
+        id: s.id,
+        name: s.name,
+        location: s.location || 'Unassigned',
+        containerLocation: s.container_location || 'N/A',
+        category: s.category || 'Unassigned',
+        quantity: s.quantity || 1
+      }));
+
+      const equipment = (rawEquip || []).filter(e => !e.hide_from_iac && !e.hideFromIac).map(e => ({
+        id: e.id,
+        name: e.name,
+        location: e.location || 'Unassigned',
+        containerLocation: e.container_location || 'N/A',
+        category: e.category || 'Unassigned',
+        quantity: e.quantity || 1
+      }));
+
+      const doc = new jsPDF();
+      doc.setFontSize(20);
+      doc.text('Inventory Audit Checklist', 14, 22);
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Date: ${new Date().toLocaleString()}`, 14, 28);
+      doc.setTextColor(0, 0, 0);
+
+      let currentY = 40;
+
+      const renderSection = (categoryName: 'Chemicals' | 'Supplies' | 'Equipment', items: any[]) => {
+        if (items.length === 0) return;
+        if (currentY > 240) {
+          doc.addPage();
+          currentY = 20;
+        }
+        doc.setFontSize(16);
+        doc.setTextColor(40, 80, 160);
+        doc.text(`${categoryName} (By Location)`, 14, currentY);
+        doc.setTextColor(0, 0, 0);
+        currentY += 10;
+
+        const pdfGroups: Record<string, any[]> = {};
+        items.forEach(item => {
+          let groupKey = 'Unassigned';
+          if (categoryName === 'Chemicals') {
+            const primLoc = item.location || 'Chemical Rack';
+            const secLoc = item.containerLocation || item.shelfLocation || 'N/A';
+            groupKey = `${primLoc}|${secLoc}`;
+          } else {
+            groupKey = item.location || 'Unassigned';
+          }
+          if (!pdfGroups[groupKey]) pdfGroups[groupKey] = [];
+          pdfGroups[groupKey].push(item);
+        });
+
+        const sortedGroupKeys = Object.keys(pdfGroups).sort((a, b) => {
+          if (categoryName === 'Chemicals') {
+            const [primA, secA] = a.split('|');
+            const [primB, secB] = b.split('|');
+            if (primA === 'Chemical Rack' && primB !== 'Chemical Rack') return -1;
+            if (primB === 'Chemical Rack' && primA !== 'Chemical Rack') return 1;
+            if (primA !== primB) return primA.localeCompare(primB);
+            return sortChemicalGroups(secA || '', secB || '');
+          }
+          return sortLocationGroups(a, b);
+        });
+
+        sortedGroupKeys.forEach(groupName => {
+          const groupItems = pdfGroups[groupName].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+          if (groupItems.length === 0) return;
+
+          if (currentY > 260) {
+            doc.addPage();
+            currentY = 20;
+          }
+
+          let head: string[][];
+          let columnStyles: any;
+
+          if (categoryName === 'Chemicals') {
+            const [primLoc, secLoc] = groupName.split('|');
+            head = [[`Primary: ${primLoc} | Sec: ${secLoc}`, 'Size', 'Category', 'Container Type', '% Remaining', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 16 }, 2: { cellWidth: 26 }, 3: { cellWidth: 22 }, 4: { cellWidth: 18 }, 5: { cellWidth: 14, halign: 'center' }, 6: { cellWidth: 18 } };
+          } else {
+            head = [[`Primary Location: ${groupName}`, 'Secondary Location', 'Category', 'DB Qty', 'Actual Count']];
+            columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 35 }, 2: { cellWidth: 35 }, 3: { cellWidth: 20, halign: 'center' }, 4: { cellWidth: 25 } };
+          }
+
+          autoTable(doc, {
+            startY: currentY,
+            head,
+            body: groupItems.map(item => {
+              if (categoryName === 'Chemicals') {
+                const nameStr = `${item.brand ? item.brand + ' / ' : ''}${item.name}`;
+                return [
+                  nameStr,
+                  item.bottleSize || 'N/A',
+                  item.chemicalCategory || 'N/A',
+                  item.containerType || '',
+                  '',
+                  item.currentStock?.toFixed(2) || '0',
+                  ''
+                ];
+              } else {
+                return [
+                  item.name,
+                  item.containerLocation || 'N/A',
+                  item.category || 'Unassigned',
+                  item.quantity || 1,
+                  ''
+                ];
+              }
+            }),
+            theme: 'grid',
+            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+            styles: { textColor: [0, 0, 0] },
+            columnStyles,
+            margin: { top: 10 }
+          });
+
+          currentY = (doc as any).lastAutoTable.finalY + 10;
+        });
+
+        if (currentY > 270) { doc.addPage(); currentY = 20; }
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'italic');
+        doc.text(`${categoryName} Subtotal: 0 of ${items.length} items counted`, 14, currentY);
+        doc.setFont('helvetica', 'normal');
+        currentY += 20;
+      };
+
+      renderSection('Chemicals', chemicals);
+      renderSection('Supplies', supplies);
+      renderSection('Equipment', equipment);
+
+      const fileName = `Full_IAC_Report_location_${new Date().toISOString().split('T')[0]}.pdf`;
+      const localPath = path.resolve(process.cwd(), fileName);
+      const artifactDir = 'C:\\Users\\rberu\\.gemini\\antigravity-ide\\brain\\f968ea3a-b9fa-410f-a724-39fd16a9eabb';
+      const artifactPath = path.resolve(artifactDir, fileName);
+
+      const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+      fs.writeFileSync(localPath, pdfBuffer);
+      console.log(`Saved PDF to: ${localPath}`);
+
+      if (fs.existsSync(artifactDir)) {
+        fs.writeFileSync(artifactPath, pdfBuffer);
+        console.log(`Saved PDF to artifact dir: ${artifactPath}`);
+      }
+
+      break;
+    }
+
     default:
       console.log(`
 Commands:
   npx tsx query_db.ts counts
   npx tsx query_db.ts apply-mapping
   npx tsx query_db.ts verify
+  npx tsx query_db.ts verify-chems
+  npx tsx query_db.ts export-iac-pdf
   npx tsx query_db.ts search <table|all> <query>
   npx tsx query_db.ts list-categories <table|materials|tools|chemicals>
   npx tsx query_db.ts get <table|all> <id>
+  npx tsx query_db.ts dump-chems
+  npx tsx query_db.ts audit-history
+  npx tsx query_db.ts query-table <table>
       `);
   }
 }

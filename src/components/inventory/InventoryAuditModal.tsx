@@ -43,7 +43,7 @@ const SHELF_RANK_ORDER = [
 ];
 
 const SECTION_RANK_ORDER = [
-  "Left Side", "Middle", "Right Side", "Unassigned"
+  "Left Side", "Right Side", "Unassigned"
 ];
 
 const sortChemicalGroups = (a: string, b: string) => {
