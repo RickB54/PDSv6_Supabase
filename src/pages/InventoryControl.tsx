@@ -282,13 +282,13 @@ const InventoryControl = () => {
   const [usageEditItem, setUsageEditItem] = useState<UsageHistory | null>(null);
   const [usageEditNotes, setUsageEditNotes] = useState("");
   // Sorting states
-  const [chemicalSort, setChemicalSort] = useState<string | "brand" | "alphabetical" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">(() => {
+  const [chemicalSort, setChemicalSort] = useState<string | "brand" | "alphabetical" | "category" | "location" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">(() => {
     return localStorage.getItem('prime_inv_chem_sort') || "brand";
   });
-  const [supplySort, setSupplySort] = useState<"name" | "category" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">(() => {
+  const [supplySort, setSupplySort] = useState<string | "name" | "category" | "location" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">(() => {
     return (localStorage.getItem('prime_inv_sup_sort') as any) || "name";
   });
-  const [equipmentSort, setEquipmentSort] = useState<"name" | "purchaseDate" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">(() => {
+  const [equipmentSort, setEquipmentSort] = useState<string | "name" | "category" | "location" | "purchaseDate" | "low_stock" | "no_cost" | "updated_at" | "where_purchased">(() => {
     return (localStorage.getItem('prime_inv_eq_sort') as any) || "name";
   });
 
@@ -668,6 +668,89 @@ const InventoryControl = () => {
     setModalOpen(true);
   };
 
+  // Location group key helpers
+  const getChemicalLocationGroupKey = (c: Chemical | undefined): string => {
+    if (!c) return 'Unassigned';
+    const primLoc = (c.location && c.location !== 'Unassigned') ? c.location.trim() : '';
+    const secLoc = (c.containerLocation && c.containerLocation !== 'N/A' && c.containerLocation !== 'Unassigned')
+      ? c.containerLocation.trim()
+      : ((c.shelfLocation && c.shelfLocation !== 'N/A' && c.shelfLocation !== 'Unassigned')
+        ? c.shelfLocation.trim()
+        : ((c.shelf && c.section)
+          ? `${c.shelf} - ${c.section}`.trim()
+          : (c.shelf || c.section || '').trim()));
+
+    if (primLoc && secLoc) return `${primLoc} - ${secLoc}`;
+    if (primLoc) return primLoc;
+    if (secLoc) return secLoc;
+    return 'Unassigned';
+  };
+
+  const getSupplyLocationGroupKey = (s: any): string => {
+    if (!s) return 'Unassigned';
+    const primLoc = (s.location && s.location !== 'Unassigned') ? s.location.trim() : '';
+    const secLoc = (s.containerLocation && s.containerLocation !== 'N/A' && s.containerLocation !== 'Unassigned') ? s.containerLocation.trim() : '';
+    if (primLoc && secLoc) return `${primLoc} - ${secLoc}`;
+    if (primLoc) return primLoc;
+    if (secLoc) return secLoc;
+    return 'Unassigned';
+  };
+
+  const getEquipmentLocationGroupKey = (t: any): string => {
+    if (!t) return 'Unassigned';
+    const primLoc = (t.location && t.location !== 'Unassigned') ? t.location.trim() : '';
+    const secLoc = (t.containerLocation && t.containerLocation !== 'N/A' && t.containerLocation !== 'Unassigned') ? t.containerLocation.trim() : '';
+    if (primLoc && secLoc) return `${primLoc} - ${secLoc}`;
+    if (primLoc) return primLoc;
+    if (secLoc) return secLoc;
+    return 'Unassigned';
+  };
+
+  const sortChemicalLocationKeys = (a: string, b: string): number => {
+    if (a === 'Unassigned' && b !== 'Unassigned') return 1;
+    if (b === 'Unassigned' && a !== 'Unassigned') return -1;
+    if (a === 'Unassigned' && b === 'Unassigned') return 0;
+
+    const isChemRackA = a.startsWith('Chemical Rack');
+    const isChemRackB = b.startsWith('Chemical Rack');
+    if (isChemRackA && !isChemRackB) return -1;
+    if (!isChemRackA && isChemRackB) return 1;
+
+    const SHELF_ORDER = ["Bottom Shelf", "2nd Shelf", "3rd Shelf", "4th Shelf", "Top Shelf", "Small Rack - Shelf 3", "Specialty Caddy", "Interior Caddy", "Exterior Caddy"];
+    const SECTION_ORDER = ["Left Side", "Right Side"];
+
+    const getShelfRank = (s: string) => {
+      for (let i = 0; i < SHELF_ORDER.length; i++) {
+        if (s.includes(SHELF_ORDER[i])) return i;
+      }
+      return 999;
+    };
+
+    const getSectionRank = (s: string) => {
+      for (let i = 0; i < SECTION_ORDER.length; i++) {
+        if (s.includes(SECTION_ORDER[i])) return i;
+      }
+      return 999;
+    };
+
+    const shelfRankA = getShelfRank(a);
+    const shelfRankB = getShelfRank(b);
+    if (shelfRankA !== shelfRankB) return shelfRankA - shelfRankB;
+
+    const secRankA = getSectionRank(a);
+    const secRankB = getSectionRank(b);
+    if (secRankA !== secRankB) return secRankA - secRankB;
+
+    return a.localeCompare(b);
+  };
+
+  const sortGeneralLocationKeys = (a: string, b: string): number => {
+    if (a === 'Unassigned' && b !== 'Unassigned') return 1;
+    if (b === 'Unassigned' && a !== 'Unassigned') return -1;
+    if (a === 'Unassigned' && b === 'Unassigned') return 0;
+    return a.localeCompare(b);
+  };
+
   // Filter and Sort functions
   // Dynamic brand list for jump-to functionality
   const allAvailableBrands = Array.from(new Set(chemicals.map(c => c.brand || "Other / No Brand"))).sort((a, b) => {
@@ -706,7 +789,7 @@ const InventoryControl = () => {
     });
 
     // BRAND FILTER: If a specific brand is selected from the Jump-to list
-    const specialModes = ["brand", "alphabetical", "low_stock", "no_cost", "updated_at", "where_purchased"];
+    const specialModes = ["brand", "category", "location", "alphabetical", "low_stock", "no_cost", "updated_at", "where_purchased"];
     if (!specialModes.includes(chemicalSort)) {
       baseFiltered = baseFiltered.filter(c => (c.brand || "Other / No Brand") === chemicalSort);
     }
@@ -717,6 +800,25 @@ const InventoryControl = () => {
         const brandA = (a.brand || "Z - No Brand").toLowerCase();
         const brandB = (b.brand || "Z - No Brand").toLowerCase();
         if (brandA !== brandB) return brandA.localeCompare(brandB);
+        return a.name.localeCompare(b.name);
+      });
+    }
+
+    if (chemicalSort === "category") {
+      return [...baseFiltered].sort((a, b) => {
+        const catA = (a.chemicalCategory || a.category || "General Chemicals").toLowerCase();
+        const catB = (b.chemicalCategory || b.category || "General Chemicals").toLowerCase();
+        if (catA !== catB) return catA.localeCompare(catB);
+        return a.name.localeCompare(b.name);
+      });
+    }
+
+    if (chemicalSort === "location") {
+      return [...baseFiltered].sort((a, b) => {
+        const locA = getChemicalLocationGroupKey(a);
+        const locB = getChemicalLocationGroupKey(b);
+        const comp = sortChemicalLocationKeys(locA, locB);
+        if (comp !== 0) return comp;
         return a.name.localeCompare(b.name);
       });
     }
@@ -771,7 +873,7 @@ const InventoryControl = () => {
     });
     
     // Vendor filtering (Jump to Vendor)
-    if (!["name", "category", "low_stock", "no_cost", "updated_at", "where_purchased"].includes(supplySort)) {
+    if (!["name", "category", "location", "low_stock", "no_cost", "updated_at", "where_purchased"].includes(supplySort)) {
       filtered = filtered.filter(s => (s.wherePurchased || "Other / Unknown") === supplySort);
     }
     
@@ -806,7 +908,13 @@ const InventoryControl = () => {
         if (dateA !== dateB) return dateB - dateA;
       }
       if (supplySort === "category") {
-        if (a.category !== b.category) return a.category.localeCompare(b.category);
+        if (a.category !== b.category) return (a.category || '').localeCompare(b.category || '');
+      }
+      if (supplySort === "location") {
+        const locA = getSupplyLocationGroupKey(a);
+        const locB = getSupplyLocationGroupKey(b);
+        const comp = sortGeneralLocationKeys(locA, locB);
+        if (comp !== 0) return comp;
       }
       if (supplySort === "where_purchased") {
         const valA = (a.wherePurchased || "ZZZZ").toLowerCase();
@@ -834,7 +942,7 @@ const InventoryControl = () => {
     });
 
     // Vendor filtering (Jump to Vendor)
-    if (!["name", "purchaseDate", "low_stock", "no_cost", "updated_at", "where_purchased"].includes(equipmentSort)) {
+    if (!["name", "category", "location", "purchaseDate", "low_stock", "no_cost", "updated_at", "where_purchased"].includes(equipmentSort)) {
       filtered = filtered.filter(e => (e.wherePurchased || "Other / Unknown") === equipmentSort);
     }
 
@@ -851,6 +959,15 @@ const InventoryControl = () => {
         const dateA = a.purchaseDate ? new Date(a.purchaseDate).getTime() : 0;
         const dateB = b.purchaseDate ? new Date(b.purchaseDate).getTime() : 0;
         if (dateA !== dateB) return dateB - dateA;
+      }
+      if (equipmentSort === "category") {
+        if (a.category !== b.category) return (a.category || '').localeCompare(b.category || '');
+      }
+      if (equipmentSort === "location") {
+        const locA = getEquipmentLocationGroupKey(eA => eA || a);
+        const locB = getEquipmentLocationGroupKey(eB => eB || b);
+        const comp = sortGeneralLocationKeys(getEquipmentLocationGroupKey(a), getEquipmentLocationGroupKey(b));
+        if (comp !== 0) return comp;
       }
       if (equipmentSort === "updated_at") {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
@@ -921,6 +1038,80 @@ const InventoryControl = () => {
     if (b === "Other / No Brand") return -1;
     return a.localeCompare(b);
   });
+
+  // Chemicals grouping by Category
+  const groupedChemicalsByCategory = productGroups.reduce((acc, group) => {
+    const cat = group.find((g: any) => g.chemicalCategory)?.chemicalCategory || group[0]?.category || "General Chemicals";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(group);
+    return acc;
+  }, {} as Record<string, Chemical[][]>);
+
+  const sortedChemicalCategories = Object.keys(groupedChemicalsByCategory).sort((a, b) => {
+    if (a === "Other / No Brand" || a === "Other" || a === "Unassigned") return 1;
+    if (b === "Other / No Brand" || b === "Other" || b === "Unassigned") return -1;
+    return a.localeCompare(b);
+  });
+
+  // Chemicals grouping by Location
+  const groupedChemicalsByLocation = productGroups.reduce((acc, group) => {
+    const loc = getChemicalLocationGroupKey(group[0]);
+    if (!acc[loc]) acc[loc] = [];
+    acc[loc].push(group);
+    return acc;
+  }, {} as Record<string, Chemical[][]>);
+
+  const sortedChemicalLocations = Object.keys(groupedChemicalsByLocation).sort(sortChemicalLocationKeys);
+
+  // Supplies grouping by Category
+  const groupedSuppliesByCategory = supplyGroups.reduce((acc, group) => {
+    const rawCat = group[0]?.category?.trim();
+    const cat = rawCat ? (rawCat.charAt(0).toUpperCase() + rawCat.slice(1)) : "Other";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(group);
+    return acc;
+  }, {} as Record<string, any[][]>);
+
+  const sortedSupplyCategories = Object.keys(groupedSuppliesByCategory).sort((a, b) => {
+    if (a === "Other" || a === "Unassigned") return 1;
+    if (b === "Other" || b === "Unassigned") return -1;
+    return a.localeCompare(b);
+  });
+
+  // Supplies grouping by Location
+  const groupedSuppliesByLocation = supplyGroups.reduce((acc, group) => {
+    const loc = getSupplyLocationGroupKey(group[0]);
+    if (!acc[loc]) acc[loc] = [];
+    acc[loc].push(group);
+    return acc;
+  }, {} as Record<string, any[][]>);
+
+  const sortedSupplyLocations = Object.keys(groupedSuppliesByLocation).sort(sortGeneralLocationKeys);
+
+  // Equipment grouping by Category
+  const groupedEquipmentByCategory = filteredEquipment.reduce((acc, t) => {
+    const rawCat = t.category?.trim();
+    const cat = rawCat ? (rawCat.charAt(0).toUpperCase() + rawCat.slice(1)) : "Other";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(t);
+    return acc;
+  }, {} as Record<string, Tool[]>);
+
+  const sortedEquipmentCategories = Object.keys(groupedEquipmentByCategory).sort((a, b) => {
+    if (a === "Other" || a === "Unassigned") return 1;
+    if (b === "Other" || b === "Unassigned") return -1;
+    return a.localeCompare(b);
+  });
+
+  // Equipment grouping by Location
+  const groupedEquipmentByLocation = filteredEquipment.reduce((acc, t) => {
+    const loc = getEquipmentLocationGroupKey(t);
+    if (!acc[loc]) acc[loc] = [];
+    acc[loc].push(t);
+    return acc;
+  }, {} as Record<string, Tool[]>);
+
+  const sortedEquipmentLocations = Object.keys(groupedEquipmentByLocation).sort(sortGeneralLocationKeys);
 
   // PDF Download - creates actual PDF file
   const downloadInventoryPDF = async (category: 'chemicals' | 'supplies' | 'equipment') => {
@@ -2047,6 +2238,303 @@ const InventoryControl = () => {
     );
   };
 
+  const renderSupplyRow = (group: any[]) => {
+    const m = group[0];
+    const totalGroupValue = group.reduce((sum: number, x: any) => sum + ((x.costPerItem || 0) * (x.quantity || 1)), 0);
+    const totalQty = group.reduce((sum: number, x: any) => sum + (x.quantity || 1), 0);
+    return (
+      <TableRow
+        key={m.id}
+        ref={registerRow(m.id)}
+        className="border-blue-500/10 hover:bg-blue-500/5 cursor-pointer group transition-colors"
+        onClick={() => openEdit(group, 'material')}
+      >
+        <TableCell className="font-medium flex items-center gap-2 text-white">
+          {m.imageUrl && (
+            <InventoryThumbnail 
+              id={m.id}
+              src={m.imageUrl} 
+              alt={m.name} 
+              activeBorderClass="border-blue-500/50"
+              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
+            />
+          )}
+          {m.name}
+        </TableCell>
+        <TableCell className="text-zinc-300">
+          {m.category}
+          {group.some((x: any) => x.wherePurchased) && <div className="text-[10px] text-zinc-500 italic mt-0.5">At: {group.map((x: any) => x.wherePurchased).filter(Boolean).join(', ')}</div>}
+        </TableCell>
+        <TableCell className={`font-medium ${group.every((x: any) => !x.costPerItem || x.costPerItem === 0) ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+          <div className="flex flex-col gap-1">
+            {(expandedRows.has(m.id) ? group : group.slice(0, 1)).map((x: any, idx: number) => (
+              <div key={idx} className="flex flex-col gap-0.5 border-b border-zinc-800/50 pb-1 last:border-0 last:pb-0">
+                <div className="flex items-center gap-2">
+                  <span>{!x.costPerItem || x.costPerItem === 0 ? '⚠ $0.00' : `$${(x.costPerItem).toFixed(2)}`}</span>
+                  {x.actualPrice && x.actualPrice > x.costPerItem && (
+                    <span className="text-[10px] text-zinc-500 line-through mr-1">${(x.actualPrice).toFixed(2)}</span>
+                  )}
+                </div>
+                {x.actualPrice && x.actualPrice > x.costPerItem && (
+                  <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
+                    Save ${(x.actualPrice - x.costPerItem).toFixed(2)}
+                  </span>
+                )}
+                {x.costPerItem > 0 && x.quantity > 0 && (
+                  <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(x.costPerItem * x.quantity).toFixed(2)}</span>
+                )}
+              </div>
+            ))}
+            {group.length > 1 && totalGroupValue > 0 && (
+              <div className="text-[10px] text-zinc-500 font-bold italic mt-1 pt-1 border-t border-zinc-800">Combined Value: ${totalGroupValue.toFixed(2)}</div>
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
+          {supplySort === 'updated_at' ? (
+            <span className="text-xs text-zinc-400 font-mono">
+              {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'Never'}
+            </span>
+          ) : (
+            <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${isSupplyGroupLowStock(group) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+              {isSupplyGroupLowStock(group) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+              {totalQty} units
+            </span>
+          )}
+        </TableCell>
+        <TableCell className="py-1 align-top">
+          <div className="flex flex-col gap-1">
+            {(expandedRows.has(m.id) ? group : group.slice(0, 1)).map((x: any, idx: number) => (
+              <div key={idx} className="flex flex-col gap-0.5 border-b border-zinc-800/50 pb-1 last:border-0 last:pb-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-zinc-400 font-bold italic">{x.wherePurchased || '-'}</span>
+                </div>
+                {x.actualPrice && x.actualPrice > x.costPerItem && (
+                  <span className="text-[10px] invisible px-1 py-0.5">Spacer</span>
+                )}
+                {x.costPerItem > 0 && x.quantity > 0 && (
+                  <span className="text-[10px] invisible">Spacer</span>
+                )}
+              </div>
+            ))}
+            {group.length > 1 && totalGroupValue > 0 && (
+              <div className="text-[10px] invisible mt-1 pt-1 border-t border-transparent">Spacer</div>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="text-right align-top pt-3">
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center">
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
+            </div>
+            {group.length > 1 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={(e) => toggleRowExpanded(m.id, e)} 
+                className="h-6 px-2 text-zinc-400 hover:text-white border border-zinc-700/50 bg-zinc-800/30"
+              >
+                {expandedRows.has(m.id) ? (
+                  <><ChevronUp className="h-3 w-3 mr-1" /> Hide {group.length - 1}</>
+                ) : (
+                  <><ChevronDown className="h-3 w-3 mr-1" /> Show {group.length - 1}</>
+                )}
+              </Button>
+            )}
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const renderSupplyCard = (group: any[]) => {
+    const m = group[0];
+    const totalGroupValue = group.reduce((sum: number, x: any) => sum + ((x.costPerItem || 0) * (x.quantity || 1)), 0);
+    const totalQty = group.reduce((sum: number, x: any) => sum + (x.quantity || 1), 0);
+    return (
+      <div
+        key={m.id}
+        ref={registerRow(m.id)}
+        className="bg-zinc-900 border border-blue-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-blue-500/5 transition-colors group"
+        onClick={() => openEdit(group, 'material')}
+      >
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="font-bold text-white flex items-center gap-2">
+              {m.imageUrl && (
+                <InventoryThumbnail 
+                  id={m.id}
+                  src={m.imageUrl} 
+                  alt={m.name} 
+                  activeBorderClass="border-blue-500/50"
+                  className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
+                />
+              )}
+              {m.name}
+            </div>
+            <div className={`text-sm font-medium ${group.every((x: any) => !x.costPerItem || x.costPerItem === 0) ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+              {supplySort === 'updated_at' ? (
+                <span className="text-xs text-blue-400 font-bold italic">
+                  Last Updated: {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'Never'}
+                </span>
+              ) : (
+                <>
+                  <div className="text-zinc-400 mb-1">{m.category}</div>
+                  {group.map((x: any, idx: number) => (
+                    <div key={idx} className="flex flex-col gap-0.5 mt-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">{!x.costPerItem ? '⚠ $0.00' : `$${(x.costPerItem * (x.quantity || 1)).toFixed(2)}`}</span>
+                        {x.actualPrice && x.actualPrice > x.costPerItem && (
+                          <span className="text-[10px] text-zinc-500 line-through mr-1">${(x.actualPrice * (x.quantity || 1)).toFixed(2)}</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 italic">(${(x.costPerItem || 0).toFixed(2)}/ea · qty {x.quantity || 1})</div>
+                    </div>
+                  ))}
+                  {group.length > 1 && totalGroupValue > 0 && <div className="text-[10px] text-zinc-500 font-bold italic mt-2 pt-1 border-t border-zinc-800">Total Value: ${totalGroupValue.toFixed(2)}</div>}
+                </>
+              )}
+            </div>
+            <div className="text-[10px] text-zinc-400 italic mt-1">Purchased at: {group.map((x: any) => x.wherePurchased).filter(Boolean).join(', ') || '-'}</div>
+          </div>
+          <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit h-fit ${isSupplyGroupLowStock(group) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
+            {isSupplyGroupLowStock(group) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
+            {totalQty} units
+          </span>
+        </div>
+        <div className="flex justify-end gap-2 pt-2 border-t border-blue-500/10">
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8" title="Edit Item">
+            <Pencil className="h-4 w-4 mr-2" /> Edit
+          </Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 text-blue-400 hover:text-blue-300" title="Duplicate">
+            <Copy className="h-4 w-4 mr-2" /> Copy
+          </Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 text-red-500" title="Delete">
+            <Trash2 className="h-4 w-4 mr-2" /> Delete
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderEquipmentRow = (t: Tool) => {
+    return (
+      <TableRow
+        key={t.id}
+        ref={registerRow(t.id)}
+        className="border-purple-500/10 hover:bg-purple-500/5 cursor-pointer group transition-colors"
+        onClick={() => openEdit(t, 'tool')}
+      >
+        <TableCell className="font-medium flex items-center gap-2 !text-white">
+          {t.imageUrl && (
+            <InventoryThumbnail 
+              id={t.id}
+              src={t.imageUrl} 
+              alt={t.name} 
+              activeBorderClass="border-purple-500/50"
+              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
+            />
+          )}
+          {t.name}
+        </TableCell>
+        <TableCell className="text-zinc-300">
+          {equipmentSort === 'updated_at' ? (
+            <div className="font-mono text-xs text-purple-400">
+              {t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'Never'}
+            </div>
+          ) : (
+            <div>{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</div>
+          )}
+          {t.wherePurchased && <div className="text-[10px] text-zinc-500 italic">At: {t.wherePurchased}</div>}
+        </TableCell>
+        <TableCell className={`font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
+              <span>{!t.price || t.price === 0 ? '⚠ $0.00' : `$${(t.price).toFixed(2)}`}</span>
+              {t.actualPrice && t.actualPrice > t.price && (
+                <span className="text-[10px] text-zinc-500 line-through mr-1">${(t.actualPrice).toFixed(2)}</span>
+              )}
+            </div>
+            {t.actualPrice && t.actualPrice > t.price && (
+              <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
+                Amount Saved: ${(t.actualPrice - t.price).toFixed(2)}
+              </span>
+            )}
+            {t.price > 0 && (t.quantity || 1) > 1 && (
+              <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(t.price * (t.quantity || 1)).toFixed(2)}</span>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="py-1">
+          <span className="text-[11px] text-zinc-400 font-bold italic">{t.wherePurchased || '-'}</span>
+        </TableCell>
+        <TableCell className="text-right">
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(t, 'tool'); }} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(t.id, 'tool', t.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const renderEquipmentCard = (t: Tool) => {
+    return (
+      <div
+        key={t.id}
+        ref={registerRow(t.id)}
+        className="bg-zinc-900 border border-purple-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-purple-500/5 transition-colors group"
+        onClick={() => openEdit(t, 'tool')}
+      >
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="font-bold text-white flex items-center gap-2">
+              {t.imageUrl && (
+                <InventoryThumbnail 
+                  id={t.id}
+                  src={t.imageUrl} 
+                  alt={t.name} 
+                  activeBorderClass="border-purple-500/50"
+                  className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
+                />
+              )}
+              {t.name}
+            </div>
+            <div className={`text-sm font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
+              {equipmentSort === 'updated_at' ? (
+                <span className="text-xs text-purple-400 font-bold italic">
+                  Last Updated: {t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'Never'}
+                </span>
+              ) : (
+                <>{!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}${(t.quantity || 1) > 1 ? ` (Total: $${(t.price * (t.quantity || 1)).toFixed(2)})` : ''}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</>
+              )}
+            </div>
+            {t.actualPrice && t.actualPrice > t.price && (
+              <div className="text-xs text-green-400 font-bold mt-0.5">
+                Amount Saved: ${(t.actualPrice - t.price).toFixed(2)}
+              </div>
+            )}
+            {t.wherePurchased && <div className="text-[10px] text-zinc-400 italic mt-1">Purchased at: {t.wherePurchased}</div>}
+          </div>
+          <span className="px-2 py-1 rounded text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+            Qty: {t.quantity || 1}
+          </span>
+        </div>
+        <div className="flex justify-end gap-2 pt-2 border-t border-purple-500/10">
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8" title="Edit Item">
+            <Pencil className="h-4 w-4 mr-2" /> Edit
+          </Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(t, 'tool'); }} className="h-8 text-purple-400 hover:text-purple-300" title="Duplicate">
+            <Copy className="h-4 w-4 mr-2" /> Copy
+          </Button>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(t.id, 'tool', t.name); }} className="h-8 text-red-500" title="Delete">
+            <Trash2 className="h-4 w-4 mr-2" /> Delete
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   const renderInteractiveChart = () => {
     const chartChemicals = Object.values((chemicals || []).reduce((acc, chem) => {
@@ -2637,6 +3125,8 @@ const InventoryControl = () => {
                   className="bg-zinc-800 border-zinc-700 text-yellow-500 text-[10px] font-bold py-1 px-2 rounded focus:outline-none focus:ring-1 focus:ring-yellow-500"
                 >
                   <option value="brand">By Brand (All)</option>
+                  <option value="category">Sort by Category</option>
+                  <option value="location">Sort by Location</option>
                   <option value="alphabetical">A-Z List</option>
                   <option value="low_stock">Low Threshold</option>
                   <option value="no_cost">⚠ Missing Cost</option>
@@ -2716,6 +3206,44 @@ const InventoryControl = () => {
                       </div>
                       <div className="md:hidden space-y-3">
                         {groupedChemicals[brand].map(group => renderChemicalCard(group))}
+                      </div>
+                    </div>
+                  ))
+                ) : chemicalSort === "category" ? (
+                  sortedChemicalCategories.map(cat => (
+                    <div key={cat} className="space-y-2">
+                      <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-yellow-500">
+                        <span className="text-xs font-black uppercase tracking-widest text-yellow-500">{cat}</span>
+                        <span className="text-[10px] text-zinc-500">({groupedChemicalsByCategory[cat].length} items)</span>
+                      </div>
+                      <div className="overflow-x-auto hidden md:block">
+                        <Table>
+                          <TableBody>
+                            {groupedChemicalsByCategory[cat].map(group => renderChemicalRow(group))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="md:hidden space-y-3">
+                        {groupedChemicalsByCategory[cat].map(group => renderChemicalCard(group))}
+                      </div>
+                    </div>
+                  ))
+                ) : chemicalSort === "location" ? (
+                  sortedChemicalLocations.map(loc => (
+                    <div key={loc} className="space-y-2">
+                      <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-yellow-500">
+                        <span className="text-xs font-black uppercase tracking-widest text-yellow-500">{loc}</span>
+                        <span className="text-[10px] text-zinc-500">({groupedChemicalsByLocation[loc].length} items)</span>
+                      </div>
+                      <div className="overflow-x-auto hidden md:block">
+                        <Table>
+                          <TableBody>
+                            {groupedChemicalsByLocation[loc].map(group => renderChemicalRow(group))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="md:hidden space-y-3">
+                        {groupedChemicalsByLocation[loc].map(group => renderChemicalCard(group))}
                       </div>
                     </div>
                   ))
@@ -2801,7 +3329,8 @@ const InventoryControl = () => {
                   className="bg-zinc-800 border-zinc-700 text-blue-500 text-[10px] font-bold py-1 px-2 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="name">A-Z Name</option>
-                  <option value="category">Category</option>
+                  <option value="category">Sort by Category</option>
+                  <option value="location">Sort by Location</option>
                   <option value="low_stock">Low Threshold</option>
                   <option value="no_cost">⚠ Missing Cost</option>
                   <option value="updated_at">Last Updated</option>
@@ -2857,221 +3386,88 @@ const InventoryControl = () => {
                   )}
                 </div>
               </div>
-              <div className="overflow-x-auto hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-blue-500/20">
-                      <TableHead>Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Cost/Item</TableHead>
-                      <TableHead>{supplySort === 'updated_at' ? 'Last Updated' : 'Quantity'}</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {supplyGroups.map(group => {
-                      const m = group[0];
-                      const totalGroupValue = group.reduce((sum: number, x: any) => sum + ((x.costPerItem || 0) * (x.quantity || 1)), 0);
-                      const totalQty = group.reduce((sum: number, x: any) => sum + (x.quantity || 1), 0);
-                      return (
-                      <TableRow
-                        key={m.id}
-                        ref={registerRow(m.id)}
-                        className="border-blue-500/10 hover:bg-blue-500/5 cursor-pointer group transition-colors"
-                        onClick={() => openEdit(group, 'material')}
-                      >
-                        <TableCell className="font-medium flex items-center gap-2 text-white">
-                          {m.imageUrl && (
-                            <InventoryThumbnail 
-                              id={m.id}
-                              src={m.imageUrl} 
-                              alt={m.name} 
-                              activeBorderClass="border-blue-500/50"
-                              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
-                            />
-                          )}
-                          {m.name}
-                        </TableCell>
-                        <TableCell className="text-zinc-300">
-                          {m.category}
-                          {group.some((x: any) => x.wherePurchased) && <div className="text-[10px] text-zinc-500 italic mt-0.5">At: {group.map((x: any) => x.wherePurchased).filter(Boolean).join(', ')}</div>}
-                        </TableCell>
-                        <TableCell className={`font-medium ${group.every((x: any) => !x.costPerItem || x.costPerItem === 0) ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          <div className="flex flex-col gap-1">
-                            {(expandedRows.has(m.id) ? group : group.slice(0, 1)).map((x: any, idx: number) => (
-                              <div key={idx} className="flex flex-col gap-0.5 border-b border-zinc-800/50 pb-1 last:border-0 last:pb-0">
-                                <div className="flex items-center gap-2">
-                                  <span>{!x.costPerItem || x.costPerItem === 0 ? '⚠ $0.00' : `$${(x.costPerItem).toFixed(2)}`}</span>
-                                  {x.actualPrice && x.actualPrice > x.costPerItem && (
-                                    <span className="text-[10px] text-zinc-500 line-through mr-1">${(x.actualPrice).toFixed(2)}</span>
-                                  )}
-                                </div>
-                                {x.actualPrice && x.actualPrice > x.costPerItem && (
-                                  <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
-                                    Save ${(x.actualPrice - x.costPerItem).toFixed(2)}
-                                  </span>
-                                )}
-                                {x.costPerItem > 0 && x.quantity > 0 && (
-                                  <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(x.costPerItem * x.quantity).toFixed(2)}</span>
-                                )}
-                              </div>
-                            ))}
-                            {group.length > 1 && totalGroupValue > 0 && (
-                              <div className="text-[10px] text-zinc-500 font-bold italic mt-1 pt-1 border-t border-zinc-800">Combined Value: ${totalGroupValue.toFixed(2)}</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {supplySort === 'updated_at' ? (
-                            <span className="text-xs text-zinc-400 font-mono">
-                              {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'Never'}
-                            </span>
-                          ) : (
-                            <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit ${isSupplyGroupLowStock(group) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
-                              {isSupplyGroupLowStock(group) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
-                              {totalQty} units
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-1 align-top">
-                          <div className="flex flex-col gap-1">
-                            {(expandedRows.has(m.id) ? group : group.slice(0, 1)).map((x: any, idx: number) => (
-                              <div key={idx} className="flex flex-col gap-0.5 border-b border-zinc-800/50 pb-1 last:border-0 last:pb-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] text-zinc-400 font-bold italic">{x.wherePurchased || '-'}</span>
-                                </div>
-                                {x.actualPrice && x.actualPrice > x.costPerItem && (
-                                  <span className="text-[10px] invisible px-1 py-0.5">Spacer</span>
-                                )}
-                                {x.costPerItem > 0 && x.quantity > 0 && (
-                                  <span className="text-[10px] invisible">Spacer</span>
-                                )}
-                              </div>
-                            ))}
-                            {group.length > 1 && totalGroupValue > 0 && (
-                              <div className="text-[10px] invisible mt-1 pt-1 border-t border-transparent">Spacer</div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right align-top pt-3">
-                          <div className="flex flex-col items-end gap-2">
-                            <div className="flex items-center">
-                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 w-8 p-0 text-blue-400 hover:text-blue-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
-                            </div>
-                            {group.length > 1 && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={(e) => toggleRowExpanded(m.id, e)} 
-                                className="h-6 px-2 text-zinc-400 hover:text-white border border-zinc-700/50 bg-zinc-800/30"
-                              >
-                                {expandedRows.has(m.id) ? (
-                                  <><ChevronUp className="h-3 w-3 mr-1" /> Hide {group.length - 1}</>
-                                ) : (
-                                  <><ChevronDown className="h-3 w-3 mr-1" /> Show {group.length - 1}</>
-                                )}
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );})}
-                    {filteredSupplies.length === 0 && materials.length > 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-zinc-500 bg-zinc-950/20">
-                          <div className="flex flex-col items-center gap-2">
-                            <Search className="h-8 w-8 opacity-20" />
-                            <p>No matches for "{supplySearch}" in supplies.</p>
-                            <Button variant="link" onClick={() => setSupplySearch("")} className="text-blue-400 p-0 h-auto">Clear search</Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    {materials.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No materials tracked.</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Mobile Card View (Supplies) */}
-              <div className="md:hidden space-y-3 mt-4">
-                {supplyGroups.map(group => {
-                  const m = group[0];
-                  const totalGroupValue = group.reduce((sum: number, x: any) => sum + ((x.costPerItem || 0) * (x.quantity || 1)), 0);
-                  const totalQty = group.reduce((sum: number, x: any) => sum + (x.quantity || 1), 0);
-                  return (
-                  <div
-                    key={m.id}
-                    ref={registerRow(m.id)}
-                    className="bg-zinc-900 border border-blue-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-blue-500/5 transition-colors group"
-                    onClick={() => openEdit(group, 'material')}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-white flex items-center gap-2">
-                          {m.imageUrl && (
-                            <InventoryThumbnail 
-                              id={m.id}
-                              src={m.imageUrl} 
-                              alt={m.name} 
-                              activeBorderClass="border-blue-500/50"
-                              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
-                            />
-                          )}
-                          {m.name}
-                        </div>
-                        <div className={`text-sm font-medium ${group.every((x: any) => !x.costPerItem || x.costPerItem === 0) ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          {supplySort === 'updated_at' ? (
-                            <span className="text-xs text-blue-400 font-bold italic">
-                              Last Updated: {m.updatedAt ? new Date(m.updatedAt).toLocaleDateString() : 'Never'}
-                            </span>
-                          ) : (
-                            <>
-                              <div className="text-zinc-400 mb-1">{m.category}</div>
-                              {group.map((x: any, idx: number) => (
-                                <div key={idx} className="flex flex-col gap-0.5 mt-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold">{!x.costPerItem ? '⚠ $0.00' : `$${(x.costPerItem * (x.quantity || 1)).toFixed(2)}`}</span>
-                                    {x.actualPrice && x.actualPrice > x.costPerItem && (
-                                      <span className="text-[10px] text-zinc-500 line-through mr-1">${(x.actualPrice * (x.quantity || 1)).toFixed(2)}</span>
-                                    )}
-                                  </div>
-                                  <div className="text-[10px] text-zinc-500 italic">(${(x.costPerItem || 0).toFixed(2)}/ea · qty {x.quantity || 1})</div>
-                                </div>
-                              ))}
-                              {group.length > 1 && totalGroupValue > 0 && <div className="text-[10px] text-zinc-500 font-bold italic mt-2 pt-1 border-t border-zinc-800">Total Value: ${totalGroupValue.toFixed(2)}</div>}
-                            </>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-zinc-400 italic mt-1">Purchased at: {group.map((x: any) => x.wherePurchased).filter(Boolean).join(', ') || '-'}</div>
+              <div className="space-y-8">
+                {supplySort === "category" ? (
+                  sortedSupplyCategories.map(cat => (
+                    <div key={cat} className="space-y-2">
+                      <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-blue-500">
+                        <span className="text-xs font-black uppercase tracking-widest text-blue-500">{cat}</span>
+                        <span className="text-[10px] text-zinc-500">({groupedSuppliesByCategory[cat].length} items)</span>
                       </div>
-                      <span className={`px-2 py-1 rounded text-xs font-bold flex items-center w-fit h-fit ${isSupplyGroupLowStock(group) ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/10 text-blue-400'}`}>
-                        {isSupplyGroupLowStock(group) && <AlertTriangle className="h-3 w-3 mr-1 fill-red-500/20" />}
-                        {totalQty} units
-                      </span>
+                      <div className="overflow-x-auto hidden md:block">
+                        <Table>
+                          <TableBody>
+                            {groupedSuppliesByCategory[cat].map(group => renderSupplyRow(group))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="md:hidden space-y-3">
+                        {groupedSuppliesByCategory[cat].map(group => renderSupplyCard(group))}
+                      </div>
                     </div>
-                    <div className="flex justify-end gap-2 pt-2 border-t border-blue-500/10">
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(group, 'material'); }} className="h-8" title="Edit Item">
-                        <Pencil className="h-4 w-4 mr-2" /> Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(m, 'material'); }} className="h-8 text-blue-400 hover:text-blue-300" title="Duplicate">
-                        <Copy className="h-4 w-4 mr-2" /> Copy
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(m.id, 'material', m.name); }} className="h-8 text-red-500" title="Delete">
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </Button>
+                  ))
+                ) : supplySort === "location" ? (
+                  sortedSupplyLocations.map(loc => (
+                    <div key={loc} className="space-y-2">
+                      <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-blue-500">
+                        <span className="text-xs font-black uppercase tracking-widest text-blue-500">{loc}</span>
+                        <span className="text-[10px] text-zinc-500">({groupedSuppliesByLocation[loc].length} items)</span>
+                      </div>
+                      <div className="overflow-x-auto hidden md:block">
+                        <Table>
+                          <TableBody>
+                            {groupedSuppliesByLocation[loc].map(group => renderSupplyRow(group))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="md:hidden space-y-3">
+                        {groupedSuppliesByLocation[loc].map(group => renderSupplyCard(group))}
+                      </div>
                     </div>
-                  </div>
-                );})}
-                {filteredSupplies.length === 0 && materials.length > 0 && (
-                  <div className="text-center py-10 text-zinc-500 border border-dashed border-zinc-800 rounded-lg">
-                    <p>No matches for "{supplySearch}"</p>
-                    <Button variant="link" onClick={() => setSupplySearch("")} className="text-blue-400">Clear</Button>
-                  </div>
+                  ))
+                ) : (
+                  <>
+                    <div className="overflow-x-auto hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-blue-500/20">
+                            <TableHead>Name</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Cost/Item</TableHead>
+                            <TableHead>{supplySort === 'updated_at' ? 'Last Updated' : 'Quantity'}</TableHead>
+                            <TableHead>Source</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {supplyGroups.map(group => renderSupplyRow(group))}
+                          {filteredSupplies.length === 0 && materials.length > 0 && (
+                            <TableRow>
+                              <TableCell colSpan={6} className="text-center py-10 text-zinc-500 bg-zinc-950/20">
+                                <div className="flex flex-col items-center gap-2">
+                                  <Search className="h-8 w-8 opacity-20" />
+                                  <p>No matches for "{supplySearch}" in supplies.</p>
+                                  <Button variant="link" onClick={() => setSupplySearch("")} className="text-blue-400 p-0 h-auto">Clear search</Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {materials.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground">No materials tracked.</TableCell></TableRow>}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="md:hidden space-y-3 mt-4">
+                      {supplyGroups.map(group => renderSupplyCard(group))}
+                      {filteredSupplies.length === 0 && materials.length > 0 && (
+                        <div className="text-center py-10 text-zinc-500 border border-dashed border-zinc-800 rounded-lg">
+                          <p>No matches for "{supplySearch}"</p>
+                          <Button variant="link" onClick={() => setSupplySearch("")} className="text-blue-400">Clear</Button>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
-                {materials.length === 0 && <div className="text-center py-6 text-muted-foreground">No materials tracked.</div>}
+                {materials.length === 0 && <div className="text-center py-6 text-muted-foreground">No supplies tracked.</div>}
               </div>
             </div>
           )}
@@ -3130,6 +3526,8 @@ const InventoryControl = () => {
                   className="bg-zinc-800 border-zinc-700 text-purple-500 text-[10px] font-bold py-1 px-2 rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
                 >
                   <option value="name">A-Z Name</option>
+                  <option value="category">Sort by Category</option>
+                  <option value="location">Sort by Location</option>
                   <option value="purchaseDate">Purchase Date</option>
                   <option value="low_stock">Low Threshold</option>
                   <option value="no_cost">⚠ Missing Cost</option>
@@ -3180,140 +3578,82 @@ const InventoryControl = () => {
                   )}
                 </div>
               </div>
-              <div className="overflow-x-auto hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent border-purple-500/20">
-                      <TableHead>Name</TableHead>
-                      <TableHead>{equipmentSort === 'updated_at' ? 'Last Updated' : 'Purchase Date'}</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Source / Vendor</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEquipment.map(t => (
-                      <TableRow
-                        key={t.id}
-                        ref={registerRow(t.id)}
-                        className="border-purple-500/10 hover:bg-purple-500/5 cursor-pointer group transition-colors"
-                        onClick={() => openEdit(t, 'tool')}
-                      >
-                        <TableCell className="font-medium flex items-center gap-2 !text-white">
-                          {t.imageUrl && (
-                            <InventoryThumbnail 
-                              id={t.id}
-                              src={t.imageUrl} 
-                              alt={t.name} 
-                              activeBorderClass="border-purple-500/50"
-                              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
-                            />
-                          )}
-                          {t.name}
-                        </TableCell>
-                        <TableCell className="text-zinc-300">
-                          {equipmentSort === 'updated_at' ? (
-                            <div className="font-mono text-xs text-purple-400">
-                              {t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'Never'}
-                            </div>
-                          ) : (
-                            <div>{t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</div>
-                          )}
-                          {t.wherePurchased && <div className="text-[10px] text-zinc-500 italic">At: {t.wherePurchased}</div>}
-                        </TableCell>
-                        <TableCell className={`font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-2">
-                              <span>{!t.price || t.price === 0 ? '⚠ $0.00' : `$${(t.price).toFixed(2)}`}</span>
-                              {t.actualPrice && t.actualPrice > t.price && (
-                                <span className="text-[10px] text-zinc-500 line-through mr-1">${(t.actualPrice).toFixed(2)}</span>
-                              )}
-                            </div>
-                            {t.actualPrice && t.actualPrice > t.price && (
-                              <span className="text-[10px] text-green-400 font-bold bg-green-500/10 px-1 py-0.5 rounded w-fit border border-green-500/20">
-                                Amount Saved: ${(t.actualPrice - t.price).toFixed(2)}
-                              </span>
-                            )}
-                            {t.price > 0 && t.quantity > 1 && (
-                              <span className="text-[10px] text-zinc-500 font-bold italic">Total: ${(t.price * (t.quantity || 1)).toFixed(2)}</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-1">
-                          <span className="text-[11px] text-zinc-400 font-bold italic">{t.wherePurchased || '-'}</span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8 w-8 p-0" title="Edit Item"><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(t, 'tool'); }} className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300" title="Duplicate"><Copy className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(t.id, 'tool', t.name); }} className="h-8 w-8 p-0 text-red-500" title="Delete"><Trash2 className="h-4 w-4" /></Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {filteredEquipment.length === 0 && tools.length > 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-zinc-500">
-                           No matches for "{equipmentSearch}"
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    {tools.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No tools tracked.</TableCell></TableRow>}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Mobile Card View (Equipment) */}
-              <div className="md:hidden space-y-3 mt-4">
-                {filteredEquipment.map(t => (
-                  <div
-                    key={t.id}
-                    ref={registerRow(t.id)}
-                    className="bg-zinc-900 border border-purple-500/20 rounded-lg p-4 space-y-2 cursor-pointer hover:bg-purple-500/5 transition-colors group"
-                    onClick={() => openEdit(t, 'tool')}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-bold text-white flex items-center gap-2">
-                          {t.imageUrl && (
-                            <InventoryThumbnail 
-                              id={t.id}
-                              src={t.imageUrl} 
-                              alt={t.name} 
-                              activeBorderClass="border-purple-500/50"
-                              className="h-8 w-8 rounded object-cover border border-zinc-700 relative" 
-                            />
-                          )}
-                          {t.name}
-                        </div>
-                        <div className={`text-sm font-medium ${!t.price || t.price === 0 ? 'text-red-400 font-bold' : 'text-zinc-300'}`}>
-                          {equipmentSort === 'updated_at' ? (
-                            <span className="text-xs text-purple-400 font-bold italic">
-                              Last Updated: {t.updatedAt ? new Date(t.updatedAt).toLocaleDateString() : 'Never'}
-                            </span>
-                          ) : (
-                            <>{!t.price || t.price === 0 ? '⚠ No cost entered' : `$${(t.price).toFixed(2)}${t.quantity > 1 ? ` (Total: $${(t.price * t.quantity).toFixed(2)})` : ''}`} • {t.purchaseDate ? new Date(t.purchaseDate).toLocaleDateString() : '-'}</>
-                          )}
-                        </div>
-                        {t.actualPrice && t.actualPrice > t.price && (
-                          <div className="text-xs text-green-400 font-bold mt-0.5">
-                            Amount Saved: ${(t.actualPrice - t.price).toFixed(2)}
-                          </div>
-                        )}
-                        {t.wherePurchased && <div className="text-sm text-purple-400 font-bold italic mt-0.5">Purchased at: {t.wherePurchased}</div>}
+              <div className="space-y-8">
+                {equipmentSort === "category" ? (
+                  sortedEquipmentCategories.map(cat => (
+                    <div key={cat} className="space-y-2">
+                      <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-purple-500">
+                        <span className="text-xs font-black uppercase tracking-widest text-purple-500">{cat}</span>
+                        <span className="text-[10px] text-zinc-500">({groupedEquipmentByCategory[cat].length} items)</span>
+                      </div>
+                      <div className="overflow-x-auto hidden md:block">
+                        <Table>
+                          <TableBody>
+                            {groupedEquipmentByCategory[cat].map(t => renderEquipmentRow(t))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="md:hidden space-y-3">
+                        {groupedEquipmentByCategory[cat].map(t => renderEquipmentCard(t))}
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2 pt-2 border-t border-purple-500/10">
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(t, 'tool'); }} className="h-8" title="Edit Item">
-                        <Pencil className="h-4 w-4 mr-2" /> Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDuplicate(t, 'tool'); }} className="h-8 text-purple-400 hover:text-purple-300" title="Duplicate">
-                        <Copy className="h-4 w-4 mr-2" /> Copy
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDelete(t.id, 'tool', t.name); }} className="h-8 text-red-500" title="Delete">
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </Button>
+                  ))
+                ) : equipmentSort === "location" ? (
+                  sortedEquipmentLocations.map(loc => (
+                    <div key={loc} className="space-y-2">
+                      <div className="flex items-center gap-2 px-2 py-1 bg-zinc-800/50 rounded-md border-l-4 border-purple-500">
+                        <span className="text-xs font-black uppercase tracking-widest text-purple-500">{loc}</span>
+                        <span className="text-[10px] text-zinc-500">({groupedEquipmentByLocation[loc].length} items)</span>
+                      </div>
+                      <div className="overflow-x-auto hidden md:block">
+                        <Table>
+                          <TableBody>
+                            {groupedEquipmentByLocation[loc].map(t => renderEquipmentRow(t))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      <div className="md:hidden space-y-3">
+                        {groupedEquipmentByLocation[loc].map(t => renderEquipmentCard(t))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <>
+                    <div className="overflow-x-auto hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-purple-500/20">
+                            <TableHead>Name</TableHead>
+                            <TableHead>{equipmentSort === 'updated_at' ? 'Last Updated' : 'Purchase Date'}</TableHead>
+                            <TableHead>Price</TableHead>
+                            <TableHead>Source / Vendor</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredEquipment.map(t => renderEquipmentRow(t))}
+                          {filteredEquipment.length === 0 && tools.length > 0 && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-10 text-zinc-500">
+                                 No matches for "{equipmentSearch}"
+                              </TableCell>
+                            </TableRow>
+                          )}
+                          {tools.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No tools tracked.</TableCell></TableRow>}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div className="md:hidden space-y-3 mt-4">
+                      {filteredEquipment.map(t => renderEquipmentCard(t))}
+                      {filteredEquipment.length === 0 && tools.length > 0 && (
+                        <div className="text-center py-10 text-zinc-500 border border-dashed border-zinc-800 rounded-lg">
+                          <p>No matches for "{equipmentSearch}"</p>
+                          <Button variant="link" onClick={() => setEquipmentSearch("")} className="text-purple-400">Clear</Button>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
                 {tools.length === 0 && <div className="text-center py-6 text-muted-foreground">No tools tracked.</div>}
               </div>
             </div>
