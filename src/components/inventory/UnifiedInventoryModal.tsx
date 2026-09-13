@@ -1457,13 +1457,20 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs text-zinc-400">Usage Type (Exterior/Interior/Both)</Label>
-                      <Input
-                        value={form.category || ""}
-                        onChange={(e) => setForm({ ...form, category: e.target.value })}
-                        className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm"
-                        placeholder="e.g. exterior, interior, both"
-                      />
+                      <Label className="text-xs text-zinc-400">Usage</Label>
+                      <Select 
+                        value={form.category ? (['both', 'dual-use'].includes(form.category.toLowerCase()) ? 'Both' : form.category.toLowerCase() === 'interior' ? 'Interior' : 'Exterior') : 'Exterior'} 
+                        onValueChange={(val) => setForm({ ...form, category: val })}
+                      >
+                        <SelectTrigger className="bg-zinc-900 border-zinc-700 text-white h-9 text-sm">
+                          <SelectValue placeholder="Select usage..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-700 text-white">
+                          <SelectItem value="Exterior">Exterior</SelectItem>
+                          <SelectItem value="Interior">Interior</SelectItem>
+                          <SelectItem value="Both">Both</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}
