@@ -189,9 +189,9 @@ export async function getChemicals(): Promise<Chemical[]> {
             ct = parts[1] || ct;
         }
 
-        const rawShelf = item.shelf || '';
-        const rawSection = item.section || '';
-        let secLoc = item.shelf_location || '';
+        const rawShelf = (item.shelf === 'N/A' || item.shelf === 'Unassigned') ? '' : (item.shelf || '');
+        const rawSection = (item.section === 'N/A' || item.section === 'Unassigned') ? '' : (item.section || '');
+        let secLoc = (item.shelf_location === 'N/A' || item.shelf_location === 'Unassigned') ? '' : (item.shelf_location || '');
         if (!secLoc || secLoc === rawShelf) {
             if (rawShelf && rawSection) secLoc = `${rawShelf} - ${rawSection}`;
             else if (rawShelf) secLoc = rawShelf;
@@ -199,13 +199,16 @@ export async function getChemicals(): Promise<Chemical[]> {
         }
 
         let rawCategory = item.category || '';
-        let chemLocation = item.location || 'Chemical Rack';
+        let chemLocation = (item.location === 'Unassigned') ? '' : (item.location || '');
 
         if (rawCategory.includes('|__L__|')) {
             const parts = rawCategory.split('|__L__|');
             rawCategory = parts[0];
-            chemLocation = parts[1] || 'Chemical Rack';
+            chemLocation = parts[1] || '';
+        } else if (rawShelf) {
+            chemLocation = chemLocation || 'Chemical Rack';
         }
+        if (chemLocation === 'Unassigned') chemLocation = '';
 
         let usageCategory = rawCategory;
         let chemCategory = item.chemical_category || item.chemicalCategory || '';
@@ -262,8 +265,24 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     if (chemical.chemicalCategory && chemical.chemicalCategory.trim()) {
         categoryToSave = `${chemical.category?.trim() || ''}|__CC__|${chemical.chemicalCategory.trim()}`;
     }
-    if (chemical.location && chemical.location !== 'Chemical Rack') {
-        categoryToSave = `${categoryToSave}|__L__|${chemical.location.trim()}`;
+    const cleanChemLoc = (chemical.location?.trim() === 'Unassigned') ? '' : (chemical.location?.trim() || '');
+    if (cleanChemLoc && cleanChemLoc !== 'Chemical Rack') {
+        categoryToSave = `${categoryToSave}|__L__|${cleanChemLoc}`;
+    }
+
+    const rawShelf = chemical.shelf?.trim();
+    const cleanShelf = (rawShelf === 'N/A' || rawShelf === 'Unassigned') ? null : (rawShelf || null);
+    const rawSec = chemical.section?.trim();
+    const cleanSec = (rawSec === 'N/A' || rawSec === 'Unassigned') ? null : (rawSec || null);
+
+    let secLoc = chemical.shelfLocation?.trim() || '';
+    if (secLoc === 'N/A' || secLoc === 'Unassigned') secLoc = '';
+    if (!secLoc && cleanShelf && cleanSec) {
+        secLoc = `${cleanShelf} - ${cleanSec}`;
+    } else if (!secLoc && cleanShelf) {
+        secLoc = cleanShelf;
+    } else if (!secLoc && cleanSec) {
+        secLoc = cleanSec;
     }
 
     const dbData: any = {
@@ -285,9 +304,9 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         notes: chemical.notes || null,
         is_concentrate: chemical.isConcentrate ?? true,
         tags: chemical.tags || [],
-        shelf_location: (chemical.shelfLocation || (chemical.shelf && chemical.section ? `${chemical.shelf} - ${chemical.section}` : (chemical.shelf || chemical.section || ''))) || null,
-        shelf: chemical.shelf?.trim() || null,
-        section: chemical.section?.trim() || null,
+        shelf_location: secLoc || null,
+        shelf: cleanShelf,
+        section: cleanSec,
         category: categoryToSave || null,
         hide_from_iac: chemical.hideFromIac ?? false,
         updated_at: new Date().toISOString()
@@ -652,14 +671,15 @@ export const SUPPLIES_EQUIPMENT_TAXONOMY: Record<string, string[]> = {
 export const VALID_RACK_LOCATIONS = Object.keys(SUPPLIES_EQUIPMENT_TAXONOMY);
 
 export function sanitizeSupplyEquipmentLocation(rawLoc: string = '', rawCl: string = ''): { location: string; containerLocation: string } {
-    let loc = rawLoc;
-    let cl = rawCl;
+    let loc = rawLoc || '';
+    let cl = rawCl || '';
     if (loc.includes('|__CL__|')) {
         const parts = loc.split('|__CL__|');
-        loc = parts[0];
+        loc = parts[0] || '';
         cl = parts[1] || cl;
-        if (loc === 'Unassigned') loc = '';
     }
+    if (loc === 'Unassigned') loc = '';
+    if (cl === 'N/A' || cl === 'Unassigned') cl = '';
 
     // We no longer strictly enforce taxonomy limits on read so that any valid location saved to the DB persists correctly in the UI.
     return { location: loc, containerLocation: cl };
@@ -728,9 +748,20 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         throw new Error('Not authenticated');
     }
 
-    let locToSave = material.location;
-    if (material.containerLocation && material.containerLocation.trim()) {
-        locToSave = `${material.location || 'Unassigned'}|__CL__|${material.containerLocation.trim()}`;
+    const prim = (material.location || '').trim();
+    const sec = (material.containerLocation || '').trim();
+    const cleanPrim = prim === 'Unassigned' ? '' : prim;
+    const cleanSec = (sec === 'N/A' || sec === 'Unassigned') ? '' : sec;
+
+    let locToSave: string | null = null;
+    if (cleanPrim && cleanSec) {
+        locToSave = `${cleanPrim}|__CL__|${cleanSec}`;
+    } else if (cleanPrim) {
+        locToSave = cleanPrim;
+    } else if (cleanSec) {
+        locToSave = `|__CL__|${cleanSec}`;
+    } else {
+        locToSave = null;
     }
 
     const dbData: any = {
@@ -1105,9 +1136,20 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
-    let locToSave = tool.location;
-    if (tool.containerLocation && tool.containerLocation.trim()) {
-        locToSave = `${tool.location || 'Unassigned'}|__CL__|${tool.containerLocation.trim()}`;
+    const prim = (tool.location || '').trim();
+    const sec = (tool.containerLocation || '').trim();
+    const cleanPrim = prim === 'Unassigned' ? '' : prim;
+    const cleanSec = (sec === 'N/A' || sec === 'Unassigned') ? '' : sec;
+
+    let locToSave: string | null = null;
+    if (cleanPrim && cleanSec) {
+        locToSave = `${cleanPrim}|__CL__|${cleanSec}`;
+    } else if (cleanPrim) {
+        locToSave = cleanPrim;
+    } else if (cleanSec) {
+        locToSave = `|__CL__|${cleanSec}`;
+    } else {
+        locToSave = null;
     }
 
     const dbData: any = {

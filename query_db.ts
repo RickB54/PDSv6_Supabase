@@ -629,14 +629,23 @@ async function main() {
       const { data: rawEquip } = await supabase.from('tools').select('*');
 
       const chemicals = (rawChems || []).filter(c => !c.hide_from_iac && !c.hideFromIac).map(c => {
-        const isCaddy = (c.shelf || '').toLowerCase().includes('caddy');
-        const defaultShelfLoc = (c.shelf || c.section) ? `${c.shelf || 'Unassigned'} / ${c.section || 'Unassigned'}` : undefined;
-        let primLoc = 'Chemical Rack';
+        const rawShelf = (c.shelf === 'N/A' || c.shelf === 'Unassigned') ? '' : (c.shelf || '');
+        const rawSec = (c.section === 'N/A' || c.section === 'Unassigned') ? '' : (c.section || '');
+        let secLoc = '';
+        if (rawShelf && rawSec) secLoc = `${rawShelf} / ${rawSec}`;
+        else if (rawShelf) secLoc = rawShelf;
+        else if (rawSec) secLoc = rawSec;
+
+        let primLoc = '';
         let rawCat = c.category || '';
         if (rawCat.includes('|__L__|')) {
-          primLoc = rawCat.split('|__L__|')[1] || 'Chemical Rack';
+          primLoc = rawCat.split('|__L__|')[1] || '';
           rawCat = rawCat.split('|__L__|')[0];
+        } else if (rawShelf) {
+          primLoc = 'Chemical Rack';
         }
+        if (primLoc === 'Unassigned') primLoc = '';
+
         let chemCat = rawCat;
         let usage = 'Exterior';
         if (rawCat.includes('|__CC__|')) {
@@ -660,9 +669,9 @@ async function main() {
           id: c.id,
           name: c.name,
           brand: c.brand,
-          location: c.location || primLoc,
-          shelfLocation: isCaddy ? c.shelf : defaultShelfLoc,
-          containerLocation: isCaddy ? c.shelf : defaultShelfLoc,
+          location: (c.location && c.location !== 'Unassigned') ? c.location : primLoc,
+          shelfLocation: secLoc,
+          containerLocation: secLoc,
           bottleSize: normalizeSize(rawSize),
           chemicalCategory: chemCat || 'General Chemicals',
           usage,
@@ -671,25 +680,49 @@ async function main() {
         };
       });
 
-      const supplies = (rawSupplies || []).filter(s => !s.hide_from_iac && !s.hideFromIac).map(s => ({
-        id: s.id,
-        name: s.name,
-        location: s.location || 'Unassigned',
-        containerLocation: s.container_location || 'N/A',
-        category: s.category || 'Unassigned',
-        quantity: s.quantity || 1
-      }));
+      const supplies = (rawSupplies || []).filter(s => !s.hide_from_iac && !s.hideFromIac).map(s => {
+        let loc = s.location || '';
+        let cl = '';
+        if (loc.includes('|__CL__|')) {
+          const parts = loc.split('|__CL__|');
+          loc = parts[0] || '';
+          cl = parts[1] || '';
+        }
+        if (loc === 'Unassigned') loc = '';
+        if (cl === 'N/A' || cl === 'Unassigned') cl = '';
 
-      const equipment = (rawEquip || []).filter(e => !e.hide_from_iac && !e.hideFromIac).map(e => ({
-        id: e.id,
-        name: e.name,
-        location: e.location || 'Unassigned',
-        containerLocation: e.container_location || 'N/A',
-        category: e.category || 'Unassigned',
-        quantity: e.quantity || 1
-      }));
+        return {
+          id: s.id,
+          name: s.name,
+          location: loc,
+          containerLocation: cl,
+          category: s.category || '',
+          quantity: s.quantity || 1
+        };
+      });
 
-      const generatePdf = (groupBy: 'location' | 'category') => {
+      const equipment = (rawEquip || []).filter(e => !e.hide_from_iac && !e.hideFromIac).map(e => {
+        let loc = e.location || '';
+        let cl = '';
+        if (loc.includes('|__CL__|')) {
+          const parts = loc.split('|__CL__|');
+          loc = parts[0] || '';
+          cl = parts[1] || '';
+        }
+        if (loc === 'Unassigned') loc = '';
+        if (cl === 'N/A' || cl === 'Unassigned') cl = '';
+
+        return {
+          id: e.id,
+          name: e.name,
+          location: loc,
+          containerLocation: cl,
+          category: e.category || '',
+          quantity: e.quantity || 1
+        };
+      });
+
+      const generatePdf = (groupBy: 'location' | 'category', includeSections?: ('Chemicals' | 'Supplies' | 'Equipment')[]) => {
         const doc = new jsPDF();
         doc.setFontSize(20);
         doc.text('Inventory Audit Checklist', 14, 22);
@@ -722,11 +755,11 @@ async function main() {
                 groupKey = item.category ? (item.category.charAt(0).toUpperCase() + item.category.slice(1)) : 'Unassigned';
               }
             } else if (categoryName === 'Chemicals') {
-              const primLoc = item.location || 'Chemical Rack';
-              const secLoc = item.containerLocation || item.shelfLocation || 'N/A';
+              const primLoc = (item.location && item.location !== 'Unassigned') ? item.location : '';
+              const secLoc = (item.containerLocation && item.containerLocation !== 'N/A') ? item.containerLocation : ((item.shelfLocation && item.shelfLocation !== 'N/A') ? item.shelfLocation : '');
               groupKey = `${primLoc}|${secLoc}`;
             } else {
-              groupKey = item.location || 'Unassigned';
+              groupKey = (item.location && item.location !== 'Unassigned') ? item.location : '';
             }
             if (!pdfGroups[groupKey]) pdfGroups[groupKey] = [];
             pdfGroups[groupKey].push(item);
@@ -764,7 +797,8 @@ async function main() {
                 columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 26 }, 2: { cellWidth: 26 }, 3: { cellWidth: 16 }, 4: { cellWidth: 24 }, 5: { cellWidth: 18, halign: 'center' }, 6: { cellWidth: 14, halign: 'center' }, 7: { cellWidth: 18 } };
               } else {
                 const [primLoc, secLoc] = groupName.split('|');
-                head = [[`Primary: ${primLoc} | Sec: ${secLoc}`, 'Size', 'Category', 'Container Type', 'Usage', 'DB Qty', 'Actual Count']];
+                const headerTitle = (primLoc || secLoc) ? `Primary: ${primLoc} | Sec: ${secLoc}` : 'Primary: | Sec: ';
+                head = [[headerTitle, 'Size', 'Category', 'Container Type', 'Usage', 'DB Qty', 'Actual Count']];
                 columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 16 }, 2: { cellWidth: 26 }, 3: { cellWidth: 22 }, 4: { cellWidth: 18, halign: 'center' }, 5: { cellWidth: 14, halign: 'center' }, 6: { cellWidth: 18 } };
               }
             } else if (groupBy === 'category') {
@@ -781,15 +815,15 @@ async function main() {
               body: groupItems.map(item => {
                 if (categoryName === 'Chemicals') {
                   const nameStr = `${item.brand ? item.brand + ' / ' : ''}${item.name}`;
-                  const secLoc = item.containerLocation || item.shelfLocation || 'N/A';
-                  const primLoc = item.location || 'Chemical Rack';
+                  const secLoc = (item.containerLocation && item.containerLocation !== 'N/A') ? item.containerLocation : ((item.shelfLocation && item.shelfLocation !== 'N/A') ? item.shelfLocation : '');
+                  const primLoc = (item.location && item.location !== 'Unassigned') ? item.location : '';
                   const usageStr = item.usage || 'Exterior';
                   if (groupBy === 'category') {
                     return [
                       nameStr,
                       primLoc,
                       secLoc,
-                      item.bottleSize || 'N/A',
+                      (item.bottleSize && item.bottleSize !== 'N/A') ? item.bottleSize : '',
                       item.containerType || '',
                       usageStr,
                       item.currentStock?.toFixed(2) || '0',
@@ -798,8 +832,8 @@ async function main() {
                   } else {
                     return [
                       nameStr,
-                      item.bottleSize || 'N/A',
-                      item.chemicalCategory || 'N/A',
+                      (item.bottleSize && item.bottleSize !== 'N/A') ? item.bottleSize : '',
+                      item.chemicalCategory || '',
                       item.containerType || '',
                       usageStr,
                       item.currentStock?.toFixed(2) || '0',
@@ -807,18 +841,22 @@ async function main() {
                     ];
                   }
                 } else if (groupBy === 'category') {
+                  const primLoc = (item.location && item.location !== 'Unassigned') ? item.location : '';
+                  const secLoc = (item.containerLocation && item.containerLocation !== 'N/A') ? item.containerLocation : '';
                   return [
                     item.name,
-                    item.location || 'Unassigned',
-                    item.containerLocation || 'N/A',
+                    primLoc,
+                    secLoc,
                     item.quantity || 1,
                     ''
                   ];
                 } else {
+                  const secLoc = (item.containerLocation && item.containerLocation !== 'N/A') ? item.containerLocation : '';
+                  const itemCat = (item.category && item.category !== 'Unassigned') ? item.category : '';
                   return [
                     item.name,
-                    item.containerLocation || 'N/A',
-                    item.category || 'Unassigned',
+                    secLoc,
+                    itemCat,
                     item.quantity || 1,
                     ''
                   ];
@@ -842,11 +880,13 @@ async function main() {
           currentY += 20;
         };
 
-        renderSection('Chemicals', chemicals);
-        renderSection('Supplies', supplies);
-        renderSection('Equipment', equipment);
+        const targetSections = (includeSections || ['Chemicals', 'Supplies', 'Equipment']);
+        if (targetSections.includes('Chemicals')) renderSection('Chemicals', chemicals);
+        if (targetSections.includes('Supplies')) renderSection('Supplies', supplies);
+        if (targetSections.includes('Equipment')) renderSection('Equipment', equipment);
 
-        const fileName = `Full_IAC_Report_${groupBy}_${new Date().toISOString().split('T')[0]}.pdf`;
+        const filePrefix = targetSections.length === 3 ? 'Full_IAC_Report' : `IAC_Report_${targetSections.join('_')}`;
+        const fileName = `${filePrefix}_${groupBy}_${new Date().toISOString().split('T')[0]}.pdf`;
         const localPath = path.resolve(process.cwd(), fileName);
         const artifactDir = 'C:\\Users\\rberu\\.gemini\\antigravity-ide\\brain\\f968ea3a-b9fa-410f-a724-39fd16a9eabb';
         const artifactPath = path.resolve(artifactDir, fileName);
@@ -861,9 +901,288 @@ async function main() {
         }
       };
 
+      // Generate Full IAC Reports
       generatePdf('location');
       generatePdf('category');
 
+      // Generate Chemicals-only IAC Reports
+      generatePdf('location', ['Chemicals']);
+      generatePdf('category', ['Chemicals']);
+
+      break;
+    }
+
+    case 'inspect-placeholders': {
+      console.log('=== Inspecting "Unassigned" and "N/A" Placeholders across DB ===');
+
+      // 1. Materials
+      const { data: materials } = await supabase.from('materials').select('*');
+      const mMatches: any[] = [];
+      materials?.forEach(m => {
+        const rawLoc = m.location || '';
+        if (rawLoc === 'Unassigned' || rawLoc === 'N/A' || rawLoc.includes('Unassigned') || rawLoc.includes('N/A')) {
+          mMatches.push({ id: m.id, name: m.name, column: 'location', value: rawLoc });
+        }
+      });
+      console.log(`Materials location placeholder matches: ${mMatches.length}`);
+      mMatches.forEach(m => console.log(`  [${m.name}]: "${m.value}"`));
+
+      // 2. Tools
+      const { data: tools } = await supabase.from('tools').select('*');
+      const tMatches: any[] = [];
+      tools?.forEach(t => {
+        const rawLoc = t.location || '';
+        if (rawLoc === 'Unassigned' || rawLoc === 'N/A' || rawLoc.includes('Unassigned') || rawLoc.includes('N/A')) {
+          tMatches.push({ id: t.id, name: t.name, column: 'location', value: rawLoc });
+        }
+      });
+      console.log(`Tools location placeholder matches: ${tMatches.length}`);
+      tMatches.forEach(t => console.log(`  [${t.name}]: "${t.value}"`));
+
+      // 3. Chemicals
+      const { data: chemicals } = await supabase.from('chemicals').select('*');
+      const cMatches: any[] = [];
+      chemicals?.forEach(c => {
+        ['location', 'shelf', 'section', 'shelf_location'].forEach(col => {
+          const val = (c as any)[col];
+          if (typeof val === 'string' && (val === 'Unassigned' || val === 'N/A' || val.includes('Unassigned') || val.includes('N/A'))) {
+            cMatches.push({ id: c.id, name: c.name, column: col, value: val });
+          }
+        });
+      });
+      console.log(`Chemicals location placeholder matches: ${cMatches.length}`);
+      cMatches.forEach(c => console.log(`  [${c.name}] col=${c.column}: "${c.value}"`));
+
+      console.log(`\nOverall Placeholders Summary: Materials: ${mMatches.length}, Tools: ${tMatches.length}, Chemicals: ${cMatches.length}`);
+      break;
+    }
+
+    case 'clean-placeholders': {
+      console.log('=== Cleaning Placeholder Location Values ("Unassigned" -> null/blank, "N/A" -> null/blank) ===');
+
+      // 1. Materials
+      const { data: materials } = await supabase.from('materials').select('*');
+      let mCleanCount = 0;
+      for (const m of (materials || [])) {
+        let rawLoc: string = m.location || '';
+        let changed = false;
+
+        let prim = rawLoc;
+        let sec = '';
+        if (rawLoc.includes('|__CL__|')) {
+          const parts = rawLoc.split('|__CL__|');
+          prim = parts[0] || '';
+          sec = parts[1] || '';
+        }
+
+        if (prim === 'Unassigned' || prim === '') {
+          prim = '';
+          if (m.location === '' || rawLoc === 'Unassigned' || rawLoc.startsWith('Unassigned')) changed = true;
+        }
+        if (sec === 'N/A' || sec === 'Unassigned') {
+          sec = '';
+          changed = true;
+        }
+
+        if (changed) {
+          let newLoc: string | null = null;
+          if (prim && sec) {
+            newLoc = `${prim}|__CL__|${sec}`;
+          } else if (prim) {
+            newLoc = prim;
+          } else if (sec) {
+            newLoc = `|__CL__|${sec}`;
+          } else {
+            newLoc = null;
+          }
+
+          const { error } = await supabase.from('materials').update({ location: newLoc, updated_at: new Date().toISOString() }).eq('id', m.id);
+          if (error) {
+            console.error(`Failed to update material [${m.name}]:`, error);
+          } else {
+            mCleanCount++;
+            console.log(`Cleaned Material [${m.name}]: oldLoc="${m.location}" -> newLoc="${newLoc}"`);
+          }
+        }
+      }
+      console.log(`Materials cleaned: ${mCleanCount}`);
+
+      // 2. Tools
+      const { data: tools } = await supabase.from('tools').select('*');
+      let tCleanCount = 0;
+      for (const t of (tools || [])) {
+        let rawLoc: string = t.location || '';
+        let changed = false;
+
+        let prim = rawLoc;
+        let sec = '';
+        if (rawLoc.includes('|__CL__|')) {
+          const parts = rawLoc.split('|__CL__|');
+          prim = parts[0] || '';
+          sec = parts[1] || '';
+        }
+
+        if (prim === 'Unassigned' || prim === '') {
+          prim = '';
+          if (t.location === '' || rawLoc === 'Unassigned' || rawLoc.startsWith('Unassigned')) changed = true;
+        }
+        if (sec === 'N/A' || sec === 'Unassigned') {
+          sec = '';
+          changed = true;
+        }
+
+        if (changed) {
+          let newLoc: string | null = null;
+          if (prim && sec) {
+            newLoc = `${prim}|__CL__|${sec}`;
+          } else if (prim) {
+            newLoc = prim;
+          } else if (sec) {
+            newLoc = `|__CL__|${sec}`;
+          } else {
+            newLoc = null;
+          }
+
+          const { error } = await supabase.from('tools').update({ location: newLoc, updated_at: new Date().toISOString() }).eq('id', t.id);
+          if (error) {
+            console.error(`Failed to update tool [${t.name}]:`, error);
+          } else {
+            tCleanCount++;
+            console.log(`Cleaned Tool [${t.name}]: oldLoc="${t.location}" -> newLoc="${newLoc}"`);
+          }
+        }
+      }
+      console.log(`Tools cleaned: ${tCleanCount}`);
+
+      // 3. Chemicals
+      const { data: chemicals } = await supabase.from('chemicals').select('*');
+      let cCleanCount = 0;
+      for (const c of (chemicals || [])) {
+        let changed = false;
+        const updatePayload: any = {};
+
+        if (c.location === 'Unassigned') {
+          updatePayload.location = null;
+          changed = true;
+        }
+        if (c.shelf === 'N/A' || c.shelf === 'Unassigned') {
+          updatePayload.shelf = null;
+          changed = true;
+        }
+        if (c.section === 'N/A' || c.section === 'Unassigned') {
+          updatePayload.section = null;
+          changed = true;
+        }
+        if (c.shelf_location === 'N/A' || c.shelf_location === 'Unassigned') {
+          updatePayload.shelf_location = null;
+          changed = true;
+        }
+
+        if (changed) {
+          updatePayload.updated_at = new Date().toISOString();
+          const { error } = await supabase.from('chemicals').update(updatePayload).eq('id', c.id);
+          if (error) {
+            console.error(`Failed to update chemical [${c.name}]:`, error);
+          } else {
+            cCleanCount++;
+            console.log(`Cleaned Chemical [${c.name}]:`, updatePayload);
+          }
+        }
+      }
+      console.log(`Chemicals cleaned: ${cCleanCount}`);
+      break;
+    }
+
+    case 'dump-locations': {
+      console.log('=== Dumping Location Values across All Tables ===');
+      const { data: materials, error: mErr } = await supabase.from('materials').select('*');
+      if (mErr) console.error('Materials error:', mErr);
+      materials?.filter(m => m.location === '').forEach(m => console.log(`Material with empty loc: [${m.id}] "${m.name}"`));
+
+      const { data: tools, error: tErr } = await supabase.from('tools').select('*');
+      if (tErr) console.error('Tools error:', tErr);
+      tools?.filter(t => t.location === '').forEach(t => console.log(`Tool with empty loc: [${t.id}] "${t.name}"`));
+      break;
+    }
+
+    case 'verify-pdf-rows': {
+      console.log('=== Verifying All PDF Table Rows across Inventory Types ===');
+      const { data: rawChems } = await supabase.from('chemicals').select('*');
+      const { data: rawSupplies } = await supabase.from('materials').select('*');
+      const { data: rawEquip } = await supabase.from('tools').select('*');
+
+      const chems = (rawChems || []).filter(c => !c.hide_from_iac && !c.hideFromIac);
+      const supplies = (rawSupplies || []).filter(s => !s.hide_from_iac && !s.hideFromIac);
+      const equip = (rawEquip || []).filter(e => !e.hide_from_iac && !e.hideFromIac);
+
+      console.log(`Counts for PDF: Chemicals=${chems.length}, Supplies=${supplies.length}, Equipment=${equip.length}`);
+
+      let unassignedPrimCount = 0;
+      let naSecCount = 0;
+
+      // Chemicals Check
+      chems.forEach(c => {
+        const rawShelf = (c.shelf === 'N/A' || c.shelf === 'Unassigned') ? '' : (c.shelf || '');
+        const rawSec = (c.section === 'N/A' || c.section === 'Unassigned') ? '' : (c.section || '');
+        let secLoc = '';
+        if (rawShelf && rawSec) secLoc = `${rawShelf} / ${rawSec}`;
+        else if (rawShelf) secLoc = rawShelf;
+        else if (rawSec) secLoc = rawSec;
+
+        let primLoc = '';
+        let rawCat = c.category || '';
+        if (rawCat.includes('|__L__|')) {
+          primLoc = rawCat.split('|__L__|')[1] || '';
+        } else if (rawShelf) {
+          primLoc = 'Chemical Rack';
+        }
+        if (primLoc === 'Unassigned') primLoc = '';
+
+        const effectivePrim = (c.location && c.location !== 'Unassigned') ? c.location : primLoc;
+        if (effectivePrim === 'Unassigned') unassignedPrimCount++;
+        if (secLoc === 'N/A') naSecCount++;
+      });
+
+      // Supplies Check
+      supplies.forEach(s => {
+        let loc = s.location || '';
+        let cl = '';
+        if (loc.includes('|__CL__|')) {
+          const parts = loc.split('|__CL__|');
+          loc = parts[0] || '';
+          cl = parts[1] || '';
+        }
+        if (loc === 'Unassigned') unassignedPrimCount++;
+        if (cl === 'N/A') naSecCount++;
+      });
+
+      // Equipment Check
+      equip.forEach(e => {
+        let loc = e.location || '';
+        let cl = '';
+        if (loc.includes('|__CL__|')) {
+          const parts = loc.split('|__CL__|');
+          loc = parts[0] || '';
+          cl = parts[1] || '';
+        }
+        if (loc === 'Unassigned') unassignedPrimCount++;
+        if (cl === 'N/A') naSecCount++;
+      });
+
+      console.log(`PDF Rows Audit:`);
+      console.log(`  Literal "Unassigned" in Primary Location: ${unassignedPrimCount}`);
+      console.log(`  Literal "N/A" in Secondary Location: ${naSecCount}`);
+
+      // Sample a few items with blank locations to verify they are blank
+      console.log('\nSample items with blank primary/secondary locations:');
+      const blankChems = chems.filter(c => !c.shelf && !c.section).slice(0, 3);
+      blankChems.forEach(c => console.log(`  Chemical "${c.name}": prim="${(c.location && c.location !== 'Unassigned') ? c.location : ''}", sec=""`));
+
+      const blankSupplies = supplies.filter(s => !s.location).slice(0, 3);
+      blankSupplies.forEach(s => console.log(`  Supply "${s.name}": prim="", sec=""`));
+
+      const blankEquip = equip.filter(e => !e.location).slice(0, 3);
+      blankEquip.forEach(e => console.log(`  Equipment "${e.name}": prim="", sec=""`));
       break;
     }
 

@@ -756,11 +756,11 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           }
         } else if (categoryName === 'Chemicals') {
           // Group by Primary Location + Secondary Location
-          const primLoc = item.location || 'Chemical Rack';
-          const secLoc = item.containerLocation || item.shelfLocation || 'N/A';
+          const primLoc = (item.location && item.location !== 'Unassigned') ? item.location : '';
+          const secLoc = (item.containerLocation && item.containerLocation !== 'N/A') ? item.containerLocation : ((item.shelfLocation && item.shelfLocation !== 'N/A') ? item.shelfLocation : '');
           groupKey = `${primLoc}|${secLoc}`;
         } else {
-          groupKey = item.location || 'Unassigned';
+          groupKey = (item.location && item.location !== 'Unassigned') ? item.location : '';
         }
         if (!pdfGroups[groupKey]) pdfGroups[groupKey] = [];
         pdfGroups[groupKey].push(item);
@@ -807,7 +807,8 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
           } else {
             // By Location: group header IS the primary & secondary location
             const [primLoc, secLoc] = groupName.split('|');
-            head = [[`Primary: ${primLoc} | Sec: ${secLoc}`, 'Size', 'Category', 'Container Type', 'Usage', 'DB Qty', 'Actual Count']];
+            const headerTitle = (primLoc || secLoc) ? `Primary: ${primLoc} | Sec: ${secLoc}` : 'Primary: | Sec: ';
+            head = [[headerTitle, 'Size', 'Category', 'Container Type', 'Usage', 'DB Qty', 'Actual Count']];
             columnStyles = { 0: { cellWidth: 'auto' }, 1: { cellWidth: 16 }, 2: { cellWidth: 26 }, 3: { cellWidth: 22 }, 4: { cellWidth: 18, halign: 'center' }, 5: { cellWidth: 14, halign: 'center' }, 6: { cellWidth: 18 } };
           }
         } else if (groupBy === 'category') {
@@ -827,11 +828,11 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               if (isChemCounted(item.id, auditState)) totalCounted++;
               const containerType = item.containerType || '';
               const usageStr = item.usage || 'Exterior';
-              const secLoc = item.containerLocation || item.shelfLocation || 'N/A';
-              const primLoc = item.location || 'Chemical Rack';
-              const sizeStr = item.bottleSize || 'N/A';
+              const secLoc = (item.containerLocation && item.containerLocation !== 'N/A') ? item.containerLocation : ((item.shelfLocation && item.shelfLocation !== 'N/A') ? item.shelfLocation : '');
+              const primLoc = (item.location && item.location !== 'Unassigned') ? item.location : '';
+              const sizeStr = (item.bottleSize && item.bottleSize !== 'N/A') ? item.bottleSize : '';
               const nameStr = `${item.brand ? item.brand + ' / ' : ''}${item.name}`;
-              const catStr = item.chemicalCategory || (item as any).chemical_category || 'N/A';
+              const catStr = item.chemicalCategory || (item as any).chemical_category || '';
               
               if (groupBy === 'category') {
                 return [
@@ -860,9 +861,9 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
               const counted = auditState[item.id]?.counted;
               const isCounted = auditState[item.id]?.isCounted;
               if (isCounted) totalCounted++;
-              const primaryLoc = item.location || 'Unassigned';
-              const secondaryLoc = item.containerLocation || 'N/A';
-              const itemCat = item.category || 'Unassigned';
+              const primaryLoc = (item.location && item.location !== 'Unassigned') ? item.location : '';
+              const secondaryLoc = (item.containerLocation && item.containerLocation !== 'N/A') ? item.containerLocation : '';
+              const itemCat = (item.category && item.category !== 'Unassigned') ? item.category : '';
 
               if (groupBy === 'category') {
                 return [

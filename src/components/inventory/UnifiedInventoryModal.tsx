@@ -668,9 +668,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           threshold: String(c.threshold || "1"),
           purchaseDate: c.purchaseDate || "",
           wherePurchased: c.wherePurchased || "",
-          shelf: c.shelf || "",
-          section: c.section || "",
-          location: c.location || "Chemical Rack"
+          shelf: (c.shelf === 'N/A' || c.shelf === 'Unassigned') ? "" : (c.shelf || ""),
+          section: (c.section === 'N/A' || c.section === 'Unassigned') ? "" : (c.section || ""),
+          location: (c.location && c.location !== 'Unassigned') ? c.location : ""
         })));
       } else if (modeProp === 'chemical') {
         setChemicalSizes([{
@@ -683,9 +683,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
           purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
           wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || "",
-          shelf: (firstItem as any).shelf || "",
-          section: (firstItem as any).section || "",
-          location: (firstItem as any).location || "Chemical Rack"
+          shelf: ((firstItem as any).shelf === 'N/A' || (firstItem as any).shelf === 'Unassigned') ? "" : ((firstItem as any).shelf || ""),
+          section: ((firstItem as any).section === 'N/A' || (firstItem as any).section === 'Unassigned') ? "" : ((firstItem as any).section || ""),
+          location: ((firstItem as any).location && (firstItem as any).location !== 'Unassigned') ? (firstItem as any).location : ""
         }]);
       } else if (modeProp === 'supply') {
         if (isGroup) {
@@ -697,8 +697,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             threshold: String(m.threshold || m.lowThreshold || "1"),
             purchaseDate: m.purchaseDate || m.purchase_date || "",
             wherePurchased: m.wherePurchased || m.where_purchased || "",
-            location: m.location || "",
-            containerLocation: m.containerLocation || m.container_location || ""
+            location: (m.location && m.location !== 'Unassigned') ? m.location : "",
+            containerLocation: (m.containerLocation && m.containerLocation !== 'N/A' && m.containerLocation !== 'Unassigned') ? m.containerLocation : ((m.container_location && m.container_location !== 'N/A' && m.container_location !== 'Unassigned') ? m.container_location : "")
           })));
         } else {
           setSupplyPurchases([{
@@ -709,8 +709,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
             purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
             wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || "",
-            location: (firstItem as any).location || "",
-            containerLocation: (firstItem as any).containerLocation || (firstItem as any).container_location || ""
+            location: ((firstItem as any).location && (firstItem as any).location !== 'Unassigned') ? (firstItem as any).location : "",
+            containerLocation: ((firstItem as any).containerLocation && (firstItem as any).containerLocation !== 'N/A' && (firstItem as any).containerLocation !== 'Unassigned') ? (firstItem as any).containerLocation : (((firstItem as any).container_location && (firstItem as any).container_location !== 'N/A' && (firstItem as any).container_location !== 'Unassigned') ? (firstItem as any).container_location : "")
           }]);
         }
       } else if (modeProp === 'equipment' || modeProp === 'tool') {
@@ -722,8 +722,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           threshold: (firstItem as any).threshold ? String((firstItem as any).threshold) : ((firstItem as any).lowThreshold ? String((firstItem as any).lowThreshold) : form.threshold),
           purchaseDate: (firstItem as any).purchaseDate || (firstItem as any).purchase_date || "",
           wherePurchased: (firstItem as any).wherePurchased || (firstItem as any).where_purchased || "",
-          location: (firstItem as any).location || "",
-          containerLocation: (firstItem as any).containerLocation || (firstItem as any).container_location || ""
+          location: ((firstItem as any).location && (firstItem as any).location !== 'Unassigned') ? (firstItem as any).location : "",
+          containerLocation: ((firstItem as any).containerLocation && (firstItem as any).containerLocation !== 'N/A' && (firstItem as any).containerLocation !== 'Unassigned') ? (firstItem as any).containerLocation : (((firstItem as any).container_location && (firstItem as any).container_location !== 'N/A' && (firstItem as any).container_location !== 'Unassigned') ? (firstItem as any).container_location : "")
         }]);
       }
 
@@ -976,9 +976,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             actualPrice: numeric(size.actualPrice) || undefined,
             salePrice: numeric(size.costPerBottle) || undefined,
             unitOfMeasure: form.unitOfMeasure,
-            shelf: size.shelf?.trim() || undefined,
-            section: size.section?.trim() || undefined,
-            location: size.location || "Chemical Rack",
+            shelf: size.shelf?.trim() || null,
+            section: size.section?.trim() || null,
+            location: size.location?.trim() || null,
             category: form.category || undefined,
             chemicalCategory: form.chemicalCategory || undefined,
             hideFromIac: form.hideFromIac,
@@ -1017,8 +1017,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             notes: form.notes || "",
             imageUrl: form.imageUrl,
             wherePurchased: purchase.wherePurchased?.trim() || undefined,
-            location: purchase.location || undefined,
-            containerLocation: purchase.containerLocation || undefined,
+            location: purchase.location?.trim() || null,
+            containerLocation: purchase.containerLocation?.trim() || null,
             hideFromIac: form.hideFromIac,
           };
           
@@ -1055,8 +1055,8 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             imageUrl: form.imageUrl,
             wherePurchased: purchase.wherePurchased?.trim() || undefined,
             purchaseDate: purchase.purchaseDate || undefined,
-            location: purchase.location || undefined,
-            containerLocation: purchase.containerLocation || undefined,
+            location: purchase.location?.trim() || null,
+            containerLocation: purchase.containerLocation?.trim() || null,
             hideFromIac: form.hideFromIac,
           };
           
@@ -2311,7 +2311,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                             <PopoverTrigger asChild>
                               <Button variant="outline" className="w-full justify-between h-9 bg-zinc-900 border-zinc-700 text-white font-normal px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
                                 <span className="truncate">
-                                  {size.shelf && size.section ? `${size.shelf} - ${size.section}` : (size.shelf || size.section || "None")}
+                                  {size.shelf && size.section ? `${size.shelf} - ${size.section}` : (size.shelf || size.section || "Select container...")}
                                 </span>
                                 <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
                               </Button>
@@ -2423,7 +2423,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
                     type="button" 
                     variant="outline" 
                     className="w-full border-dashed border-emerald-700 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/30 text-sm mt-2"
-                    onClick={() => setChemicalSizes([...chemicalSizes, { bottleSize: "", containerType: "", costPerBottle: "", currentStock: "1", threshold: "", shelf: "", section: "", location: chemicalSizes[0]?.location || "Chemical Rack" }])}
+                    onClick={() => setChemicalSizes([...chemicalSizes, { bottleSize: "", containerType: "", costPerBottle: "", currentStock: "1", threshold: "", shelf: "", section: "", location: chemicalSizes[0]?.location || "" }])}
                   >
                     <PlusIcon className="w-4 h-4 mr-2" />
                     Add Another Bottle Size
