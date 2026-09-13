@@ -949,7 +949,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           const removedSizes = initial.filter(initSize => !currentIds.includes(initSize.id));
           for (const removed of removedSizes) {
             if (removed.id) {
-              await deleteChemical(removed.id);
+              await deleteChemical(removed.id, false); // Explicitly NEVER delete library card when deleting a single bottle size
             }
           }
         }

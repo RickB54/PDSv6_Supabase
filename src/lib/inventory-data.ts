@@ -285,6 +285,43 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         secLoc = cleanSec;
     }
 
+    let rawLibId: string | null = null;
+    if (chemical.chemicalLibraryId && typeof chemical.chemicalLibraryId === 'string') {
+        const trimmed = chemical.chemicalLibraryId.trim();
+        if (trimmed && trimmed !== 'null' && trimmed !== 'undefined') {
+            rawLibId = trimmed;
+        }
+    }
+
+    // Verify rawLibId against chemical_library to guarantee no FK violation
+    if (rawLibId) {
+        const { data: libExists } = await supabase
+            .from('chemical_library')
+            .select('id')
+            .eq('id', rawLibId)
+            .maybeSingle();
+        if (!libExists) {
+            console.warn(`[saveChemical] chemical_library_id "${rawLibId}" does not exist in chemical_library table. Setting to null to avoid FK violation.`);
+            rawLibId = null;
+        }
+    }
+
+    // Fallback: if no valid library card is set, attempt to auto-link by exact name & brand if a card exists
+    if (!rawLibId && chemical.name) {
+        const cleanName = chemical.name.trim().toLowerCase();
+        const cleanBrand = (chemical.brand || '').trim().toLowerCase();
+        const { data: libRows } = await supabase.from('chemical_library').select('id, name, brand');
+        if (libRows) {
+            const match = libRows.find(l => 
+                (l.name || '').trim().toLowerCase() === cleanName && 
+                (l.brand || '').trim().toLowerCase() === cleanBrand
+            );
+            if (match) {
+                rawLibId = match.id;
+            }
+        }
+    }
+
     const dbData: any = {
         id: chemical.id || crypto.randomUUID(), // Always assign an ID so multiple new rows don't collide
         user_id: session.user.id,
@@ -295,7 +332,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         threshold: chemical.threshold,
         current_stock: chemical.currentStock,
         image_url: chemical.imageUrl,
-        chemical_library_id: chemical.chemicalLibraryId,
+        chemical_library_id: rawLibId,
         dilution_ratios: chemical.dilutionRatios || [],
         where_purchased: chemical.wherePurchased || null,
         purchase_date: chemical.purchaseDate || null,
@@ -318,6 +355,15 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     
     if (error) {
         const msg = (error.message || '').toLowerCase();
+
+        // 1. Foreign Key violation handling: if chemical_library_id is invalid, retry with null
+        if (error.code === '23503' || msg.includes('chemical_library_id') || msg.includes('foreign key')) {
+            console.warn('[saveChemical] Foreign key constraint violation on chemical_library_id, retrying with chemical_library_id: null...', error.message);
+            const sanitizedDbData = { ...dbData, chemical_library_id: null };
+            const { error: retryErr } = await supabase.from('chemicals').upsert(sanitizedDbData);
+            if (!retryErr) return;
+        }
+
         const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased') || msg.includes('brand') || msg.includes('container_type');
         
         if (isColumnError) {
@@ -413,7 +459,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
 
 }
 
-export async function deleteChemical(id: string, deleteLibraryCard: boolean = true): Promise<void> {
+export async function deleteChemical(id: string, deleteLibraryCard: boolean = false): Promise<void> {
     if (isDemoActive()) return;
 
     // Retrieve the item details before deletion to locate chemical_library association
@@ -429,7 +475,16 @@ export async function deleteChemical(id: string, deleteLibraryCard: boolean = tr
     if (deleteLibraryCard && item) {
         const libId = (item as any).chemical_library_id || (item as any).chemicalLibraryId;
         if (libId) {
-            await supabase.from('chemical_library').delete().eq('id', libId);
+            // Only delete library card if NO other chemicals in inventory reference this library card
+            const { count } = await supabase
+                .from('chemicals')
+                .select('*', { count: 'exact', head: true })
+                .eq('chemical_library_id', libId)
+                .neq('id', id);
+
+            if (!count || count === 0) {
+                await supabase.from('chemical_library').delete().eq('id', libId);
+            }
         }
         if (item.name) {
             const cleanName = item.name.trim().toLowerCase();
@@ -440,7 +495,16 @@ export async function deleteChemical(id: string, deleteLibraryCard: boolean = tr
                     .filter(l => (l.name || '').trim().toLowerCase() === cleanName && (l.brand || '').trim().toLowerCase() === cleanBrand)
                     .map(l => l.id);
                 if (matchIds.length > 0) {
-                    await supabase.from('chemical_library').delete().in('id', matchIds);
+                    for (const mId of matchIds) {
+                        const { count: refCount } = await supabase
+                            .from('chemicals')
+                            .select('*', { count: 'exact', head: true })
+                            .eq('chemical_library_id', mId)
+                            .neq('id', id);
+                        if (!refCount || refCount === 0) {
+                            await supabase.from('chemical_library').delete().eq('id', mId);
+                        }
+                    }
                 }
             }
         }
