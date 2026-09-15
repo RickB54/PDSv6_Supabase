@@ -297,8 +297,6 @@ const CustomerPortal = () => {
 
   useEffect(() => {
     fetchLive();
-    const intervalId = setInterval(fetchLive, 120000); 
-    return () => clearInterval(intervalId);
   }, []);
 
   const allBuiltInSteps: Record<string, { id: string; name: string }> = Object.fromEntries(

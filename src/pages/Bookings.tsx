@@ -43,12 +43,6 @@ export default function Bookings() {
   const canEdit = user?.role === 'admin';
   const [previewBooking, setPreviewBooking] = useState<Booking | null>(null);
 
-  useEffect(() => {
-    refreshBookings();
-    const interval = setInterval(refreshBookings, 5000); // Auto refresh for real-time visibility
-    return () => clearInterval(interval);
-  }, [refreshBookings]);
-
   const start = startOfMonth(viewDate);
   const end = endOfMonth(viewDate);
   const days = Array.from({ length: end.getDate() }, (_, i) => new Date(viewDate.getFullYear(), viewDate.getMonth(), i + 1));

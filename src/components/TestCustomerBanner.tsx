@@ -85,9 +85,14 @@ export const TestCustomerBanner = () => {
 
     checkTestAccount();
     
-    // Listen for customer additions/updates to recheck
-    const interval = setInterval(checkTestAccount, 15000);
-    return () => clearInterval(interval);
+    // Re-check only when customers change locally or window gains focus
+    const onFocus = () => { if (document.visibilityState === 'visible') checkTestAccount(); };
+    window.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('app-cache-invalidated', checkTestAccount);
+    return () => {
+      window.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('app-cache-invalidated', checkTestAccount);
+    };
   }, []);
 
   const handleWipe = async () => {

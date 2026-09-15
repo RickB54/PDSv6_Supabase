@@ -216,17 +216,11 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
 
     refreshRole();
 
-    // Aggressive retry for the first 10 seconds after mount
-    const interval = setInterval(refreshRole, 2000);
-    const timeout = setTimeout(() => clearInterval(interval), 10000);
-
     return () => {
       window.removeEventListener('storage', onStorage as any);
       window.removeEventListener('admin_alerts_updated', bump as any);
       window.removeEventListener('pdf_archive_updated', bump as any);
       window.removeEventListener('new-chat-alert', handleChatAlert);
-      clearInterval(interval);
-      clearTimeout(timeout);
     };
   }, [isDemoMode]);
 

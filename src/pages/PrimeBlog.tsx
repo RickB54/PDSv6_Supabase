@@ -83,10 +83,6 @@ export default function PrimeBlog() {
 
     useEffect(() => {
         loadItems();
-        const interval = setInterval(async () => {
-            const counts = await getAllCommentCounts();
-            setCommentCounts(counts);
-        }, 30000);
 
         const updateAuth = () => {
             setUser(getCurrentUser());
@@ -95,7 +91,6 @@ export default function PrimeBlog() {
         window.addEventListener('storage', updateAuth);
 
         return () => {
-            clearInterval(interval);
             window.removeEventListener('auth-changed', updateAuth);
             window.removeEventListener('storage', updateAuth);
         };

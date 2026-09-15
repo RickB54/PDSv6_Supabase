@@ -433,8 +433,6 @@ const BookNow = () => {
 
   useEffect(() => {
     fetchLive();
-    const intervalId = setInterval(fetchLive, 120000); // Polling reduced to 2 minutes
-    return () => clearInterval(intervalId);
   }, []);
 
   // Use derived lists with useMemo where possible to avoid re-calculating on every tiny render

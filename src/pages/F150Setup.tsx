@@ -47,13 +47,6 @@ export default function F150Setup() {
 
     useEffect(() => {
         loadItems();
-
-        // Poll for comment counts every 15 seconds to keep numbers in sync across users
-        const interval = setInterval(async () => {
-            const counts = await getAllCommentCounts();
-            setCommentCounts(counts);
-        }, 15000);
-        return () => clearInterval(interval);
     }, []);
 
     const loadItems = async () => {
@@ -738,10 +731,6 @@ function CommentsSection({ postId, currentUser, onCommentAdded }: { postId: stri
 
     useEffect(() => {
         loadComments();
-
-        // Optional: Simple polling for real-time-ish updates (every 10s)
-        const interval = setInterval(loadComments, 10000);
-        return () => clearInterval(interval);
     }, [loadComments]);
 
     const handleAddComment = async () => {

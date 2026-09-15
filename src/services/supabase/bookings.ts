@@ -1,5 +1,6 @@
 import supabase from '@/lib/supabase';
 import { isDemoActive } from '@/lib/supa-data';
+import { checkClientRateLimit } from '@/lib/rateLimit';
 
 // Helper to sanitize undefined checks
 const clean = (s?: string) => s || null;
@@ -29,6 +30,16 @@ export interface BookingInput {
 
 export async function create(input: BookingInput) {
   if (isDemoActive()) return { ...input, id: `demo_book_${Date.now()}` };
+
+  // Enforce rate limit on public submissions (max 5 per 60s window)
+  const isPublic = !input.booked_by || input.booked_by === 'Public Website' || input.booked_by === 'Customer Web';
+  if (isPublic) {
+    const rateCheck = checkClientRateLimit('public_booking_insert', 5, 60000);
+    if (!rateCheck.allowed) {
+      throw new Error(`Rate limit exceeded: Please wait ${rateCheck.waitSeconds}s before creating another booking.`);
+    }
+  }
+
   try {
     // 1. Find or create Customer
     // Priority: email match → name match → phone match → create new prospect
