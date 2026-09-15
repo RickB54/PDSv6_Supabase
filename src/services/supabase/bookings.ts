@@ -31,12 +31,29 @@ export interface BookingInput {
 export async function create(input: BookingInput) {
   if (isDemoActive()) return { ...input, id: `demo_book_${Date.now()}` };
 
-  // Enforce rate limit on public submissions (max 5 per 60s window)
   const isPublic = !input.booked_by || input.booked_by === 'Public Website' || input.booked_by === 'Customer Web';
+
+  // 1. Client-side fast UI check
   if (isPublic) {
     const rateCheck = checkClientRateLimit('public_booking_insert', 5, 60000);
     if (!rateCheck.allowed) {
       throw new Error(`Rate limit exceeded: Please wait ${rateCheck.waitSeconds}s before creating another booking.`);
+    }
+
+    // 2. Route through server-side rate-limited Edge Function
+    try {
+      const { data: edgeRes, error: edgeErr } = await supabase.functions.invoke('create-booking', {
+        body: input
+      });
+      if (!edgeErr && edgeRes?.booking) {
+        return edgeRes.booking;
+      }
+      if (edgeErr?.message?.includes('Rate limit') || edgeRes?.error?.includes('Rate limit')) {
+        throw new Error(edgeRes?.error || edgeErr?.message || 'Rate limit exceeded');
+      }
+    } catch (e: any) {
+      if (e?.message?.includes('Rate limit')) throw e;
+      console.warn('[bookings.ts] Server gateway failed, falling back to direct table insert:', e);
     }
   }
 

@@ -560,6 +560,65 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
     }, { domain: 'customers', ttlMs: 10 * 60 * 1000 });
 };
 
+export interface CustomerLight {
+    id: string;
+    name: string;
+    phone?: string;
+    email?: string;
+    type?: string;
+}
+
+/**
+ * Lightweight customer query for dropdowns, search bars, and selectors.
+ * Only selects id, full_name, name, phone, email, and type (omits heavy vehicle/media trees).
+ */
+export const getSupabaseCustomersLight = async (): Promise<CustomerLight[]> => {
+    if (isDemoActive()) {
+        const { MOCK_CUSTOMERS } = await import('./demoMockData');
+        return MOCK_CUSTOMERS.map(c => ({
+            id: c.id || '',
+            name: c.name || '',
+            phone: c.phone || '',
+            email: c.email || '',
+            type: c.type || 'customer'
+        }));
+    }
+    return appCache.fetchWithCache('customers', 'customers_light', async () => {
+        try {
+            const { data, error } = await supabase
+                .from('customers')
+                .select('id, full_name, name, phone, email, type')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('getSupabaseCustomersLight error:', error);
+                return [];
+            }
+
+            const map = new Map<string, CustomerLight>();
+            (data || []).forEach((c: any) => {
+                const name = c.full_name || c.name || 'Unknown';
+                const email = (c.email || '').toLowerCase().trim();
+                const phone = (c.phone || '').replace(/\D/g, '');
+                const key = email || `name:${name.toLowerCase()}_phone:${phone || c.id}`;
+                if (!map.has(key)) {
+                    map.set(key, {
+                        id: c.id,
+                        name,
+                        phone: c.phone || '',
+                        email: c.email || '',
+                        type: c.type || 'customer'
+                    });
+                }
+            });
+            return Array.from(map.values());
+        } catch (err) {
+            console.error('getSupabaseCustomersLight exception:', err);
+            return [];
+        }
+    }, { domain: 'customers', ttlMs: 10 * 60 * 1000 });
+};
+
 /**
  * Aggregates all data related to a single customer for reporting.
  * Applies standard mappers to ensure data consistency with the rest of the app.
@@ -3303,7 +3362,7 @@ export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
         try {
             const { data, error } = await supabase
                 .from('inventory_audit_history')
-                .select('*')
+                .select('id, timestamp, status, note, active_tab, total_counted')
                 .order('timestamp', { ascending: false })
                 .limit(50);
                 
@@ -3318,9 +3377,9 @@ export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
                 timestamp: row.timestamp,
                 status: row.status,
                 note: row.note,
-                chemAudit: row.chem_audit || {},
-                supplyAudit: row.supply_audit || {},
-                equipAudit: row.equip_audit || {},
+                chemAudit: {},
+                supplyAudit: {},
+                equipAudit: {},
                 activeTab: row.active_tab,
                 totalCounted: row.total_counted || 0
             }));
@@ -3329,7 +3388,48 @@ export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
             const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
             return local ? JSON.parse(local) : [];
         }
-    });
+    }, { domain: 'auditHistory', ttlMs: 5 * 60 * 1000 });
+};
+
+/**
+ * Fetches the full audit snapshot including nested chem_audit, supply_audit, and equip_audit JSON trees
+ * for a specific audit when explicitly opened or exported.
+ */
+export const getInventoryAuditById = async (id: string): Promise<AuditSnapshot | null> => {
+    return appCache.fetchWithCache('auditHistory', `audit_detail_${id}`, async () => {
+        try {
+            const { data, error } = await supabase
+                .from('inventory_audit_history')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) {
+                console.warn(`getInventoryAuditById error for ${id} (falling back to localStorage):`, error.message);
+                const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
+                if (local) {
+                    const parsed: AuditSnapshot[] = JSON.parse(local);
+                    return parsed.find(a => a.id === id) || null;
+                }
+                return null;
+            }
+
+            return {
+                id: data.id,
+                timestamp: data.timestamp,
+                status: data.status,
+                note: data.note,
+                chemAudit: data.chem_audit || {},
+                supplyAudit: data.supply_audit || {},
+                equipAudit: data.equip_audit || {},
+                activeTab: data.active_tab,
+                totalCounted: data.total_counted || 0
+            };
+        } catch (err) {
+            console.warn(`getInventoryAuditById exception for ${id}:`, err);
+            return null;
+        }
+    }, { domain: 'auditHistory', ttlMs: 10 * 60 * 1000 });
 };
 
 export const upsertInventoryAuditHistory = async (snapshot: AuditSnapshot) => {

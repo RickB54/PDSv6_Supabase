@@ -7,6 +7,7 @@ import CustomerModal from "@/components/customers/CustomerModal";
 import { Badge } from "@/components/ui/badge";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, deleteSupabaseVehicle, getSupabaseEstimates, Customer, supabase } from "@/lib/supa-data";
+import { getMediaUrl } from "@/lib/storage-utils";
 import { format } from "date-fns";
 
 import { ActivityLog } from "@/components/customers/ActivityLog";
@@ -1000,7 +1001,12 @@ export default function Prospects() {
                                 className="h-12 w-12 rounded-lg border-2 border-zinc-700 overflow-hidden cursor-pointer hover:border-purple-400 transition-all hover:scale-105"
                                 onClick={() => openGallery(customer, 0)}
                               >
-                                <img src={allPhotos[0]} alt={customer.name} className="h-full w-full object-cover" />
+                                <img 
+                                  src={getMediaUrl(allPhotos[0], 'thumb')} 
+                                  onError={(e) => { if (e.currentTarget.src !== allPhotos[0]) e.currentTarget.src = allPhotos[0]; }}
+                                  alt={customer.name} 
+                                  className="h-full w-full object-cover" 
+                                />
                               </div>
                               {allPhotos.length > 1 && (
                                 <button

@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser } from "@/lib/auth";
 import { useTasksStore, parseTaskInput, Task, TaskPriority, TaskStatus } from "@/store/tasks";
 import api from "@/lib/api";
-import { getSupabaseEmployees, getSupabaseCustomers, getTeamMessages, sendTeamMessage, deleteTeamMessage, TeamMessage } from "@/lib/supa-data";
+import { getSupabaseEmployees, getSupabaseCustomersLight, getTeamMessages, sendTeamMessage, deleteTeamMessage, TeamMessage } from "@/lib/supa-data";
 import { supabase } from "@/lib/supabase";
 import localforage from "localforage";
 import { pushAdminAlert } from "@/lib/adminAlerts";
@@ -108,7 +108,7 @@ export default function Tasks() {
         }
         const [empList, custList] = await Promise.all([
           getSupabaseEmployees(),
-          getSupabaseCustomers()
+          getSupabaseCustomersLight()
         ]);
         setEmployees(Array.isArray(empList) ? empList : []);
         setCustomers(Array.isArray(custList) ? custList : []);

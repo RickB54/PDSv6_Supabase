@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PhotoGalleryLightbox } from "@/components/gallery/PhotoGalleryLightbox";
 import { HelpTooltipPopup } from "@/components/ui/HelpTooltipPopup";
+import { getMediaUrl } from "@/lib/storage-utils";
 import {
   Truck,
   Package,
@@ -3168,7 +3169,12 @@ function MediaCard({
       ) : item.type === "video" ? (
         <video src={item.url} className="w-full h-full object-cover pointer-events-none" />
       ) : (
-        <img src={item.url} alt={item.caption || "Setup photo"} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        <img 
+          src={getMediaUrl(item.url, 'thumb')} 
+          onError={(e) => { if (e.currentTarget.src !== item.url) e.currentTarget.src = item.url; }}
+          alt={item.caption || "Setup photo"} 
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+        />
       )}
 
       {/* Overlay controls - Using pointer-events-none to let clicks pass through to the gallery trigger below, except for the buttons */}

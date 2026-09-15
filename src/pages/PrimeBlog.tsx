@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { getCurrentUser } from "@/lib/auth";
+import { getMediaUrl } from "@/lib/storage-utils";
 import {
     getLibraryItems, upsertLibraryItem, deleteLibraryItem, deleteLibraryItems,
     LibraryItem, LibraryComment, getComments, addComment, getAllCommentCounts,
@@ -723,7 +724,7 @@ export default function PrimeBlog() {
                                                 </div>
                                             ) : (
                                                 <img
-                                                    src={item.resource_url}
+                                                    src={item.thumbnail_url || getMediaUrl(item.resource_url, 'thumb')}
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                                                     loading="lazy"
                                                     onError={(e) => {

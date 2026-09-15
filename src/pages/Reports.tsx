@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/card";
@@ -30,6 +30,11 @@ import { MOCK_CUSTOMERS, MOCK_INVOICES, MOCK_INVENTORY, MOCK_BOOKINGS, MOCK_ESTI
 
 const Reports = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') || 'customers';
+  const setTab = (newTab: string) => {
+    setSearchParams({ tab: newTab }, { replace: true });
+  };
+
   const [dateFilter, setDateFilter] = useState<"all" | "daily" | "weekly" | "monthly">("all");
   const [dateRange, setDateRange] = useState<DateRangeValue>({});
   const [customers, setCustomers] = useState<any[]>([]);
@@ -65,65 +70,98 @@ const Reports = () => {
   const { isDemoMode } = useDemoMode();
   const isAdmin = currentUser?.role === 'admin' || isDemoMode;
 
-  useEffect(() => {
-    // Always load data from localforage (fast, cached)
-    loadData();
+  const loadedTabsRef = useRef<Set<string>>(new Set());
 
-    // Mark as loaded for this session
-    sessionStorage.setItem('reports-loaded', 'true');
-  }, []);
+  const loadTabData = async (currentTab: string) => {
+    if (loadedTabsRef.current.has(currentTab)) return;
+    loadedTabsRef.current.add(currentTab);
 
-  const loadData = async () => {
     if (isDemoMode) {
-      setCustomers(MOCK_CUSTOMERS);
-      setInvoices(MOCK_INVOICES);
-      setChemicals(MOCK_INVENTORY.chemicals);
-      setMaterials(MOCK_INVENTORY.materials);
-      setTools([]);
-      setJobs(MOCK_BOOKINGS.filter(b => b.status === 'completed' || b.status === 'in_progress'));
-      setEstimates(MOCK_ESTIMATES);
-      setIncome(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'income'));
-      setExpenses(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'expense'));
-      setPayrollHistory([]);
-      setTaxHistory([]);
+      if (currentTab === 'customers' || currentTab === 'prospects') setCustomers(MOCK_CUSTOMERS);
+      else if (currentTab === 'invoices' || currentTab === 'addons' || currentTab === 'services') setInvoices(MOCK_INVOICES);
+      else if (currentTab === 'inventory') {
+        setChemicals(MOCK_INVENTORY.chemicals);
+        setMaterials(MOCK_INVENTORY.materials);
+        setTools([]);
+      }
+      else if (currentTab === 'employee') {
+        setJobs(MOCK_BOOKINGS.filter(b => b.status === 'completed' || b.status === 'in_progress'));
+        setEmployees([]);
+      }
+      else if (currentTab === 'estimates') setEstimates(MOCK_ESTIMATES);
+      else if (currentTab === 'accounting') {
+        setIncome(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'income'));
+        setExpenses(MOCK_ACCOUNTING.transactions.filter(t => t.type === 'expense'));
+        setPayrollHistory([]);
+        setTaxHistory([]);
+        setChemicals(MOCK_INVENTORY.chemicals);
+        setMaterials(MOCK_INVENTORY.materials);
+        setTools([]);
+      }
+      else if (currentTab === 'tax-report') setTaxHistory([]);
       return;
     }
-    const cust = await getSupabaseCustomers();
-    // Load Estimates from Supabase
-    const estimatesData = await getSupabaseEstimates();
-    const incomeData = await getReceivables();
-    const expenseData = await getExpenses();
-    const payrollData = (await localforage.getItem<any[]>("payroll-history")) || [];
-    const taxReportsData = await getSupabaseTaxReports();
 
-    const inv = await getSupabaseInvoices();
-    // Load Inventory from Supabase
-    const chems = (await getChemicals()) || [];
-    const mats = (await getMaterials()) || [];
-    const tls = (await getTools()) || [];
-    
-    // Fetch bookings to populate jobs for Employee report
-    const bookingsData = await getSupabaseBookings();
-    const allEmps = (await getSupabaseEmployees()) || [];
-    // Show all jobs except cancelled ones for comprehensive employee reporting
-    const activeJobs = (bookingsData || []).filter(b => b.status !== 'cancelled');
-    
-    const audits = await getInventoryAuditHistory();
-    setAuditHistory(audits || []);
-    
-    setCustomers(cust);
-    setInvoices(inv);
-    setChemicals(chems);
-    setMaterials(mats);
-    setTools(tls);
-    setJobs(activeJobs);
-    setEmployees(allEmps);
-    setEstimates(estimatesData);
-    setIncome(incomeData);
-    setExpenses(expenseData);
-    setPayrollHistory(payrollData);
-    setTaxHistory(taxReportsData);
+    try {
+      if (currentTab === 'customers' || currentTab === 'prospects') {
+        const cust = await getSupabaseCustomers();
+        setCustomers(cust || []);
+      } else if (currentTab === 'invoices' || currentTab === 'addons' || currentTab === 'services') {
+        const inv = await getSupabaseInvoices();
+        setInvoices(inv || []);
+      } else if (currentTab === 'inventory') {
+        const [chems, mats, tls] = await Promise.all([
+          getChemicals(),
+          getMaterials(),
+          getTools()
+        ]);
+        setChemicals(chems || []);
+        setMaterials(mats || []);
+        setTools(tls || []);
+      } else if (currentTab === 'inventory-audit') {
+        const audits = await getInventoryAuditHistory();
+        setAuditHistory(audits || []);
+      } else if (currentTab === 'employee') {
+        const [bookingsData, allEmps] = await Promise.all([
+          getSupabaseBookings(),
+          getSupabaseEmployees()
+        ]);
+        const activeJobs = (bookingsData || []).filter(b => b.status !== 'cancelled');
+        setJobs(activeJobs);
+        setEmployees(allEmps || []);
+      } else if (currentTab === 'estimates') {
+        const estimatesData = await getSupabaseEstimates();
+        setEstimates(estimatesData || []);
+      } else if (currentTab === 'accounting') {
+        const [incomeData, expenseData, payrollData, taxReportsData, chems, mats, tls] = await Promise.all([
+          getReceivables(),
+          getExpenses(),
+          localforage.getItem<any[]>("payroll-history"),
+          getSupabaseTaxReports(),
+          getChemicals(),
+          getMaterials(),
+          getTools()
+        ]);
+        setIncome(incomeData || []);
+        setExpenses(expenseData || []);
+        setPayrollHistory(payrollData || []);
+        setTaxHistory(taxReportsData || []);
+        setChemicals(chems || []);
+        setMaterials(mats || []);
+        setTools(tls || []);
+      } else if (currentTab === 'tax-report') {
+        const taxReportsData = await getSupabaseTaxReports();
+        setTaxHistory(taxReportsData || []);
+      }
+    } catch (err) {
+      console.error(`Error loading data for report tab ${currentTab}:`, err);
+    }
   };
+
+  useEffect(() => {
+    loadTabData(tab);
+    sessionStorage.setItem('reports-loaded', 'true');
+  }, [tab]);
 
   const filterByDate = (items: any[], dateField = "createdAt") => {
     const now = new Date();
@@ -1012,11 +1050,6 @@ const Reports = () => {
 
     return stats;
   }, [jobs, employees, dateFilter, dateRange]);
-
-  const tab = searchParams.get('tab') || 'customers';
-  const setTab = (newTab: string) => {
-    setSearchParams({ tab: newTab }, { replace: true });
-  };
 
   const reports_list = [
     { id: 'customers', label: 'Customers', icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },

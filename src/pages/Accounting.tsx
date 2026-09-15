@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { getInvoices, getExpenses, upsertExpense, deleteExpense } from "@/lib/db";
 import { getReceivables, upsertReceivable, deleteReceivable, Receivable } from "@/lib/receivables";
-import { getSupabaseCustomers, getSupabaseTaxExpenses, getSupabaseInvoices } from "@/lib/supa-data";
+import { getSupabaseCustomersLight, getSupabaseTaxExpenses, getSupabaseInvoices } from "@/lib/supa-data";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -322,7 +322,7 @@ const Accounting = () => {
   useEffect(() => {
     loadData();
     loadCustomCategories();
-    getSupabaseCustomers().then(setCustomers);
+    getSupabaseCustomersLight().then(setCustomers);
   }, [dateFilter, dateRange]);
 
   const loadCustomCategories = async () => {

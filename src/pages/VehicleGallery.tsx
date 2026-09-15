@@ -11,6 +11,7 @@ import { getCurrentUser } from "@/lib/auth";
 import {
     getSupabaseCustomers, Customer, getSupabaseBookings
 } from "@/lib/supa-data";
+import { getMediaUrl } from "@/lib/storage-utils";
 import { useToast } from "@/hooks/use-toast";
 import { useDemoMode } from "@/contexts/DemoContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -273,7 +274,12 @@ function Lightbox({
                                     className={`flex-shrink-0 h-14 w-14 rounded-lg overflow-hidden border-2 transition-all ${i === idx ? "border-blue-500 scale-110" : "border-zinc-700 opacity-50 hover:opacity-100"}`}
                                 >
                                     {item.type === "image" ? (
-                                        <img src={item.url} alt="" className="w-full h-full object-cover" />
+                                        <img 
+                                            src={getMediaUrl(item.url, 'thumb')} 
+                                            onError={(e) => { if (e.currentTarget.src !== item.url) e.currentTarget.src = item.url; }}
+                                            alt="" 
+                                            className="w-full h-full object-cover" 
+                                        />
                                     ) : (
                                         <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
                                             <Video className="h-4 w-4 text-pink-400" />
@@ -303,7 +309,12 @@ function MediaTile({ item, onClick, small = false, onDelete, isAdmin = false }: 
             className={`group relative aspect-square rounded-xl bg-zinc-950 border border-zinc-900 overflow-hidden hover:border-blue-500/60 hover:shadow-xl hover:shadow-blue-900/20 transition-all cursor-pointer ${small ? 'h-20 w-20' : ''}`}
         >
             {item.type === "image" ? (
-                <img src={item.url} alt={item.vehicleLabel} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                <img 
+                    src={getMediaUrl(item.url, 'thumb')} 
+                    onError={(e) => { if (e.currentTarget.src !== item.url) e.currentTarget.src = item.url; }}
+                    alt={item.vehicleLabel} 
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                />
             ) : (
                 <div className="w-full h-full bg-zinc-900 flex flex-col items-center justify-center gap-1">
                     <div className="relative">

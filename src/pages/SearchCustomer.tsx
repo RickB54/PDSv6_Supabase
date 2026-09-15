@@ -8,6 +8,7 @@ import CustomerModal from "@/components/customers/CustomerModal";
 import { getCustomers, deleteCustomer as removeCustomer, upsertCustomer } from "@/lib/db";
 import { getUnifiedCustomers } from "@/lib/customers";
 import { getSupabaseCustomers, upsertSupabaseCustomer, deleteSupabaseCustomer, deleteSupabaseVehicle, Customer, supabase } from "@/lib/supa-data";
+import { getMediaUrl } from "@/lib/storage-utils";
 import { useBookingsStore } from "@/store/bookings";
 import { useTasksStore } from "@/store/tasks";
 import api from "@/lib/api";
@@ -972,7 +973,12 @@ const SearchCustomer = () => {
                                     ) : item.includes(':::') || item.includes('youtube.com') || item.includes('youtu.be') ? (
                                       <Video className="w-6 h-6 text-zinc-500" />
                                     ) : (
-                                      <img src={item} alt={`${customer.name} - ${idx + 1}`} className="h-full w-full object-cover" />
+                                      <img 
+                                        src={getMediaUrl(item, 'thumb')} 
+                                        onError={(e) => { if (e.currentTarget.src !== item) e.currentTarget.src = item; }}
+                                        alt={`${customer.name} - ${idx + 1}`} 
+                                        className="h-full w-full object-cover" 
+                                      />
                                     )}
                                   </div>
                                 );

@@ -20,7 +20,7 @@ import {
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/lib/supa-data";
-import { compressImageForUpload } from "@/lib/image-compression";
+import { compressImageForUpload, getMediaUrl } from "@/lib/image-compression";
 import { VoiceInput } from "@/components/VoiceInput";
 import {
     ResizableHandle,
@@ -620,7 +620,12 @@ export default function PersonalNotes() {
                                                                 className="relative aspect-video rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl active:scale-95 transition-transform"
                                                                 onClick={() => setLightboxIndex(idx)}
                                                             >
-                                                                <img src={url} alt="Note asset" className="w-full h-full object-cover" />
+                                                                <img 
+                                                                    src={getMediaUrl(url, 'thumb')} 
+                                                                    onError={(e) => { if (e.currentTarget.src !== url) e.currentTarget.src = url; }}
+                                                                    alt="Note asset" 
+                                                                    className="w-full h-full object-cover" 
+                                                                />
                                                                 {/* Small X button in top-right corner always visible on mobile */}
                                                                 <button
                                                                     className="absolute top-2 right-2 h-6 w-6 rounded-full bg-red-500/90 hover:bg-red-500 text-white flex items-center justify-center shadow-lg border border-white/20 z-10"
@@ -987,7 +992,12 @@ export default function PersonalNotes() {
                                                                 onMouseEnter={() => setHoveredImage(url)}
                                                                 onMouseLeave={() => setHoveredImage(null)}
                                                             >
-                                                                <img src={url} alt="Note asset" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                                                                <img 
+                                                                    src={getMediaUrl(url, 'thumb')} 
+                                                                    onError={(e) => { if (e.currentTarget.src !== url) e.currentTarget.src = url; }}
+                                                                    alt="Note asset" 
+                                                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                                                                />
                                                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                                                                     <div className="h-12 w-12 rounded-full bg-white/10 backdrop-blur-xl flex items-center justify-center border border-white/20">
                                                                         <Maximize2 className="w-6 h-6 text-white" />

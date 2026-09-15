@@ -67,18 +67,26 @@ const ThumbnailZoomContext = createContext<{
   activeId: string | null;
 }>({ activeId: null });
 
+import { getMediaUrl } from "@/lib/storage-utils";
+
 /**
  * Enhanced Thumbnail that auto-zooms when its parent row is centered (Mobile)
  * and supports manual hover/touch zoom on all devices.
  */
-const InventoryThumbnail = ({ id, src, alt, className, activeBorderClass }: { id: string, src: string, alt: string, className?: string, activeBorderClass?: string }) => {
+const InventoryThumbnail = ({ src, alt, className, activeBorderClass = "border-purple-500/50", id }: any) => {
   const { activeId } = useContext(ThumbnailZoomContext);
   const isAutoZoomed = activeId === id;
+  const thumbSrc = getMediaUrl(src, 'thumb');
 
   return (
     <img
-      src={src}
+      src={thumbSrc}
       alt={alt}
+      onError={(e) => {
+        if (e.currentTarget.src !== src) {
+          e.currentTarget.src = src;
+        }
+      }}
       onClick={(e) => e.stopPropagation()}
       className={`${className} transition-all duration-300 md:hover:scale-[2.5] md:group-hover:scale-[2.5] md:active:scale-[3] md:hover:z-40 md:group-hover:z-40 md:active:z-40 md:hover:shadow-2xl md:group-hover:shadow-2xl ${isAutoZoomed ? `scale-[2.2] z-40 shadow-xl ${activeBorderClass}` : ''} cursor-zoom-in touch-none`}
     />

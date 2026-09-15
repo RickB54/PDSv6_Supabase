@@ -88,27 +88,37 @@ export const ensureAllStorageBuckets = async (): Promise<void> => {
     }
 };
 
+export { getMediaUrl, compressImageVariant, compressImageForUpload } from './image-compression';
+
 /**
  * Uploads a file to a specific Supabase Storage bucket.
  * Returns the public URL of the uploaded file.
- * Automatically compresses images to prevent mobile device out-of-memory errors.
+ * Automatically compresses full images (<120KB) and generates/uploads _thumb.webp (<15KB) variants.
  */
 export const uploadFile = async (bucket: string, file: File, path?: string, skipCompression: boolean = false): Promise<string> => {
     let fileToUpload = file;
+    let thumbFile: File | null = null;
     
-    // Automatically apply compression for image uploads unless explicitly skipped
+    const baseName = path || `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+    const dotIdx = baseName.lastIndexOf('.');
+    const basePrefix = dotIdx > 0 ? baseName.substring(0, dotIdx) : baseName;
+    const thumbName = `${basePrefix}_thumb.webp`;
+
     if (!skipCompression && file.type.startsWith('image/')) {
         try {
-            const { compressImageForUpload } = await import('./image-compression');
-            fileToUpload = await compressImageForUpload(file);
+            const { compressImageVariant } = await import('./image-compression');
+            const [compressedFull, compressedThumb] = await Promise.all([
+                compressImageVariant(file, 'full'),
+                compressImageVariant(file, 'thumb')
+            ]);
+            fileToUpload = compressedFull;
+            thumbFile = compressedThumb;
         } catch (compErr) {
             console.warn("Auto-compression failed before upload:", compErr);
-            // Continue with original file if compression fails
         }
     }
 
-    const fileName = path || `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-    const { data, error } = await supabase.storage.from(bucket).upload(fileName, fileToUpload, {
+    const { data, error } = await supabase.storage.from(bucket).upload(baseName, fileToUpload, {
         cacheControl: '3600',
         upsert: true
     });
@@ -116,6 +126,14 @@ export const uploadFile = async (bucket: string, file: File, path?: string, skip
     if (error) {
         console.error(`Upload to bucket "${bucket}" failed:`, error);
         throw error;
+    }
+
+    // Upload thumbnail variant asynchronously
+    if (thumbFile) {
+        supabase.storage.from(bucket).upload(thumbName, thumbFile, {
+            cacheControl: '3600',
+            upsert: true
+        }).catch(err => console.warn(`Thumb upload failed for ${thumbName}:`, err));
     }
 
     const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path);

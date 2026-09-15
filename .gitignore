@@ -31,3 +31,8 @@ dist-ssr
 
 # Zip files
 *.zip
+
+# Local media backup archives
+backups/storage_archive/
+backups/compressed_storage/
+backups/thumbnails_storage/

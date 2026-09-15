@@ -40,9 +40,9 @@ import {
     getSupabaseMileageLogs,
     upsertSupabaseMileageLog,
     deleteSupabaseMileageLog,
-    getSupabaseCustomers,
+    getSupabaseCustomersLight,
     MileageLog,
-    Customer
+    CustomerLight
 } from "@/lib/supa-data";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -60,7 +60,7 @@ const PURPOSE_OPTIONS = [
 const MileageTracking = () => {
     const { toast } = useToast();
     const [logs, setLogs] = useState<MileageLog[]>([]);
-    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [customers, setCustomers] = useState<CustomerLight[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAdding, setIsAdding] = useState(false);
 
@@ -86,7 +86,7 @@ const MileageTracking = () => {
         try {
             const [mileageData, customerData] = await Promise.all([
                 getSupabaseMileageLogs(),
-                getSupabaseCustomers()
+                getSupabaseCustomersLight()
             ]);
             setLogs(mileageData);
             setCustomers(customerData);

@@ -1,4 +1,5 @@
 import imageCompression from 'browser-image-compression';
+export { getMediaUrl } from './image-compression';
 
 /**
  * Compress an image file using browser-image-compression library.

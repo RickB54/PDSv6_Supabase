@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { getCurrentUser } from '@/lib/auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getInventoryAuditHistory, upsertInventoryAuditHistory, deleteInventoryAuditHistory } from '@/lib/supa-data';
+import { getInventoryAuditHistory, getInventoryAuditById, upsertInventoryAuditHistory, deleteInventoryAuditHistory } from '@/lib/supa-data';
 
 interface InventoryAuditModalProps {
   open: boolean;
@@ -1060,19 +1060,44 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
     }
   };
 
+  // Hydrate full snapshot data on demand if this snapshot only has list metadata
+  const fetchFullSnapshotIfNeeded = async (snapshot: AuditSnapshot): Promise<AuditSnapshot> => {
+    if (snapshot.chemAudit && Object.keys(snapshot.chemAudit).length > 0) {
+      return snapshot;
+    }
+    if (!snapshot.id) return snapshot;
+    try {
+      const full = await getInventoryAuditById(snapshot.id);
+      return full || snapshot;
+    } catch {
+      return snapshot;
+    }
+  };
+
   // Resume from snapshot
-  const handleResume = (snapshot: AuditSnapshot) => {
+  const handleResume = async (snapshot: AuditSnapshot) => {
+    const full = await fetchFullSnapshotIfNeeded(snapshot);
     // Merge snapshot chem audit with any newly added chemicals
     const mergedChem: Record<string, ChemicalAuditState> = { ...chemAudit };
-    Object.entries(snapshot.chemAudit || {}).forEach(([id, state]) => {
+    Object.entries(full.chemAudit || {}).forEach(([id, state]) => {
       if (mergedChem[id]) mergedChem[id] = state as ChemicalAuditState;
     });
     setChemAudit(mergedChem);
-    setSupplyAudit(snapshot.supplyAudit || {});
-    setEquipAudit(snapshot.equipAudit || {});
-    setActiveTab(snapshot.activeTab || 'chemicals');
+    setSupplyAudit(full.supplyAudit || {});
+    setEquipAudit(full.equipAudit || {});
+    setActiveTab(full.activeTab || 'chemicals');
     setShowHistory(false);
-    toast({ title: 'Resumed', description: `Audit from ${new Date(snapshot.timestamp).toLocaleString()} loaded.` });
+    toast({ title: 'Resumed', description: `Audit from ${new Date(full.timestamp).toLocaleString()} loaded.` });
+  };
+
+  const handleViewSnapshot = async (entry: AuditSnapshot) => {
+    const full = await fetchFullSnapshotIfNeeded(entry);
+    setViewingSnapshot(full);
+  };
+
+  const handleExportPDFWithFetch = async (entry: AuditSnapshot, groupBy: 'location' | 'category') => {
+    const full = await fetchFullSnapshotIfNeeded(entry);
+    handleExportPDF(full, groupBy);
   };
 
   // Delete snapshot from history
@@ -2380,7 +2405,7 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           size="sm"
                           variant="outline"
                           className="h-8 text-xs bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-700 gap-1"
-                          onClick={() => setViewingSnapshot(entry)}
+                          onClick={() => handleViewSnapshot(entry)}
                           title="View Data"
                         >
                           <Eye className="h-3.5 w-3.5" /> View
@@ -2399,14 +2424,14 @@ export default function InventoryAuditModal({ open, onOpenChange, chemicals, sup
                           <DropdownMenuContent className="bg-zinc-950 border-zinc-800 text-zinc-200 z-[99999]" align="end">
                             <DropdownMenuItem
                               className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
-                              onClick={() => handleExportPDF(entry, 'location')}
+                              onClick={() => handleExportPDFWithFetch(entry, 'location')}
                             >
                               <MapPin className="h-3.5 w-3.5 text-blue-400" />
                               By Location
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="cursor-pointer hover:bg-zinc-800 text-xs font-semibold flex items-center gap-2 focus:bg-zinc-800 focus:text-white"
-                              onClick={() => handleExportPDF(entry, 'category')}
+                              onClick={() => handleExportPDFWithFetch(entry, 'category')}
                             >
                               <FolderTree className="h-3.5 w-3.5 text-purple-400" />
                               By Category
