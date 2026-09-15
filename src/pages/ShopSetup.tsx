@@ -1115,31 +1115,41 @@ const ShopSetup = () => {
                             src={doc.url}
                             alt={doc.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
                           />
-                        ) : isGdoc ? (
-                          <div className="w-full h-full relative overflow-hidden bg-white">
-                            <iframe
-                              src={previewUrl}
-                              className="w-[200%] h-[200%] transform scale-50 origin-top-left pointer-events-none border-0"
-                              title={doc.name}
-                            />
-                          </div>
-                        ) : doc.type === "pdf" && doc.url ? (
-                          <div className="w-full h-full relative overflow-hidden bg-white">
-                            <iframe
-                              src={`${doc.url}#page=1&toolbar=0&navpanes=0&view=FitH`}
-                              className="w-[200%] h-[200%] transform scale-50 origin-top-left pointer-events-none border-0"
-                              title={doc.name}
-                            />
-                          </div>
+                        ) : doc.thumbnail_url ? (
+                          <img
+                            src={doc.thumbnail_url}
+                            alt={doc.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            loading="lazy"
+                          />
                         ) : (
-                          <div className="w-full h-full bg-zinc-900 p-4 text-left font-mono text-[9px] text-zinc-400 overflow-hidden relative">
-                            <div className="border-b border-zinc-800 pb-2 mb-2 font-bold text-indigo-400 flex items-center gap-1">
-                              <FileText className="h-3.5 w-3.5" /> {doc.folder.toUpperCase()}
+                          <div className="w-full h-full bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 p-4 text-left font-mono text-[9px] text-zinc-400 overflow-hidden relative flex flex-col justify-between border-t border-zinc-800/40">
+                            {/* Decorative document mockup header */}
+                            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
+                              <div className="font-bold text-indigo-400 flex items-center gap-1.5 uppercase text-[10px] tracking-wider">
+                                {isGdoc ? <Globe className="h-3.5 w-3.5 text-blue-400" /> : <FileText className="h-3.5 w-3.5 text-red-400" />}
+                                {isGdoc ? "GOOGLE DOC" : "PDF DOCUMENT"}
+                              </div>
+                              <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700">
+                                {doc.size || "PAGE 1"}
+                              </span>
                             </div>
-                            <p className="line-clamp-6 opacity-80 leading-relaxed">
-                              {doc.name.replace(/_/g, " ")} — Official shop documentation, guidelines, and reference sheet.
-                            </p>
+
+                            {/* Simulated document lines preview */}
+                            <div className="my-2 space-y-1.5 opacity-70">
+                              <div className="h-2 bg-zinc-800 rounded w-4/5"></div>
+                              <div className="h-1.5 bg-zinc-800/70 rounded w-full"></div>
+                              <div className="h-1.5 bg-zinc-800/50 rounded w-11/12"></div>
+                              <div className="h-1.5 bg-zinc-800/40 rounded w-3/4"></div>
+                            </div>
+
+                            {/* Document metadata summary */}
+                            <div className="pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[8px] text-zinc-500 font-sans font-bold">
+                              <span className="truncate max-w-[140px] uppercase tracking-wider">{doc.folder}</span>
+                              <span className="text-indigo-400/80">Click to View</span>
+                            </div>
                           </div>
                         )}
 

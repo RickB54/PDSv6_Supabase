@@ -252,160 +252,213 @@ export default function NotificationBell() {
     }).length;
   }, [alerts, isEmployee, isFileManagerView]);
 
-  // Background Sync for Online Bookings (ensure Admin is notified of public website activity)
+  // Realtime Subscriptions & Smart Sync for Online Bookings and Engagements
   useEffect(() => {
     if (isEmployee || isFileManagerView) return;
     const isDemoMode = localStorage.getItem('demo_mode_active') === 'true';
     if (isDemoMode) return; // Prevent live sync and DB mutations during Demo Mode
 
-    const syncBookings = async () => {
+    const handleBookingAlert = async (b: any) => {
       try {
-        // 1. Sync global AdminAlerts state from DB
+        let meta = b.booking_vehicle || {};
+        if (typeof meta === 'string') {
+          try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
+        }
+        
+        const syncId = `sync_book_${b.id}`;
+        const isAlreadyNotifiedGlobally = meta.notified === true;
+        const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+        const isLocallyDismissed = dismissedIds.includes(syncId) || dismissedIds.includes(b.id);
+        const currentAlerts = useAlertsStore.getState().alerts || [];
+        const alreadyAlerted = currentAlerts.some(a => 
+          a.type === 'booking_created' && 
+          String(a.payload?.bookingId || '') === String(b.id)
+        );
+        
+        if (!isAlreadyNotifiedGlobally && !isLocallyDismissed && !alreadyAlerted) {
+          const custName = b.customer_name || meta.customer_name || meta.name || 'New Customer';
+          let activeCustomerId = b.customer_id;
+
+          if (!activeCustomerId) {
+            try {
+              const email = meta.email || null;
+              let existingId = null;
+              
+              if (email) {
+                const { data: existing } = await supabase.from('customers').select('id').eq('email', email).maybeSingle();
+                if (existing) existingId = existing.id;
+              }
+
+              if (existingId) {
+                activeCustomerId = existingId;
+                await supabase.from('bookings').update({ customer_id: activeCustomerId }).eq('id', b.id);
+              } else {
+                const { data: newCust, error: cErr } = await supabase.from('customers').insert({
+                  full_name: custName,
+                  email: email,
+                  phone: meta.phone || null,
+                  type: 'prospect',
+                  notes: `Auto-created from Online Booking #${b.id}`
+                }).select('id').single();
+
+                if (!cErr && newCust) {
+                  activeCustomerId = newCust.id;
+                  await supabase.from('bookings').update({ customer_id: activeCustomerId }).eq('id', b.id);
+                }
+              }
+            } catch (e) {
+              console.warn("[AlertSync] Auto-prospect creation failed:", e);
+            }
+          }
+
+          const serviceStr = b.service_package || meta.service_package || meta.package || 'Service';
+
+          toast({
+            title: "New Online Booking!",
+            description: `${custName} just booked a ${serviceStr}.`,
+            variant: "default",
+          });
+
+          notify(
+            'booking_created',
+            `NEW ONLINE REQUEST: ${custName} - ${serviceStr}`,
+            'Customer Web',
+            { id: syncId, recordId: b.id, bookingId: b.id, customerId: activeCustomerId }
+          );
+          
+          await supabase.from('bookings').update({
+            booking_vehicle: { ...meta, notified: true }
+          }).eq('id', b.id);
+
+          refresh();
+        }
+      } catch (err) {
+        console.warn("[AlertSync] Booking alert processing error:", err);
+      }
+    };
+
+    const handleEngagementAlert = (e: any) => {
+      try {
+        const syncId = `sync_eng_${e.id}`;
+        const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+        const isLocallyDismissed = dismissedIds.includes(syncId) || dismissedIds.includes(e.id);
+        const currentAlerts = useAlertsStore.getState().alerts || [];
+        const alreadyAlerted = currentAlerts.some(a => 
+          a.type === 'admin_message' && 
+          String(a.payload?.recordId || '') === String(e.id)
+        );
+
+        if (!isLocallyDismissed && !alreadyAlerted) {
+          const custName = e.customer_name || 'Customer';
+          
+          toast({
+            title: e.type === 'Estimate Pre-Check' ? "Estimate Accepted!" : "Estimate Declined",
+            description: e.note,
+            variant: "default",
+          });
+
+          notify(
+            'admin_message',
+            `ESTIMATE UPDATE: ${custName} - ${e.note}`,
+            'Customer Web',
+            { id: syncId, recordId: e.id, customerId: e.customer_id }
+          );
+          
+          refresh();
+        }
+      } catch (err) {
+        console.warn("[AlertSync] Engagement alert processing error:", err);
+      }
+    };
+
+    const runCheck = async () => {
+      if (document.hidden) return; // Skip background tabs entirely
+      try {
         await performGlobalSync();
         refresh();
 
-        // 2. Sync 'tentative' bookings and deduplicate via DB flag
-        const { data, error } = await supabase
+        // 1. Check tentative bookings
+        const { data: bData, error: bError } = await supabase
           .from('bookings')
           .select('id, customer_id, date, status, booking_vehicle')
           .in('status', ['tentative', 'TENTATIVE'])
           .limit(20);
 
-          if (error) console.error("Error fetching tentative bookings:", error);
-
-          let addedAny = false;
-
-          for (const b of (data || [])) {
-            let meta = b.booking_vehicle || {};
-            if (typeof meta === 'string') {
-              try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
-            }
-            
-            // SYNCHRONIZED DEDUPLICATION:
-            const syncId = `sync_book_${b.id}`;
-            const isAlreadyNotifiedGlobally = meta.notified === true;
-            const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
-            const isLocallyDismissed = dismissedIds.includes(syncId) || dismissedIds.includes(b.id);
-            const alreadyAlerted = (alerts || []).some(a => 
-              a.type === 'booking_created' && 
-              String(a.payload?.bookingId || '') === String(b.id)
-            );
-            
-            if (!isAlreadyNotifiedGlobally && !isLocallyDismissed && !alreadyAlerted) {
-              const custName = b.customer_name || meta.customer_name || meta.name || 'New Customer';
-              let activeCustomerId = b.customer_id;
-
-              // AUTO-PROMOTION: If the booking doesn't have a linked customer record,
-              // we create one now from the Admin's authenticated session.
-              if (!activeCustomerId) {
-                try {
-                  const email = meta.email || null;
-                  let existingId = null;
-                  
-                  if (email) {
-                    const { data: existing } = await supabase.from('customers').select('id').eq('email', email).maybeSingle();
-                    if (existing) existingId = existing.id;
-                  }
-
-                  if (existingId) {
-                    activeCustomerId = existingId;
-                    await supabase.from('bookings').update({ customer_id: activeCustomerId }).eq('id', b.id);
-                    console.log(`[AlertSync] Linked existing customer ${activeCustomerId} to booking ${b.id}`);
-                  } else {
-                    const { data: newCust, error: cErr } = await supabase.from('customers').insert({
-                      full_name: custName,
-                      email: email,
-                      phone: meta.phone || null,
-                      type: 'prospect',
-                      notes: `Auto-created from Online Booking #${b.id}`
-                    }).select('id').single();
-
-                    if (!cErr && newCust) {
-                      activeCustomerId = newCust.id;
-                      await supabase.from('bookings').update({ customer_id: activeCustomerId }).eq('id', b.id);
-                      console.log(`[AlertSync] Auto-created prospect ${activeCustomerId} for booking ${b.id}`);
-                    }
-                  }
-                } catch (e) {
-                  console.warn("[AlertSync] Auto-prospect creation failed:", e);
-                }
-              }
-
-              const serviceStr = b.service_package || meta.service_package || meta.package || 'Service';
-
-              toast({
-                title: "New Online Booking!",
-                description: `${custName} just booked a ${serviceStr}.`,
-                variant: "default",
-              });
-
-              notify(
-                'booking_created',
-                `NEW ONLINE REQUEST: ${custName} - ${serviceStr}`,
-                'Customer Web',
-                { id: syncId, recordId: b.id, bookingId: b.id, customerId: activeCustomerId }
-              );
-              
-              // MARK AS NOTIFIED IN DB (Syncs to all devices)
-              await supabase.from('bookings').update({
-                booking_vehicle: { ...meta, notified: true }
-              }).eq('id', b.id);
-
-              addedAny = true;
-            }
+        if (!bError && bData) {
+          for (const b of bData) {
+            await handleBookingAlert(b);
           }
+        }
 
-          // 3. Sync Estimate Responses from engagements
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          const { data: engData } = await supabase
-            .from('engagements')
-            .select('id, customer_id, customer_name, type, note, created_at')
-            .in('type', ['Estimate Response', 'Estimate Pre-Check'])
-            .gte('created_at', yesterday.toISOString())
-            .order('created_at', { ascending: false })
-            .limit(10);
+        // 2. Check recent estimate engagements
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const { data: engData } = await supabase
+          .from('engagements')
+          .select('id, customer_id, customer_name, type, note, created_at')
+          .in('type', ['Estimate Response', 'Estimate Pre-Check'])
+          .gte('created_at', yesterday.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(10);
 
-          for (const e of (engData || [])) {
-            const syncId = `sync_eng_${e.id}`;
-            const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
-            const isLocallyDismissed = dismissedIds.includes(syncId) || dismissedIds.includes(e.id);
-            const alreadyAlerted = (useAlertsStore.getState().alerts || []).some(a => 
-              a.type === 'admin_message' && 
-              String(a.payload?.recordId || '') === String(e.id)
-            );
-
-            if (!isLocallyDismissed && !alreadyAlerted) {
-              const custName = e.customer_name || 'Customer';
-              
-              toast({
-                title: e.type === 'Estimate Pre-Check' ? "Estimate Accepted!" : "Estimate Declined",
-                description: e.note,
-                variant: "default",
-              });
-
-              notify(
-                'admin_message',
-                `ESTIMATE UPDATE: ${custName} - ${e.note}`,
-                'Customer Web',
-                { id: syncId, recordId: e.id, customerId: e.customer_id }
-              );
-              
-              addedAny = true;
-            }
+        if (engData) {
+          for (const e of engData) {
+            handleEngagementAlert(e);
           }
-
-          if (addedAny) {
-            refresh();
-          }
-        } catch (err) {
-        console.warn("[AlertSync] Failed to poll bookings:", err);
+        }
+      } catch (err) {
+        console.warn("[AlertSync] Fallback poll check error:", err);
       }
     };
 
-    const interval = setInterval(syncBookings, 5000); // Check every 5s for snappy alerts
-    syncBookings(); // Initial check
-    return () => clearInterval(interval);
+    // 1. Initial check on mount
+    runCheck();
+
+    // 2. Setup Realtime subscription for instant zero-polling event delivery
+    const channel = supabase
+      .channel('admin-notification-bell')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'bookings' },
+        (payload) => {
+          const b = payload.new;
+          if (b && (b.status === 'tentative' || b.status === 'TENTATIVE')) {
+            handleBookingAlert(b);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'engagements' },
+        (payload) => {
+          const e = payload.new;
+          if (e && (e.type === 'Estimate Response' || e.type === 'Estimate Pre-Check')) {
+            handleEngagementAlert(e);
+          }
+        }
+      )
+      .subscribe();
+
+    // 3. Fallback interval: 60s (only when active/visible tab)
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        runCheck();
+      }
+    }, 60000);
+
+    // 4. Tab visibility change listener
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        runCheck();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      supabase.removeChannel(channel);
+    };
   }, [isEmployee, isFileManagerView, refresh]);
 
   // Priority: Yellow if ANY unread (easier to see), Red if 0 (matches user's screenshot requirement for 'nothing new')

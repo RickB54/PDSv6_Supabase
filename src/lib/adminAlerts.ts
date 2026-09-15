@@ -43,50 +43,30 @@ export interface AdminAlert {
   read?: boolean;
 }
 
+/**
+ * Storage key for local admin alerts
+ */
 const STORAGE_KEY = "admin_alerts";
-const DUMMY_BOOKING_ID = '00000000-0000-0000-0000-000000000000';
 
 /**
- * Pushes alerts to the global database storage (dummy booking)
+ * Pushes alerts to local storage and dispatches update event.
+ * NOTE: Dummy booking DB upsert was removed because inserting id: '00000000-0000-0000-0000-000000000000'
+ * with status: 'system' violated PostgreSQL schema/status constraints (causing recurring 400 Bad Request errors)
+ * and generated 36-48 unnecessary DB writes/min. Alerts are synced locally and via Realtime channels.
  */
 async function syncToDB(alerts: AdminAlert[]): Promise<void> {
-  try {
-    if (localStorage.getItem("demo_mode_active") === "true") {
-      // Prevent background polling from triggering the global write-block toast
-      return;
-    }
-    // Keep only last 200 for DB storage to keep it lightweight
-    const trimmed = alerts.slice(Math.max(0, alerts.length - 200));
-    const dismissedIds: string[] = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
-    await supabase.from('bookings').upsert({
-      id: DUMMY_BOOKING_ID,
-      service_package: 'SYSTEM_ALERTS_STORAGE',
-      status: 'system',
-      booking_vehicle: { alerts: trimmed, dismissed_ids: dismissedIds },
-      notes: `LAST_SYNC:${new Date().toISOString()}`
-    });
-  } catch (err) {
-    console.error("[AdminAlerts] DB Sync Failed:", err);
-  }
+  // No-op: LocalStorage + Realtime event streams manage alert state cleanly without polluting the bookings table.
 }
 
 /**
- * Fetches alerts and dismissed IDs from the global database storage
+ * Fetches alerts and dismissed IDs from local storage
  */
 export async function fetchAlertsFromDB(): Promise<{ alerts: AdminAlert[]; dismissed_ids: string[] }> {
   try {
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('booking_vehicle')
-      .eq('id', DUMMY_BOOKING_ID)
-      .maybeSingle();
-    
-    if (error || !data?.booking_vehicle) return { alerts: [], dismissed_ids: [] };
-    const alerts = Array.isArray(data.booking_vehicle.alerts) ? (data.booking_vehicle.alerts as AdminAlert[]) : [];
-    const dismissed_ids = Array.isArray(data.booking_vehicle.dismissed_ids) ? (data.booking_vehicle.dismissed_ids as string[]) : [];
-    return { alerts, dismissed_ids };
+    const list: AdminAlert[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const dismissed_ids: string[] = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
+    return { alerts: list, dismissed_ids };
   } catch (err) {
-    console.warn("[AdminAlerts] DB Fetch Failed:", err);
     return { alerts: [], dismissed_ids: [] };
   }
 }
