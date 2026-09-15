@@ -1,6 +1,7 @@
 import { supabase, isDemoActive } from './supa-data';
 import { Chemical } from '@/types/chemicals';
 import { saveChemical as saveInventoryChemical, getChemicals as getInventoryChemicals } from './inventory-data';
+import { appCache, invalidateInventoryCache } from './app-cache';
 
 export interface StepChemicalMapping {
     id: string;
@@ -18,23 +19,26 @@ export interface StepChemicalMapping {
 }
 
 export async function getStepChemicalMappings(stepId?: string | string[]): Promise<StepChemicalMapping[]> {
-    let query = supabase.from('step_chemical_mappings').select('*, chemical:chemical_library(*)');
-    if (stepId) {
-        if (Array.isArray(stepId)) {
-            query = query.in('step_id', stepId);
-        } else {
-            query = query.eq('step_id', stepId);
+    const key = `inventory:step_chemical_mappings:${stepId ? JSON.stringify(stepId) : 'all'}`;
+    return appCache.fetchWithCache(key, async () => {
+        let query = supabase.from('step_chemical_mappings').select('*, chemical:chemical_library(*)');
+        if (stepId) {
+            if (Array.isArray(stepId)) {
+                query = query.in('step_id', stepId);
+            } else {
+                query = query.eq('step_id', stepId);
+            }
         }
-    }
-    const { data, error } = await query;
-    if (error) {
-        console.error('Error fetching step chemical mappings:', error);
-        return [];
-    }
-    return (data || []).map((m: any) => ({
-        ...m,
-        chemical: m.chemical
-    }));
+        const { data, error } = await query;
+        if (error) {
+            console.error('Error fetching step chemical mappings:', error);
+            return [];
+        }
+        return (data || []).map((m: any) => ({
+            ...m,
+            chemical: m.chemical
+        }));
+    });
 }
 
 export async function upsertStepChemicalMapping(mapping: Partial<StepChemicalMapping>) {
@@ -52,31 +56,35 @@ export async function upsertStepChemicalMapping(mapping: Partial<StepChemicalMap
         .select()
         .single();
     if (error) throw error;
+    invalidateInventoryCache();
     return data;
 }
 
 export async function deleteStepChemicalMapping(id: string) {
     const { error } = await supabase.from('step_chemical_mappings').delete().eq('id', id);
     if (error) throw error;
+    invalidateInventoryCache();
 }
 
 
 export async function getChemicals(): Promise<Chemical[]> {
-    try {
-        const { data, error } = await supabase
-            .from('chemical_library')
-            .select('*')
-            .order('name');
+    return appCache.fetchWithCache('inventory:chemical_library', async () => {
+        try {
+            const { data, error } = await supabase
+                .from('chemical_library')
+                .select('*')
+                .order('name');
 
-        if (error) {
-            console.error('getChemicals error:', error);
+            if (error) {
+                console.error('getChemicals error:', error);
+                return [];
+            }
+            return data || [];
+        } catch (e) {
+            console.error('getChemicals exception:', e);
             return [];
         }
-        return data || [];
-    } catch (e) {
-        console.error('getChemicals exception:', e);
-        return [];
-    }
+    });
 }
 
 /**
@@ -88,17 +96,9 @@ export async function getCombinedSelectableProducts(): Promise<Chemical[]> {
         // 1. Get Library Chemicals (The professional database)
         const library = await getChemicals();
         
-        // 2. Get Inventory Chemicals (The user's actual stock)
-        const { data: inventoryData, error } = await supabase
-            .from('chemicals')
-            .select('*')
-            .order('name');
+        // 2. Get Inventory Chemicals (The user's actual stock - cached)
+        const inventoryData = await getInventoryChemicals();
         
-        if (error) {
-            console.error('Error fetching inventory for combination:', error);
-            return library;
-        }
-
         if (!inventoryData || inventoryData.length === 0) {
             return library;
         }
@@ -331,6 +331,7 @@ export async function upsertChemical(chemical: Partial<Chemical>): Promise<{ err
             .single();
 
         if (!error && data) {
+            invalidateInventoryCache();
             // SYNC TO INVENTORY: check if it already exists there first to avoid duplicates
             if (isNew) {
                 try {
@@ -415,30 +416,33 @@ export async function updateChemicalPartial(id: string, updates: Partial<Chemica
             .select()
             .single();
 
-        if (!error && data && !skipInventorySync) {
-            try {
-                const inventoryItems = await getInventoryChemicals();
-                const matching = inventoryItems.filter(inv => inv.chemicalLibraryId === id);
-                
-                for (const item of matching) {
-                    const updatesToInventory: any = { ...item };
-                    let changed = false;
+        if (!error && data) {
+            invalidateInventoryCache();
+            if (!skipInventorySync) {
+                try {
+                    const inventoryItems = await getInventoryChemicals();
+                    const matching = inventoryItems.filter(inv => inv.chemicalLibraryId === id);
+                    
+                    for (const item of matching) {
+                        const updatesToInventory: any = { ...item };
+                        let changed = false;
 
-                    if (updates.dilution_ratios) {
-                        updatesToInventory.dilutionRatios = data.dilution_ratios || [];
-                        changed = true;
-                    }
-                    if (updates.primary_image_url) {
-                        updatesToInventory.imageUrl = updates.primary_image_url;
-                        changed = true;
-                    }
+                        if (updates.dilution_ratios) {
+                            updatesToInventory.dilutionRatios = data.dilution_ratios || [];
+                            changed = true;
+                        }
+                        if (updates.primary_image_url) {
+                            updatesToInventory.imageUrl = updates.primary_image_url;
+                            changed = true;
+                        }
 
-                    if (changed) {
-                        await saveInventoryChemical(updatesToInventory, false, true); // skipLibrarySync
+                        if (changed) {
+                            await saveInventoryChemical(updatesToInventory, false, true); // skipLibrarySync
+                        }
                     }
+                } catch (syncErr) {
+                    console.error('Failed to sync inventory on partial update:', syncErr);
                 }
-            } catch (syncErr) {
-                console.error('Failed to sync inventory on partial update:', syncErr);
             }
         }
 
@@ -513,6 +517,7 @@ export async function deleteChemical(idOrChem: string | Chemical, libraryId?: st
             }
         }
 
+        invalidateInventoryCache();
         return true;
     } catch (e) {
         console.error("Failed to delete chemical:", e);
@@ -555,6 +560,7 @@ export async function syncOrphanedChemicalLibraryCards(): Promise<number> {
         if (orphanedLibIds.length > 0) {
             await supabase.from('chemical_library').delete().in('id', orphanedLibIds);
             console.log(`Cleaned up ${orphanedLibIds.length} orphaned chemical library cards.`);
+            invalidateInventoryCache();
             return orphanedLibIds.length;
         }
         return 0;
