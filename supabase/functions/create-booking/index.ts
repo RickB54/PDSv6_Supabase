@@ -2,27 +2,8 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ── Rate Limiting State (Sliding Window per IP in memory) ──
-const ipRequestHistory = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 5; // Max 5 bookings per IP per minute
-
-function isRateLimited(ip: string): { limited: boolean; remaining: number } {
-  const now = Date.now();
-  const timestamps = ipRequestHistory.get(ip) || [];
-  
-  // Prune timestamps older than 60 seconds
-  const validTimestamps = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW_MS);
-  
-  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
-    ipRequestHistory.set(ip, validTimestamps);
-    return { limited: true, remaining: 0 };
-  }
-  
-  validTimestamps.push(now);
-  ipRequestHistory.set(ip, validTimestamps);
-  return { limited: false, remaining: MAX_REQUESTS_PER_WINDOW - validTimestamps.length };
-}
 
 serve(async (req) => {
   const corsHeaders = {
@@ -34,19 +15,41 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    return new Response(JSON.stringify({ error: "missing_supabase_env" }), { status: 500, headers: corsHeaders });
+  }
+
   // Extract client IP
   const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
                    req.headers.get('cf-connecting-ip') ||
                    req.headers.get('x-real-ip') ||
                    'unknown-client';
 
-  // Enforce server-side rate limit
-  const { limited, remaining } = isRateLimited(clientIp);
-  if (limited) {
-    console.warn(`⚠️ Rate limit exceeded on booking creation for IP: ${clientIp}`);
+  let input: any;
+  try {
+    input = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "invalid_json" }), { status: 400, headers: corsHeaders });
+  }
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+  // ── 1. Database-Backed Global Sliding Window Rate Limit ──
+  const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  
+  const { count: ipCount, error: countError } = await supabase
+    .from('bookings')
+    .select('id', { count: 'exact', head: true })
+    .gte('created_at', windowStart)
+    .eq('booking_vehicle->>client_ip', clientIp);
+
+  if (ipCount !== null && ipCount >= MAX_REQUESTS_PER_WINDOW) {
+    console.warn(`⚠️ Rate limit exceeded on booking creation for IP: ${clientIp} (${ipCount} in last minute)`);
     return new Response(
       JSON.stringify({ 
-        error: 'Rate limit exceeded: Max 5 booking submissions per minute per IP. Please wait before trying again.' 
+        error: `Rate limit exceeded: Max ${MAX_REQUESTS_PER_WINDOW} booking submissions per minute per IP. Please wait before trying again.` 
       }),
       { 
         headers: { 
@@ -61,20 +64,7 @@ serve(async (req) => {
     );
   }
 
-  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-  const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-    return new Response(JSON.stringify({ error: "missing_supabase_env" }), { status: 500, headers: corsHeaders });
-  }
-
-  let input: any;
-  try {
-    input = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "invalid_json" }), { status: 400, headers: corsHeaders });
-  }
-
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+  const remaining = Math.max(0, MAX_REQUESTS_PER_WINDOW - (ipCount || 0) - 1);
 
   try {
     let customerId: string | null = null;
@@ -172,7 +162,8 @@ serve(async (req) => {
         type: input.vehicle_type || '',
         color: input.color || '',
         condition: input.condition || '',
-        placeOfService: input.place_of_service || ''
+        placeOfService: input.place_of_service || '',
+        client_ip: clientIp
       }
     };
 
