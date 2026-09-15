@@ -27,6 +27,10 @@ export function GlobalChatWidget() {
     const [forceShowPopup, setForceShowPopup] = useState(false);
 
     const scrollRef = useRef<HTMLDivElement>(null);
+    const isOpenRef = useRef(isOpen);
+    useEffect(() => {
+        isOpenRef.current = isOpen;
+    }, [isOpen]);
 
     // Load messages function
     const loadMessages = async () => {
@@ -132,7 +136,7 @@ export function GlobalChatWidget() {
                 
                 const isForMe = newMsg.recipient_email?.toLowerCase() === myEmail || newMsg.sender_email?.toLowerCase() === myEmail;
                 
-                if (!isOpen) {
+                if (!isOpenRef.current) {
                     if (isAdmin || isForMe) {
                         setHasUnread(true);
                     }
@@ -154,7 +158,7 @@ export function GlobalChatWidget() {
 
         // Listen for global audio alerts (triggered by ChatAudioAlert hidden component)
         const handleGlobalAlert = () => {
-            if (!isOpen) setHasUnread(true);
+            if (!isOpenRef.current) setHasUnread(true);
         };
         window.addEventListener('new-chat-alert', handleGlobalAlert);
 
@@ -162,7 +166,7 @@ export function GlobalChatWidget() {
             supabase.removeChannel(channel);
             window.removeEventListener('new-chat-alert', handleGlobalAlert);
         };
-    }, [isIdentified, guestEmail, isOpen]);
+    }, [isIdentified, guestEmail]);
 
     // Presence Tracking (Global)
     useEffect(() => {

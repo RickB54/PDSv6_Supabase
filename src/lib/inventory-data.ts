@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 const isDemoActive = () => localStorage.getItem("demo_mode_active") === "true";
 import { upsertExpense } from './db';
 import { compressImageForUpload } from './image-compression';
+import { appCache, invalidateInventoryCache } from './app-cache';
 
 export async function uploadInventoryImage(file: File): Promise<string | null> {
     if (isDemoActive()) return null;
@@ -169,18 +170,19 @@ export interface UsageHistory {
 // ============================================
 
 export async function getChemicals(): Promise<Chemical[]> {
-    const { data, error } = await supabase
-        .from('chemicals')
-        .select('*')
-        .order('name');
+    return appCache.fetchWithCache('inventory:chemicals', async () => {
+        const { data, error } = await supabase
+            .from('chemicals')
+            .select('*')
+            .order('name');
 
-    if (error) {
-        console.error('Error loading chemicals:', error);
-        return [];
-    }
+        if (error) {
+            console.error('Error loading chemicals:', error);
+            return [];
+        }
 
-    // Map database fields to component format
-    return (data || []).map(item => {
+        // Map database fields to component format
+        return (data || []).map(item => {
         let bs = item.bottle_size || '';
         let ct = item.container_type || '';
         if (bs.includes('|__CT__|')) {
@@ -249,6 +251,7 @@ export async function getChemicals(): Promise<Chemical[]> {
             containerLocation: secLoc
         };
     });
+    }, { domain: 'inventory', ttlMs: 15 * 60 * 1000 });
 }
 
 export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean = false, skipLibrarySync: boolean = false): Promise<void> {
@@ -457,6 +460,7 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         }
     }
 
+    invalidateInventoryCache();
 }
 
 export async function deleteChemical(id: string, deleteLibraryCard: boolean = false): Promise<void> {
@@ -509,6 +513,7 @@ export async function deleteChemical(id: string, deleteLibraryCard: boolean = fa
             }
         }
     }
+    invalidateInventoryCache();
 }
 
 export async function cleanupGhostDuplicates(): Promise<number> {
@@ -576,6 +581,7 @@ export async function cleanupGhostDuplicates(): Promise<number> {
         }
     }
     
+    if (deletedCount > 0) invalidateInventoryCache();
     return deletedCount;
 }
 
@@ -719,6 +725,7 @@ export async function cleanupInventoryDuplicates(): Promise<{ deleted: number; l
         else deletedCount = toDelete.length;
     }
 
+    if (deletedCount > 0 || linkedCount > 0) invalidateInventoryCache();
     return { deleted: deletedCount, linked: linkedCount };
 }
 
@@ -759,20 +766,21 @@ export async function getMaterials(): Promise<Material[]> {
         return (MOCK_INVENTORY as any).materials || [];
     }
 
-    console.log('[InventoryData] getMaterials: Fetching from Supabase...');
-    const { data, error } = await supabase
-        .from('materials')
-        .select('*')
-        .order('name');
+    return appCache.fetchWithCache('inventory:materials', async () => {
+        console.log('[InventoryData] getMaterials: Fetching from Supabase...');
+        const { data, error } = await supabase
+            .from('materials')
+            .select('*')
+            .order('name');
 
-    if (error) {
-        console.error('[InventoryData] getMaterials: Supabase Error!', error);
-        return [];
-    }
+        if (error) {
+            console.error('[InventoryData] getMaterials: Supabase Error!', error);
+            return [];
+        }
 
-    console.log(`[InventoryData] getMaterials: Successfully loaded ${data?.length || 0} materials`);
+        console.log(`[InventoryData] getMaterials: Successfully loaded ${data?.length || 0} materials`);
 
-    return (data || []).map(item => {
+        return (data || []).map(item => {
         const { location: loc, containerLocation: cl } = sanitizeSupplyEquipmentLocation(item.location || '', item.container_location || '');
 
         return {
@@ -796,6 +804,7 @@ export async function getMaterials(): Promise<Material[]> {
             hideFromIac: item.hide_from_iac || false
         };
     });
+    }, { domain: 'inventory', ttlMs: 15 * 60 * 1000 });
 }
 
 export async function saveMaterial(material: Partial<Material>, isNew: boolean = false): Promise<Material | undefined> {
@@ -953,6 +962,7 @@ export async function saveMaterial(material: Partial<Material>, isNew: boolean =
         console.warn('[InventoryData] Local cache sync failed:', cacheErr);
     }
 
+    invalidateInventoryCache();
     return savedItem;
 }
 
@@ -964,6 +974,7 @@ export async function deleteMaterial(id: string): Promise<void> {
         .eq('id', id);
 
     if (error) throw error;
+    invalidateInventoryCache();
 }
 
 export async function batchUpdateCategory(oldCat: string, newCat: string, targetMode: 'supply' | 'equipment' | 'material' | 'tool' | 'chemical' | 'chemicals'): Promise<void> {
@@ -1088,6 +1099,7 @@ export async function batchUpdateContainerLocation(oldCl: string, newCl: string,
                 .eq('id', row.id);
         }
     }
+    invalidateInventoryCache();
 }
 
 export async function globalDeleteLocation(loc: string): Promise<void> {
@@ -1104,6 +1116,7 @@ export async function globalDeleteLocation(loc: string): Promise<void> {
             }
         }
     }
+    invalidateInventoryCache();
 }
 
 export async function globalDeleteContainerLocation(loc: string): Promise<void> {
@@ -1145,6 +1158,7 @@ export async function globalDeleteContainerLocation(loc: string): Promise<void> 
             }
         }
     }
+    invalidateInventoryCache();
 }
 
 
@@ -1158,41 +1172,43 @@ export async function getTools(): Promise<Tool[]> {
         return (MOCK_INVENTORY as any).tools || (MOCK_INVENTORY as any).equipment || [];
     }
 
-    const { data, error } = await supabase
-        .from('tools')
-        .select('*')
-        .order('name');
+    return appCache.fetchWithCache('inventory:tools', async () => {
+        const { data, error } = await supabase
+            .from('tools')
+            .select('*')
+            .order('name');
 
-    if (error) {
-        console.error('Error loading tools:', error);
-        return [];
-    }
+        if (error) {
+            console.error('Error loading tools:', error);
+            return [];
+        }
 
-    return (data || []).map(item => {
-        const { location: loc, containerLocation: cl } = sanitizeSupplyEquipmentLocation(item.location || '', item.container_location || '');
+        return (data || []).map(item => {
+            const { location: loc, containerLocation: cl } = sanitizeSupplyEquipmentLocation(item.location || '', item.container_location || '');
 
-        return {
-            id: item.id,
-            name: item.name,
-            category: item.category || 'Other',
-            warranty: item.warranty || '',
-            purchaseDate: item.purchase_date || '',
-            price: item.price || 0,
-            quantity: item.quantity || 1,
-            lowThreshold: item.low_threshold || 1,
-            lifeExpectancy: item.life_expectancy || '',
-            notes: item.notes || '',
-            imageUrl: item.image_url,
-            createdAt: item.created_at,
-            updatedAt: item.updated_at,
-            wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
-            actualPrice: item.actual_price,
-            salePrice: item.sale_price,
-            location: loc,
-            containerLocation: cl,
-            hideFromIac: item.hide_from_iac || false
-        };
-    });
+            return {
+                id: item.id,
+                name: item.name,
+                category: item.category || 'Other',
+                warranty: item.warranty || '',
+                purchaseDate: item.purchase_date || '',
+                price: item.price || 0,
+                quantity: item.quantity || 1,
+                lowThreshold: item.low_threshold || 1,
+                lifeExpectancy: item.life_expectancy || '',
+                notes: item.notes || '',
+                imageUrl: item.image_url,
+                createdAt: item.created_at,
+                updatedAt: item.updated_at,
+                wherePurchased: (item.where_purchased && item.where_purchased.trim() !== "") ? item.where_purchased : "Amazon",
+                actualPrice: item.actual_price,
+                salePrice: item.sale_price,
+                location: loc,
+                containerLocation: cl,
+                hideFromIac: item.hide_from_iac || false
+            };
+        });
+    }, { domain: 'inventory', ttlMs: 15 * 60 * 1000 });
 }
 
 export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Promise<void> {
@@ -1280,6 +1296,7 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
             }
             if (currentErr) throw currentErr;
             
+            invalidateInventoryCache();
             // Return mapped object
             return {
                 id: dbData.id,
@@ -1301,6 +1318,22 @@ export async function saveTool(tool: Partial<Tool>, isNew: boolean = false): Pro
         }
     }
 
+    invalidateInventoryCache();
+    return {
+        id: dbData.id,
+        name: dbData.name,
+        category: dbData.category,
+        quantity: dbData.quantity,
+        price: dbData.price,
+        purchaseDate: dbData.purchase_date,
+        wherePurchased: dbData.where_purchased,
+        actualPrice: dbData.actual_price,
+        salePrice: dbData.sale_price,
+        notes: dbData.notes,
+        imageUrl: dbData.image_url,
+        location: dbData.location,
+        updatedAt: dbData.updated_at
+    } as any;
 }
 
 export async function deleteTool(id: string): Promise<void> {
@@ -1311,6 +1344,7 @@ export async function deleteTool(id: string): Promise<void> {
         .eq('id', id);
 
     if (error) throw error;
+    invalidateInventoryCache();
 }
 
 // ============================================
@@ -1318,31 +1352,32 @@ export async function deleteTool(id: string): Promise<void> {
 // ============================================
 
 export async function getUsageHistory(): Promise<UsageHistory[]> {
-    const { data, error } = await supabase
-        .from('usage_history')
-        .select('*')
-        .order('date', { ascending: false });
+    return appCache.fetchWithCache('inventory:usage_history', async () => {
+        const { data, error } = await supabase
+            .from('usage_history')
+            .select('*')
+            .order('date', { ascending: false });
 
-    if (error) {
-        console.error('Error loading usage history:', error);
-        return [];
-    }
+        if (error) {
+            console.error('Error loading usage history:', error);
+            return [];
+        }
 
-    return (data || []).map(item => ({
-        id: item.id,
-        chemicalId: item.chemical_id,
-        materialId: item.material_id,
-        toolId: item.tool_id,
-        serviceName: item.service_name || '',
-        date: item.date,
-        remainingStock: item.remaining_stock,
-        amountUsed: item.amount_used,
-        notes: item.notes,
-        // We'll need to fetch names separately or join
-        chemicalName: undefined, // TODO: Add join or separate query
-        materialName: undefined,
-        toolName: undefined
-    }));
+        return (data || []).map(item => ({
+            id: item.id,
+            chemicalId: item.chemical_id,
+            materialId: item.material_id,
+            toolId: item.tool_id,
+            serviceName: item.service_name || '',
+            date: item.date,
+            remainingStock: item.remaining_stock,
+            amountUsed: item.amount_used,
+            notes: item.notes,
+            chemicalName: undefined,
+            materialName: undefined,
+            toolName: undefined
+        }));
+    }, { domain: 'inventory', ttlMs: 15 * 60 * 1000 });
 }
 
 export async function saveUsageHistory(usage: Partial<UsageHistory>): Promise<void> {
@@ -1368,6 +1403,7 @@ export async function saveUsageHistory(usage: Partial<UsageHistory>): Promise<vo
         .upsert(dbData);
 
     if (error) throw error;
+    invalidateInventoryCache();
 }
 
 export async function deleteUsageHistory(id: string): Promise<void> {
@@ -1378,6 +1414,7 @@ export async function deleteUsageHistory(id: string): Promise<void> {
         .eq('id', id);
 
     if (error) throw error;
+    invalidateInventoryCache();
 }
 
 // ============================================
@@ -1436,23 +1473,27 @@ async function saveFullMeta(key: string, payload: { media: SetupMedia[]; categor
 }
 
 export async function getSetupMedia(key: string = MOBILE_SETUP_KEY): Promise<SetupMedia[]> {
-    try {
-        const full = await getFullMeta(key);
-        return Array.isArray(full.media) ? full.media : [];
-    } catch (err) {
-        console.error('Error loading setup media:', err);
-        return [];
-    }
+    return appCache.fetchWithCache('inventory:setup_media:' + key, async () => {
+        try {
+            const full = await getFullMeta(key);
+            return Array.isArray(full.media) ? full.media : [];
+        } catch (err) {
+            console.error('Error loading setup media:', err);
+            return [];
+        }
+    }, { domain: 'inventory', ttlMs: 15 * 60 * 1000 });
 }
 
 export async function getSetupCategories(key: string = MOBILE_SETUP_KEY): Promise<SetupCategory[]> {
-    try {
-        const full = await getFullMeta(key);
-        const cats = Array.isArray(full.categories) ? full.categories : getDefaultCategories(key);
-        return cats.sort((a: SetupCategory, b: SetupCategory) => a.order - b.order);
-    } catch {
-        return getDefaultCategories(key);
-    }
+    return appCache.fetchWithCache('inventory:setup_categories:' + key, async () => {
+        try {
+            const full = await getFullMeta(key);
+            const cats = Array.isArray(full.categories) ? full.categories : getDefaultCategories(key);
+            return cats.sort((a: SetupCategory, b: SetupCategory) => a.order - b.order);
+        } catch {
+            return getDefaultCategories(key);
+        }
+    }, { domain: 'inventory', ttlMs: 15 * 60 * 1000 });
 }
 
 export async function saveSetupCategories(categories: SetupCategory[], key: string = MOBILE_SETUP_KEY): Promise<void> {
@@ -1460,6 +1501,7 @@ export async function saveSetupCategories(categories: SetupCategory[], key: stri
     try {
         const full = await getFullMeta(key);
         await saveFullMeta(key, { media: full.media || [], categories });
+        invalidateInventoryCache();
     } catch (err) {
         console.error('Error saving categories:', err);
         throw err;
@@ -1482,6 +1524,7 @@ export async function saveSetupMedia(media: SetupMedia, key: string = MOBILE_SET
         }
 
         await saveFullMeta(key, { media: next, categories });
+        invalidateInventoryCache();
     } catch (err) {
         console.error('Error saving setup media:', err);
         throw err;
@@ -1496,6 +1539,7 @@ export async function updateSetupMediaCategory(id: string, categoryId: string, k
         const categories: SetupCategory[] = Array.isArray(full.categories) ? full.categories : getDefaultCategories(key);
         const updated = media.map(m => m.id === id ? { ...m, category: categoryId } : m);
         await saveFullMeta(key, { media: updated, categories });
+        invalidateInventoryCache();
     } catch (err) {
         console.error('Error updating media category:', err);
         throw err;
@@ -1534,6 +1578,7 @@ export async function clearMaterialLocation(locationToClear: string): Promise<vo
         } catch (e) {
             console.error('Failed to update local cache for material location sync:', e);
         }
+        invalidateInventoryCache();
     } catch (e) {
         console.error('Error clearing material location:', e);
         throw e;
@@ -1548,6 +1593,7 @@ export async function deleteSetupMedia(id: string, key: string = MOBILE_SETUP_KE
         const media: SetupMedia[] = Array.isArray(full.media) ? full.media : [];
         const next = media.filter(m => m.id !== id);
         await saveFullMeta(key, { media: next, categories });
+        invalidateInventoryCache();
     } catch (err) {
         console.error('Error deleting setup media:', err);
         throw err;

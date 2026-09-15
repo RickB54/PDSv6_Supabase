@@ -2,6 +2,13 @@ import { createClient } from "@supabase/supabase-js";
 import { supabase } from './supabase';
 import localforage from 'localforage';
 import { MOCK_GALLERY } from './demoMockData';
+import { 
+    appCache, 
+    invalidateCustomerCache, 
+    invalidateBookingCache, 
+    invalidateFinancialCache, 
+    invalidateAuditHistoryCache 
+} from './app-cache';
 // Re-export supabase so other files can import it from here if needed, 
 // but primarily so this file can use it.
 export { supabase };
@@ -167,100 +174,102 @@ export const getSupabaseEmployees = async (): Promise<Employee[]> => {
             role: e.role.charAt(0).toUpperCase() + e.role.slice(1)
         }));
     }
-    try {
-        // 1. Fetch from Supabase using singleton anon client
+    return appCache.fetchWithCache('users:employees', async () => {
+        try {
+            // 1. Fetch from Supabase using singleton anon client
 
-        const { data: supaUsers, error } = await anonClient
-            .from('app_users')
-            .select('id, email, name, role, created_at, updated_at, full_legal_name, phone, home_address, dob, emergency_contact_name, emergency_contact_phone, job_title, employee_type, status, hire_date, termination_date, tax_classification, payment_method_notes, skill_rating, work_ethic_notes, customer_feedback_score, incident_log, tier_promotion_history, internal_notes, documents_on_file');
+            const { data: supaUsers, error } = await anonClient
+                .from('app_users')
+                .select('id, email, name, role, created_at, updated_at, full_legal_name, phone, home_address, dob, emergency_contact_name, emergency_contact_phone, job_title, employee_type, status, hire_date, termination_date, tax_classification, payment_method_notes, skill_rating, work_ethic_notes, customer_feedback_score, incident_log, tier_promotion_history, internal_notes, documents_on_file');
 
-        if (error) {
-            console.error('Supabase fetch error (app_users):', error);
-        }
-
-        const safeSupaUsers = supaUsers || [];
-
-        // 2. Fetch Local Metadata
-        const localEmployees = (await localforage.getItem<Employee[]>('company-employees')) || [];
-        const localMap = new Map<string, Employee>();
-        localEmployees.forEach(emp => {
-            if (emp.email) localMap.set(emp.email.toLowerCase(), emp);
-        });
-
-        // 3. Merge & Deduplicate
-        const mergedEmployees: Employee[] = [];
-        const seenEmails = new Set<string>();
-
-        // A. Add Supabase Users
-        for (const supaUser of safeSupaUsers) {
-            const email = (supaUser.email || '').toLowerCase();
-            if (!email) continue;
-            if (seenEmails.has(email)) continue; // Deduplicate
-
-            // Check if this user is actually an employee or admin
-            const role = (supaUser.role || '').toLowerCase();
-
-            // STRICT FILTER: Only allow 'admin', 'owner', 'employee'
-            if (!['admin', 'owner', 'employee'].includes(role)) {
-                continue;
+            if (error) {
+                console.error('Supabase fetch error (app_users):', error);
             }
 
-            const normalizedRole = (role === 'admin' || role === 'owner') ? 'Admin' : 'Employee';
+            const safeSupaUsers = supaUsers || [];
 
-            // Get local metadata
-            const localData = localMap.get(email);
-
-            mergedEmployees.push({
-                id: supaUser.id,
-                email: supaUser.email,
-                name: supaUser.name || supaUser.email,
-                role: normalizedRole,
-                // Local metadata
-                flatRate: localData?.flatRate,
-                bonuses: localData?.bonuses,
-                paymentByJob: localData?.paymentByJob,
-                jobRates: localData?.jobRates,
-                lastPaid: localData?.lastPaid,
-                // Profile fields ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â sourced directly from Supabase
-                full_legal_name: supaUser.full_legal_name,
-                phone: supaUser.phone,
-                home_address: supaUser.home_address,
-                dob: supaUser.dob,
-                emergency_contact_name: supaUser.emergency_contact_name,
-                emergency_contact_phone: supaUser.emergency_contact_phone,
-                job_title: (supaUser as any).job_title,
-                employee_type: supaUser.employee_type,
-                status: supaUser.status || 'Active',
-                hire_date: supaUser.hire_date,
-                termination_date: supaUser.termination_date,
-                tax_classification: supaUser.tax_classification,
-                payment_method_notes: supaUser.payment_method_notes,
-                skill_rating: supaUser.skill_rating,
-                work_ethic_notes: supaUser.work_ethic_notes,
-                customer_feedback_score: supaUser.customer_feedback_score,
-                incident_log: supaUser.incident_log || [],
-                tier_promotion_history: supaUser.tier_promotion_history || [],
-                internal_notes: supaUser.internal_notes,
-                documents_on_file: supaUser.documents_on_file || [],
-                profilePhotoUrl: Array.isArray(supaUser.documents_on_file) 
-                    ? supaUser.documents_on_file.find((d: any) => d.type === 'profile_photo')?.url 
-                    : undefined,
+            // 2. Fetch Local Metadata
+            const localEmployees = (await localforage.getItem<Employee[]>('company-employees')) || [];
+            const localMap = new Map<string, Employee>();
+            localEmployees.forEach(emp => {
+                if (emp.email) localMap.set(emp.email.toLowerCase(), emp);
             });
 
-            seenEmails.add(email);
+            // 3. Merge & Deduplicate
+            const mergedEmployees: Employee[] = [];
+            const seenEmails = new Set<string>();
+
+            // A. Add Supabase Users
+            for (const supaUser of safeSupaUsers) {
+                const email = (supaUser.email || '').toLowerCase();
+                if (!email) continue;
+                if (seenEmails.has(email)) continue; // Deduplicate
+
+                // Check if this user is actually an employee or admin
+                const role = (supaUser.role || '').toLowerCase();
+
+                // STRICT FILTER: Only allow 'admin', 'owner', 'employee'
+                if (!['admin', 'owner', 'employee'].includes(role)) {
+                    continue;
+                }
+
+                const normalizedRole = (role === 'admin' || role === 'owner') ? 'Admin' : 'Employee';
+
+                // Get local metadata
+                const localData = localMap.get(email);
+
+                mergedEmployees.push({
+                    id: supaUser.id,
+                    email: supaUser.email,
+                    name: supaUser.name || supaUser.email,
+                    role: normalizedRole,
+                    // Local metadata
+                    flatRate: localData?.flatRate,
+                    bonuses: localData?.bonuses,
+                    paymentByJob: localData?.paymentByJob,
+                    jobRates: localData?.jobRates,
+                    lastPaid: localData?.lastPaid,
+                    // Profile fields ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â  sourced directly from Supabase
+                    full_legal_name: supaUser.full_legal_name,
+                    phone: supaUser.phone,
+                    home_address: supaUser.home_address,
+                    dob: supaUser.dob,
+                    emergency_contact_name: supaUser.emergency_contact_name,
+                    emergency_contact_phone: supaUser.emergency_contact_phone,
+                    job_title: (supaUser as any).job_title,
+                    employee_type: supaUser.employee_type,
+                    status: supaUser.status || 'Active',
+                    hire_date: supaUser.hire_date,
+                    termination_date: supaUser.termination_date,
+                    tax_classification: supaUser.tax_classification,
+                    payment_method_notes: supaUser.payment_method_notes,
+                    skill_rating: supaUser.skill_rating,
+                    work_ethic_notes: supaUser.work_ethic_notes,
+                    customer_feedback_score: supaUser.customer_feedback_score,
+                    incident_log: supaUser.incident_log || [],
+                    tier_promotion_history: supaUser.tier_promotion_history || [],
+                    internal_notes: supaUser.internal_notes,
+                    documents_on_file: supaUser.documents_on_file || [],
+                    profilePhotoUrl: Array.isArray(supaUser.documents_on_file) 
+                        ? supaUser.documents_on_file.find((d: any) => d.type === 'profile_photo')?.url 
+                        : undefined,
+                });
+
+                seenEmails.add(email);
+            }
+
+            // NOTE: Local-only employee fallback intentionally removed.
+            // Supabase app_users is the single source of truth.
+            // Stale localforage entries (ghosts/orphans) are intentionally excluded.
+
+            // Sort by name
+            return mergedEmployees.sort((a, b) => a.name.localeCompare(b.name));
+
+        } catch (err) {
+            console.error('getSupabaseEmployees failed:', err);
+            return [];
         }
-
-        // NOTE: Local-only employee fallback intentionally removed.
-        // Supabase app_users is the single source of truth.
-        // Stale localforage entries (ghosts/orphans) are intentionally excluded.
-
-        // Sort by name
-        return mergedEmployees.sort((a, b) => a.name.localeCompare(b.name));
-
-    } catch (err) {
-        console.error('getSupabaseEmployees failed:', err);
-        return [];
-    }
+    }, { domain: 'users', ttlMs: 15 * 60 * 1000 });
 };
 
 // ------------------------------------------------------------------
@@ -329,7 +338,8 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
         const { MOCK_CUSTOMERS } = await import('./demoMockData');
         return MOCK_CUSTOMERS as Customer[];
     }
-    try {
+    return appCache.fetchWithCache('customers:all', async () => {
+        try {
         // 1. Fetch CRM customers with their vehicles
         // IMPORTANT: Photos are in customers table, NOT vehicles table
         const { data: crmData, error: crmError } = await supabase
@@ -547,7 +557,8 @@ export const getSupabaseCustomers = async (): Promise<Customer[]> => {
         console.error('getSupabaseCustomers exception:', err);
         return [];
     }
-}
+    }, { domain: 'customers', ttlMs: 10 * 60 * 1000 });
+};
 
 /**
  * Aggregates all data related to a single customer for reporting.
@@ -809,6 +820,7 @@ export async function upsertSupabaseVehicle(vehicleData: {
             throw error;
         }
         console.log('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Vehicle saved successfully with ID:', data.id);
+        invalidateCustomerCache();
         return data;
     } catch (err) {
         console.error('Failed to save vehicle to Supabase:', err);
@@ -828,6 +840,7 @@ export const deleteSupabaseVehicle = async (id: string) => {
             throw error;
         }
         console.log('ÃƒÆ’Ã‚Â¢Ãƒâ€¦Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ Vehicle deleted successfully:', id);
+        invalidateCustomerCache();
     } catch (err) {
         console.error('deleteSupabaseVehicle error:', err);
         throw err;
@@ -977,6 +990,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
         }
     }
 
+    invalidateCustomerCache();
     return {
         ...upserted,
         name: upserted.full_name, // Map back for consistency
@@ -1243,6 +1257,7 @@ export const deleteSupabaseCustomer = async (id: string) => {
             .eq('id', id);
 
         console.log(`[DeleteCustomer] Completed. CRM count: ${crmCount}, Auth count: ${authCount}`);
+        invalidateCustomerCache();
 
         return {
             success: true,
@@ -1459,130 +1474,127 @@ export const resolvePlaceOfService = (
 };
 
 export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise<Estimate[]> => {
-    try {
-        let query = supabase
-            .from('estimates')
-            .select('*, customers(full_name), vehicles(make, model, year)')
-            .order('created_at', { ascending: false });
+    return appCache.fetchWithCache('financials:estimates:' + filterByCurrentUser, async () => {
+        try {
+            let query = supabase
+                .from('estimates')
+                .select('*, customers(full_name), vehicles(make, model, year)')
+                .order('created_at', { ascending: false });
 
-        if (filterByCurrentUser) {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                // Strategy 1: Lookup by email (case-insensitive)
-                let { data: customerData } = await supabase
-                    .from('customers')
-                    .select('id')
-                    .ilike('email', user.email ?? '')
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
-                // Strategy 2: Fallback - lookup by user_id stored in customers table
-                if (!customerData) {
-                    const { data: byUserId } = await supabase
+            if (filterByCurrentUser) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    // Strategy 1: Lookup by email (case-insensitive)
+                    let { data: customerData } = await supabase
                         .from('customers')
                         .select('id')
-                        .eq('user_id', user.id)
+                        .ilike('email', user.email ?? '')
                         .order('created_at', { ascending: false })
                         .limit(1)
                         .maybeSingle();
-                    customerData = byUserId;
-                }
 
-                if (customerData) {
-                    query = query.eq('customer_id', customerData.id);
+                    // Strategy 2: Fallback - lookup by user_id stored in customers table
+                    if (!customerData) {
+                        const { data: byUserId } = await supabase
+                            .from('customers')
+                            .select('id')
+                            .eq('user_id', user.id)
+                            .order('created_at', { ascending: false })
+                            .limit(1)
+                            .maybeSingle();
+                        customerData = byUserId;
+                    }
+
+                    if (customerData) {
+                        query = query.eq('customer_id', customerData.id);
+                    } else {
+                        console.warn(`[MyEstimates] No customer record found for auth user: ${user.email} (${user.id})`);
+                        return [];
+                    }
                 } else {
-                    console.warn(`[MyEstimates] No customer record found for auth user: ${user.email} (${user.id})`);
                     return [];
                 }
-            } else {
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('getSupabaseEstimates error:', error);
                 return [];
             }
-        }
 
-        const { data, error } = await query;
+            const results = (data || []).map((e: any) => {
+                let virtualVehicle = null;
+                const filteredServices = (e.services || []).filter((s: any) => {
+                    if (s.name?.startsWith("VIRTUAL_SENT:")) {
+                        (e as any).isSent = s.name.replace("VIRTUAL_SENT:", "").trim() === "true";
+                        return false;
+                    }
+                    if (s.name?.startsWith("VIRTUAL_SENT_DATE:")) {
+                        (e as any).sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
+                        return false;
+                    }
+                    if (s.name?.startsWith("VIRTUAL_VEHICLE:")) {
+                        virtualVehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
+                        return false;
+                    }
+                    if (s.name?.startsWith("VIRTUAL_CUSTOMER:")) {
+                        return false;
+                    }
+                    if (s.name?.startsWith("VIRTUAL_PLACE_OF_SERVICE:")) {
+                        (e as any).placeOfService = s.name.replace("VIRTUAL_PLACE_OF_SERVICE:", "").trim();
+                        return false;
+                    }
+                    return true;
+                });
 
-        if (error) {
-            console.error('getSupabaseEstimates error:', error);
+                // Reconstruct legacy customer name
+                let reconstructedCust = e.customers?.full_name || '';
+                const custMeta = (e.services || []).find((s: any) => s.name?.startsWith("VIRTUAL_CUSTOMER:"));
+                if (custMeta) {
+                    reconstructedCust = custMeta.name.replace("VIRTUAL_CUSTOMER:", "").trim();
+                }
+
+                return {
+                    ...e,
+                    services: filteredServices,
+                    customerName: reconstructedCust || 'Unknown Customer',
+                    customer: e.customers ? {
+                        id: e.customer_id,
+                        name: e.customers.full_name
+                    } : (reconstructedCust ? { id: e.customer_id || '', name: reconstructedCust } : undefined),
+                    vehicle: virtualVehicle || (e.vehicles ? `${e.vehicles.year || ''} ${e.vehicles.make || ''} ${e.vehicles.model || ''}`.trim() : (e.vehicle_type || 'Unknown Vehicle')),
+                    estimateNumber: e.estimate_number || `EST-${e.id.slice(0, 4).toUpperCase()}`,
+                    estimateDate: e.estimate_date || e.date,
+                    discount: e.discount || 0,
+                    discountType: e.discount_type || 'fixed'
+                };
+            });
+
+            // Merge local storage estimates for demo/mock testing
+            try {
+                const localEsts = await localforage.getItem<any[]>('estimates') || [];
+                localEsts.forEach(le => {
+                    if (!results.some(r => r.id === le.id)) {
+                        results.push({
+                            ...le,
+                            id: le.id || `local_${Date.now()}`,
+                            customerName: le.customerName || "Local Customer",
+                            vehicle: le.vehicle || "Local Vehicle",
+                            date: le.date || new Date().toISOString().split('T')[0]
+                        });
+                    }
+                });
+            } catch (e) {
+                console.warn("Local estimates merge failed", e);
+            }
+
+            return results.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime());
+        } catch (err) {
+            console.error('getSupabaseEstimates exception:', err);
             return [];
         }
-
-        const results = (data || []).map((e: any) => {
-            let virtualVehicle = null;
-            const filteredServices = (e.services || []).filter((s: any) => {
-                if (s.name?.startsWith("VIRTUAL_SENT:")) {
-                    (e as any).isSent = s.name.replace("VIRTUAL_SENT:", "").trim() === "true";
-                    return false;
-                }
-                if (s.name?.startsWith("VIRTUAL_SENT_DATE:")) {
-                    (e as any).sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
-                    return false;
-                }
-                if (s.name?.startsWith("VIRTUAL_VEHICLE:")) {
-                    virtualVehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
-                    return false;
-                }
-                if (s.name?.startsWith("VIRTUAL_CUSTOMER:")) {
-                    return false;
-                }
-                if (s.name?.startsWith("VIRTUAL_PLACE_OF_SERVICE:")) {
-                    (e as any).placeOfService = s.name.replace("VIRTUAL_PLACE_OF_SERVICE:", "").trim();
-                    return false;
-                }
-                return true;
-            });
-
-            return {
-                id: e.id,
-                estimateNumber: e.estimate_number,
-                customerId: e.customer_id,
-                customerName: e.customers?.full_name || 'Unknown',
-                vehicle: virtualVehicle ? virtualVehicle : (e.vehicles ? `${e.vehicles.year} ${e.vehicles.make} ${e.vehicles.model}` : 'Unknown'),
-                vehicleId: e.vehicle_id,
-                services: filteredServices,
-                isSent: (e as any).isSent ?? false,
-                sentDate: (e as any).sentDate,
-                total: e.total,
-                date: e.date || e.created_at?.split('T')[0],
-                status: e.status,
-                createdAt: e.created_at,
-                created_at: e.created_at,
-                notes: e.notes,
-                vehicleType: e.vehicle_type,
-                packageId: e.package_id,
-                addonIds: e.addon_ids || [],
-                discount: e.discount,
-                discountType: e.discount_type as ('percent' | 'amount' | undefined),
-                placeOfService: (e as any).placeOfService || e.place_of_service || undefined,
-                estimateDate: e.estimate_date
-            };
-        });
-
-        // Merge Local Estimates (Offline or Legacy)
-        try {
-            const localEst = await localforage.getItem<any[]>('estimates') || [];
-            localEst.forEach(le => {
-                // If it's a static mock from demo or if it's already in results, skip
-                if (le.isStaticMock) return;
-                const exists = results.some(re => re.id === le.id || (re.estimateNumber && re.estimateNumber === le.estimateNumber));
-                if (!exists) {
-                    results.push({
-                        ...le,
-                        id: le.id || `local_est_${Date.now()}_${Math.random()}`,
-                        customerName: le.customerName || "Local Prospect",
-                        date: le.date || le.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
-                    });
-                }
-            });
-        } catch (e) {
-            console.warn("Local estimates merge failed", e);
-        }
-
-        return results.sort((a, b) => new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime());
-    } catch (err) {
-        console.error('getSupabaseEstimates exception:', err);
-        return [];
-    }
+    }, { domain: 'financials', ttlMs: 10 * 60 * 1000 });
 };
 
 /**
@@ -1661,16 +1673,19 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
             ests.push(saved);
         }
         await localforage.setItem('estimates', ests);
+        invalidateFinancialCache();
         return saved;
     }
 
     if (p.id) {
         const { data, error } = await supabase.from('estimates').update(payload).eq('id', p.id).select().single();
         if (error) throw error;
+        invalidateFinancialCache();
         return data;
     } else {
         const { data, error } = await supabase.from('estimates').insert([payload]).select().single();
         if (error) throw error;
+        invalidateFinancialCache();
         return data;
     }
 };
@@ -1793,193 +1808,195 @@ export const deleteStaffShift = async (id: string) => {
 // [Removed duplicate Bookings section. See end of file for implementation.]
 
 export const getSupabaseInvoices = async (filterByCurrentUser = false): Promise<any[]> => {
-    try {
-        let query = supabase
-            .from('invoices')
-            .select('*, customers(full_name, user_id), vehicles(make, model, year)')
-            .order('created_at', { ascending: false });
+    return appCache.fetchWithCache('financial', `invoices_${filterByCurrentUser}`, async () => {
+        try {
+            let query = supabase
+                .from('invoices')
+                .select('*, customers(full_name, user_id), vehicles(make, model, year)')
+                .order('created_at', { ascending: false });
 
-        // If filtering for current user (customer dashboard), only get their invoices
-        if (filterByCurrentUser) {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return [];
+            // If filtering for current user (customer dashboard), only get their invoices
+            if (filterByCurrentUser) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return [];
 
-            // Strategy 1: Lookup by email (case-insensitive)
-            let { data: customerData } = await supabase
-                .from('customers')
-                .select('id')
-                .ilike('email', user.email ?? '')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            // Strategy 2: Fallback - lookup by user_id stored in customers table
-            if (!customerData) {
-                const { data: byUserId } = await supabase
+                // Strategy 1: Lookup by email (case-insensitive)
+                let { data: customerData } = await supabase
                     .from('customers')
                     .select('id')
-                    .eq('user_id', user.id)
+                    .ilike('email', user.email ?? '')
                     .order('created_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
-                customerData = byUserId;
+
+                // Strategy 2: Fallback - lookup by user_id stored in customers table
+                if (!customerData) {
+                    const { data: byUserId } = await supabase
+                        .from('customers')
+                        .select('id')
+                        .eq('user_id', user.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+                    customerData = byUserId;
+                }
+
+                if (customerData) {
+                    query = query.eq('customer_id', customerData.id);
+                } else {
+                    // No customer record found - return empty with console info
+                    console.warn(`[MyInvoices] No customer record found for auth user: ${user.email} (${user.id})`);
+                    return [];
+                }
             }
 
-            if (customerData) {
-                query = query.eq('customer_id', customerData.id);
-            } else {
-                // No customer record found - return empty with console info
-                console.warn(`[MyInvoices] No customer record found for auth user: ${user.email} (${user.id})`);
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('getSupabaseInvoices error:', error);
                 return [];
             }
-        }
 
-        const { data, error } = await query;
+            const supaInvoices = (data || []).map(i => {
+                // Unpack virtualized fields from services if they exist
+                let notes = i.notes || "";
+                let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "");
+                if (!vehicle || vehicle.trim() === "Unknown Unknown") vehicle = "Unknown";
+                let discount = i.discount || null;
+                let adjustment = i.adjustment || null;
+                let tipAmount = i.tipAmount || null;
+                let isSent = false;
+                let sentDate = "";
+                let serviceDate = "";
+                let priceLocked = false;
+                
+                const filteredServices = (i.services || []).filter((s: any) => {
+                  if (!s || !s.name) return true;
+                  if (s.name.startsWith("VIRTUAL_VEHICLE:")) {
+                    vehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_NOTES:")) {
+                    notes = s.name.replace("VIRTUAL_NOTES:", "").trim();
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_DISCOUNT:")) {
+                    try {
+                      discount = JSON.parse(s.name.replace("VIRTUAL_DISCOUNT:", "").trim());
+                    } catch (e) { console.error("Failed to parse virtual discount", e); }
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_ADJUSTMENT:")) {
+                    adjustment = parseFloat(s.name.replace("VIRTUAL_ADJUSTMENT:", "").trim());
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_TIP:")) {
+                    tipAmount = parseFloat(s.name.replace("VIRTUAL_TIP:", "").trim());
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_PRICE_LOCKED:")) {
+                    priceLocked = s.name.replace("VIRTUAL_PRICE_LOCKED:", "").trim() === "true";
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_SENT:")) {
+                    isSent = s.name.replace("VIRTUAL_SENT:", "").trim() === "true";
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_SENT_DATE:")) {
+                    sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_SERVICE_DATE:")) {
+                    serviceDate = s.name.replace("VIRTUAL_SERVICE_DATE:", "").trim();
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_HOURS_WORKED:")) {
+                    i.hoursWorked = parseFloat(s.name.replace("VIRTUAL_HOURS_WORKED:", "").trim());
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_HOURS_METHOD:")) {
+                    i.hoursMethod = s.name.replace("VIRTUAL_HOURS_METHOD:", "").trim();
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_TRAVEL_INCLUDED:")) {
+                    i.includeTravelTime = s.name.replace("VIRTUAL_TRAVEL_INCLUDED:", "").trim() === "true";
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_EMPLOYEE_ID:")) {
+                    i.employeeId = s.name.replace("VIRTUAL_EMPLOYEE_ID:", "").trim();
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_PRODUCT_COST:")) {
+                    i.productCost = parseFloat(s.name.replace("VIRTUAL_PRODUCT_COST:", "").trim());
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_STRIPE_NET_PAYOUT:")) {
+                    i.stripeNetPayout = parseFloat(s.name.replace("VIRTUAL_STRIPE_NET_PAYOUT:", "").trim());
+                    return false;
+                  }
+                  if (s.name.startsWith("VIRTUAL_STRIPE_FEE:")) {
+                    i.stripeFee = parseFloat(s.name.replace("VIRTUAL_STRIPE_FEE:", "").trim());
+                    return false;
+                  }
+                  return true;
+                });
 
-        if (error) {
-            console.error('getSupabaseInvoices error:', error);
+                return {
+                  id: i.id,
+                  invoiceNumber: i.invoice_number,
+                  customerId: i.customer_id,
+                  customerName: i.customers?.full_name || i.customerName || "Unknown",
+                  vehicle: vehicle || "Unknown Vehicle",
+                  date: i.date || i.created_at?.split('T')[0],
+                  serviceDate: serviceDate || i.date || i.created_at?.split('T')[0],
+                  total: i.total || 0,
+                  services: filteredServices,
+                  paymentStatus: i.status || "unpaid",
+                  paidAmount: i.paid_amount || 0,
+                  paidDate: i.paid_date,
+                  notes: notes || "",
+                  discount: discount,
+                  adjustment: adjustment,
+                  tipAmount: tipAmount,
+                  priceLocked: priceLocked,
+                  isSent: isSent,
+                  sentDate: sentDate,
+                  hoursWorked: i.hoursWorked,
+                  hoursMethod: i.hoursMethod,
+                  includeTravelTime: i.includeTravelTime,
+                  employeeId: i.employeeId,
+                  productCost: i.productCost,
+                  stripeNetPayout: i.stripeNetPayout,
+                  stripeFee: i.stripeFee,
+                  createdAt: i.created_at
+                };
+            });
+
+            // Merge Local Invoices (Offline or Legacy)
+            try {
+                const localInvs = await localforage.getItem<any[]>('invoices') || [];
+                localInvs.forEach(li => {
+                    // If it doesn't have a Supabase-like UUID or isn't already in supaInvoices
+                    if (!supaInvoices.some(si => si.id === li.id || (si.invoiceNumber && si.invoiceNumber === li.invoiceNumber))) {
+                        supaInvoices.push({
+                            ...li,
+                            id: li.id || `local_${Date.now()}_${Math.random()}`,
+                            customerName: li.customerName || "Local Customer",
+                            paymentStatus: li.paymentStatus || li.status || "unpaid",
+                            date: li.date || li.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]
+                        });
+                    }
+                });
+            } catch (e) {
+                console.warn("Local invoices merge failed", e);
+            }
+
+            return supaInvoices;
+        } catch (err) {
+            console.error('getSupabaseInvoices exception:', err);
             return [];
         }
-
-        const supaInvoices = (data || []).map(i => {
-            // Unpack virtualized fields from services if they exist
-            let notes = i.notes || "";
-            let vehicle = i.vehicle || (i.vehicles ? `${i.vehicles.year} ${i.vehicles.make} ${i.vehicles.model}` : "");
-            if (!vehicle || vehicle.trim() === "Unknown Unknown") vehicle = "Unknown";
-            let discount = i.discount || null;
-            let adjustment = i.adjustment || null;
-            let tipAmount = i.tipAmount || null;
-            let isSent = false;
-            let sentDate = "";
-            let serviceDate = "";
-            let priceLocked = false;
-            
-            const filteredServices = (i.services || []).filter((s: any) => {
-              if (!s || !s.name) return true;
-              if (s.name.startsWith("VIRTUAL_VEHICLE:")) {
-                vehicle = s.name.replace("VIRTUAL_VEHICLE:", "").trim();
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_NOTES:")) {
-                notes = s.name.replace("VIRTUAL_NOTES:", "").trim();
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_DISCOUNT:")) {
-                try {
-                  discount = JSON.parse(s.name.replace("VIRTUAL_DISCOUNT:", "").trim());
-                } catch (e) { console.error("Failed to parse virtual discount", e); }
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_ADJUSTMENT:")) {
-                adjustment = parseFloat(s.name.replace("VIRTUAL_ADJUSTMENT:", "").trim());
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_TIP:")) {
-                tipAmount = parseFloat(s.name.replace("VIRTUAL_TIP:", "").trim());
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_PRICE_LOCKED:")) {
-                priceLocked = s.name.replace("VIRTUAL_PRICE_LOCKED:", "").trim() === "true";
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_SENT:")) {
-                isSent = s.name.replace("VIRTUAL_SENT:", "").trim() === "true";
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_SENT_DATE:")) {
-                sentDate = s.name.replace("VIRTUAL_SENT_DATE:", "").trim();
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_SERVICE_DATE:")) {
-                serviceDate = s.name.replace("VIRTUAL_SERVICE_DATE:", "").trim();
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_HOURS_WORKED:")) {
-                i.hoursWorked = parseFloat(s.name.replace("VIRTUAL_HOURS_WORKED:", "").trim());
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_HOURS_METHOD:")) {
-                i.hoursMethod = s.name.replace("VIRTUAL_HOURS_METHOD:", "").trim();
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_TRAVEL_INCLUDED:")) {
-                i.includeTravelTime = s.name.replace("VIRTUAL_TRAVEL_INCLUDED:", "").trim() === "true";
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_EMPLOYEE_ID:")) {
-                i.employeeId = s.name.replace("VIRTUAL_EMPLOYEE_ID:", "").trim();
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_PRODUCT_COST:")) {
-                i.productCost = parseFloat(s.name.replace("VIRTUAL_PRODUCT_COST:", "").trim());
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_STRIPE_NET_PAYOUT:")) {
-                i.stripeNetPayout = parseFloat(s.name.replace("VIRTUAL_STRIPE_NET_PAYOUT:", "").trim());
-                return false;
-              }
-              if (s.name.startsWith("VIRTUAL_STRIPE_FEE:")) {
-                i.stripeFee = parseFloat(s.name.replace("VIRTUAL_STRIPE_FEE:", "").trim());
-                return false;
-              }
-              return true;
-            });
-
-            return {
-              id: i.id,
-              invoiceNumber: i.invoice_number,
-              customerId: i.customer_id,
-              customerName: i.customers?.full_name || i.customerName || "Unknown",
-              vehicle: vehicle || "Unknown Vehicle",
-              date: i.date || i.created_at?.split('T')[0],
-              serviceDate: serviceDate || i.date || i.created_at?.split('T')[0],
-              total: i.total || 0,
-              services: filteredServices,
-              paymentStatus: i.status || "unpaid",
-              paidAmount: i.paid_amount || 0,
-              paidDate: i.paid_date,
-              notes: notes || "",
-              discount: discount,
-              adjustment: adjustment,
-              tipAmount: tipAmount,
-              priceLocked: priceLocked,
-              isSent: isSent,
-              sentDate: sentDate,
-              hoursWorked: i.hoursWorked,
-              hoursMethod: i.hoursMethod,
-              includeTravelTime: i.includeTravelTime,
-              employeeId: i.employeeId,
-              productCost: i.productCost,
-              stripeNetPayout: i.stripeNetPayout,
-              stripeFee: i.stripeFee,
-              createdAt: i.created_at
-            };
-        });
-
-        // Merge Local Invoices (Offline or Legacy)
-        try {
-            const localInvs = await localforage.getItem<any[]>('invoices') || [];
-            localInvs.forEach(li => {
-                // If it doesn't have a Supabase-like UUID or isn't already in supaInvoices
-                if (!supaInvoices.some(si => si.id === li.id || (si.invoiceNumber && si.invoiceNumber === li.invoiceNumber))) {
-                    supaInvoices.push({
-                        ...li,
-                        id: li.id || `local_${Date.now()}_${Math.random()}`,
-                        customerName: li.customerName || "Local Customer",
-                        paymentStatus: li.paymentStatus || li.status || "unpaid",
-                        date: li.date || li.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0]
-                    });
-                }
-            });
-        } catch (e) {
-            console.warn("Local invoices merge failed", e);
-        }
-
-        return supaInvoices;
-    } catch (err) {
-        console.error('getSupabaseInvoices exception:', err);
-        return [];
-    }
+    });
 };
 
 export const upsertSupabaseInvoice = async (invoice: any) => {
@@ -2014,21 +2031,25 @@ export const upsertSupabaseInvoice = async (invoice: any) => {
         invoice_number: invoice.invoiceNumber
     };
 
+    let result;
     if (invoice.id) {
         const { data, error } = await supabase.from('invoices').update(payload).eq('id', invoice.id).select().single();
         if (error) throw error;
-        return data;
+        result = data;
     } else {
         const { data, error } = await supabase.from('invoices').insert([payload]).select().single();
         if (error) throw error;
-        return data;
+        result = data;
     }
+    invalidateFinancialCache();
+    return result;
 };
 
 export const deleteSupabaseInvoice = async (id: string) => {
     if (isDemoActive()) return;
     const { error } = await supabase.from('invoices').delete().eq('id', id);
     if (error) throw error;
+    invalidateFinancialCache();
 };
 
 
@@ -2654,124 +2675,126 @@ export interface SupaBooking {
 }
 
 export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<any[]> => {
-    try {
-        let query = supabase
-            .from('bookings')
-            .select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type, color)');
+    return appCache.fetchWithCache('booking', `bookings_${filterByCurrentUser}`, async () => {
+        try {
+            let query = supabase
+                .from('bookings')
+                .select('*, customers(full_name, email, phone, address, notes), vehicles(make, model, year, type, color)');
 
-        if (filterByCurrentUser) {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return [];
+            if (filterByCurrentUser) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return [];
 
-            const { data: customerData } = await supabase
-                .from('customers')
-                .select('id')
-                .eq('email', user.email)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+                const { data: customerData } = await supabase
+                    .from('customers')
+                    .select('id')
+                    .eq('email', user.email)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
 
-            if (customerData) {
-                query = query.eq('customer_id', customerData.id);
-            } else {
-                query = query.eq('customer_id', 'none');
+                if (customerData) {
+                    query = query.eq('customer_id', customerData.id);
+                } else {
+                    query = query.eq('customer_id', 'none');
+                }
             }
-        }
 
-        const { data, error } = await query;
+            const { data, error } = await query;
 
-        if (error) {
-            console.error('getSupabaseBookings error:', error);
+            if (error) {
+                console.error('getSupabaseBookings error:', error);
+                return [];
+            }
+
+            const ALERT_DUMMY_ID = '00000000-0000-0000-0000-000000000000';
+            const rawData = (data || []).filter(b => b.id !== ALERT_DUMMY_ID);
+
+            console.log(`[getSupabaseBookings] Fetched ${data?.length} rows. Filtering by currentUser=${filterByCurrentUser}`);
+
+            return rawData.map((b: any) => {
+                // Priority: Columns -> Legacy meta (if migration incomplete)
+                let meta = b.booking_vehicle || {};
+                if (typeof meta === 'string') {
+                    try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
+                }
+                const dateStr = b.date || b.scheduled_at || meta.date || new Date().toISOString();
+
+                return {
+                    id: b.id,
+                    // Map columns first, fallback to meta
+                    title: b.service_package || b.title || meta.title || b.service || 'Service',
+                    customer: b.customers?.full_name || b.customer_name || meta.customer_name || meta.customer || 'Unknown',
+                    customerEmail: b.customers?.email || meta.email || meta.customer_email || meta.customerEmail || b.email || '',
+                    customerPhone: b.customers?.phone || meta.phone || meta.customer_phone || meta.customerPhone || b.phone || '',
+                    email: b.customers?.email || meta.email || meta.customer_email || meta.customerEmail || b.email || '',
+                    phone: b.customers?.phone || meta.phone || meta.customer_phone || meta.customerPhone || b.phone || '',
+                    customerId: b.customer_id,
+
+                    // CRITICAL: Hybrid Availability expects 'scheduled_at'
+                    date: dateStr,
+                    scheduled_at: dateStr,
+
+                    endTime: b.end_time || meta.end_time,
+                    status: b.status || 'confirmed',
+
+                    // Employee Info
+                    assignedEmployee: b.assigned_employee_id || 'Unassigned',
+                    employee: b.assigned_employee_id || 'Unassigned',
+                    employeeName: b.assigned_employee_id || 'Unassigned',
+
+                    // Service & Time consistency for Reports
+                    service: b.service_package || b.title || meta.title || b.service || 'N/A',
+                    totalTime: b.estimated_time || meta.estimated_time || 'N/A',
+
+                    // Vehicle Relations
+                    vehicleId: b.vehicle_id || meta.vehicle_id,
+                    vehicle: b.vehicles?.type || b.vehicle_type || meta.type || (b.booking_vehicle?.type) || '',
+                    vehicleMake: b.vehicles?.make || b.make || meta.make || (b.booking_vehicle?.make) || '',
+                    vehicleModel: b.vehicles?.model || b.model || meta.model || (b.booking_vehicle?.model) || '',
+                    vehicleYear: b.vehicles?.year || b.year || meta.year || (b.booking_vehicle?.year) || '',
+                    vehicleColor: b.vehicles?.color || b.color || meta.color || (b.booking_vehicle?.color) || '',
+                    vehicleCondition: meta.condition || meta.condition_outside || meta.conditionOutside || b.condition_outside || '',
+
+                    // Addons mapping with robust parsing
+                    addons: (() => {
+                      try {
+                        const raw = b.add_ons || meta.add_ons || meta.addons || [];
+                        if (Array.isArray(raw)) return raw;
+                        if (typeof raw === 'string') return JSON.parse(raw);
+                        return [];
+                      } catch (e) {
+                        return [];
+                      }
+                    })(),
+                    price: b.service_price || b.price || meta.price,
+                    createdAt: b.created_at || meta.created_at,
+
+                    hasReminder: b.has_reminder || meta.has_reminder,
+                    reminderFrequency: b.reminder_frequency || meta.reminder_frequency,
+                    address: b.address || b.customers?.address || meta.address || '',
+                    notes: b.notes || b.customers?.notes || meta.notes || '',
+                    customReminderDate: b.custom_reminder_date || meta.custom_reminder_date,
+                    isArchived: Boolean(b.is_archived || meta.is_archived || meta.isArchived || b.isArchived || false),
+                    source: b.source_origin || meta.source_origin || b.source || 'Manual Entry',
+                    bookedBy: b.booked_by || meta.bookedBy || meta.booked_by || b.bookedBy || b.source_origin || b.source || 'Manual Entry',
+                    howFound: b.how_found || meta.howFound || meta.how_found || b.howFound || '',
+                    discountCode: b.discount_code || meta.discountCode || meta.discount_code || '',
+                    discountAmount: Number(b.discount_amount || meta.discountAmount || meta.discount_amount || 0),
+                    placeOfService: meta.placeOfService || meta.place_of_service || b.place_of_service || '',
+                    probonoReason: b.probono_reason || meta.probonoReason || meta.probono_reason || '',
+                    probonoReasons: meta.probonoReasons || meta.probono_reasons || [],
+                    probonoPrimaryReason: b.probono_primary_reason || meta.probonoPrimaryReason || meta.probono_primary_reason || '',
+                    booking_vehicle: meta
+                };
+            });
+        } catch (err) {
+            console.error('Exception getSupabaseBookings', err);
             return [];
         }
-
-        const ALERT_DUMMY_ID = '00000000-0000-0000-0000-000000000000';
-        const rawData = (data || []).filter(b => b.id !== ALERT_DUMMY_ID);
-
-        console.log(`[getSupabaseBookings] Fetched ${data?.length} rows. Filtering by currentUser=${filterByCurrentUser}`);
-
-        return rawData.map((b: any) => {
-            // Priority: Columns -> Legacy meta (if migration incomplete)
-            let meta = b.booking_vehicle || {};
-            if (typeof meta === 'string') {
-                try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
-            }
-            const dateStr = b.date || b.scheduled_at || meta.date || new Date().toISOString();
-
-            return {
-                id: b.id,
-                // Map columns first, fallback to meta
-                title: b.service_package || b.title || meta.title || b.service || 'Service',
-                customer: b.customers?.full_name || b.customer_name || meta.customer_name || meta.customer || 'Unknown',
-                customerEmail: b.customers?.email || meta.email || meta.customer_email || meta.customerEmail || b.email || '',
-                customerPhone: b.customers?.phone || meta.phone || meta.customer_phone || meta.customerPhone || b.phone || '',
-                email: b.customers?.email || meta.email || meta.customer_email || meta.customerEmail || b.email || '',
-                phone: b.customers?.phone || meta.phone || meta.customer_phone || meta.customerPhone || b.phone || '',
-                customerId: b.customer_id,
-
-                // CRITICAL: Hybrid Availability expects 'scheduled_at'
-                date: dateStr,
-                scheduled_at: dateStr,
-
-                endTime: b.end_time || meta.end_time,
-                status: b.status || 'confirmed',
-
-                // Employee Info
-                assignedEmployee: b.assigned_employee_id || 'Unassigned',
-                employee: b.assigned_employee_id || 'Unassigned',
-                employeeName: b.assigned_employee_id || 'Unassigned',
-
-                // Service & Time consistency for Reports
-                service: b.service_package || b.title || meta.title || b.service || 'N/A',
-                totalTime: b.estimated_time || meta.estimated_time || 'N/A',
-
-                // Vehicle Relations
-                vehicleId: b.vehicle_id || meta.vehicle_id,
-                vehicle: b.vehicles?.type || b.vehicle_type || meta.type || (b.booking_vehicle?.type) || '',
-                vehicleMake: b.vehicles?.make || b.make || meta.make || (b.booking_vehicle?.make) || '',
-                vehicleModel: b.vehicles?.model || b.model || meta.model || (b.booking_vehicle?.model) || '',
-                vehicleYear: b.vehicles?.year || b.year || meta.year || (b.booking_vehicle?.year) || '',
-                vehicleColor: b.vehicles?.color || b.color || meta.color || (b.booking_vehicle?.color) || '',
-                vehicleCondition: meta.condition || meta.condition_outside || meta.conditionOutside || b.condition_outside || '',
-
-                // Addons mapping with robust parsing
-                addons: (() => {
-                  try {
-                    const raw = b.add_ons || meta.add_ons || meta.addons || [];
-                    if (Array.isArray(raw)) return raw;
-                    if (typeof raw === 'string') return JSON.parse(raw);
-                    return [];
-                  } catch (e) {
-                    return [];
-                  }
-                })(),
-                price: b.service_price || b.price || meta.price,
-                createdAt: b.created_at || meta.created_at,
-
-                hasReminder: b.has_reminder || meta.has_reminder,
-                reminderFrequency: b.reminder_frequency || meta.reminder_frequency,
-                address: b.address || b.customers?.address || meta.address || '',
-                notes: b.notes || b.customers?.notes || meta.notes || '',
-                customReminderDate: b.custom_reminder_date || meta.custom_reminder_date,
-                isArchived: Boolean(b.is_archived || meta.is_archived || meta.isArchived || b.isArchived || false),
-                source: b.source_origin || meta.source_origin || b.source || 'Manual Entry',
-                bookedBy: b.booked_by || meta.bookedBy || meta.booked_by || b.bookedBy || b.source_origin || b.source || 'Manual Entry',
-                howFound: b.how_found || meta.howFound || meta.how_found || b.howFound || '',
-                discountCode: b.discount_code || meta.discountCode || meta.discount_code || '',
-                discountAmount: Number(b.discount_amount || meta.discountAmount || meta.discount_amount || 0),
-                placeOfService: meta.placeOfService || meta.place_of_service || b.place_of_service || '',
-                probonoReason: b.probono_reason || meta.probonoReason || meta.probono_reason || '',
-                probonoReasons: meta.probonoReasons || meta.probono_reasons || [],
-                probonoPrimaryReason: b.probono_primary_reason || meta.probonoPrimaryReason || meta.probono_primary_reason || '',
-                booking_vehicle: meta
-            };
-        });
-    } catch (err) {
-        console.error('Exception getSupabaseBookings', err);
-        return [];
-    }
+    });
 };
- 
+
 export const upsertSupabaseBooking = async (booking: any) => {
     if (isDemoActive()) return { ...booking, id: booking.id || `demo_b_${Date.now()}` };
     try {
@@ -2864,8 +2887,7 @@ export const upsertSupabaseBooking = async (booking: any) => {
             throw error;
         }
 
-        // Vehicle syncing is now handled explicitly via the CRM/Modal to ensure a single source of truth and avoid duplicates.
-
+        invalidateBookingCache();
         return data;
     } catch (err) {
         console.error('upsertSupabaseBooking error:', err);
@@ -2889,6 +2911,8 @@ export const deleteSupabaseBooking = async (id: string) => {
 
         const { error } = await supabase.from('bookings').delete().eq('id', id);
         if (error) throw error;
+        invalidateBookingCache();
+        invalidateFinancialCache();
     } catch (err) {
         console.error('deleteSupabaseBooking error:', err);
         throw err;
@@ -3001,25 +3025,27 @@ export interface TaxReportArchive {
 }
 
 export const getSupabaseTaxExpenses = async (year?: number): Promise<TaxExpense[]> => {
-    try {
-        let query = supabase.from('tax_expenses').select('*');
+    return appCache.fetchWithCache('financial', `tax_expenses_${year || 'all'}`, async () => {
+        try {
+            let query = supabase.from('tax_expenses').select('*');
 
-        if (year) {
-            query = query.gte('date', `${year}-01-01`).lte('date', `${year}-12-31`);
-        }
+            if (year) {
+                query = query.gte('date', `${year}-01-01`).lte('date', `${year}-12-31`);
+            }
 
-        const { data, error } = await query.order('date', { ascending: false });
+            const { data, error } = await query.order('date', { ascending: false });
 
-        if (error) {
-            console.error('getSupabaseTaxExpenses error:', error);
+            if (error) {
+                console.error('getSupabaseTaxExpenses error:', error);
+                return [];
+            }
+
+            return data || [];
+        } catch (err) {
+            console.error('getSupabaseTaxExpenses exception:', err);
             return [];
         }
-
-        return data || [];
-    } catch (err) {
-        console.error('getSupabaseTaxExpenses exception:', err);
-        return [];
-    }
+    });
 };
 
 export const upsertSupabaseTaxExpense = async (expense: Partial<TaxExpense>) => {
@@ -3032,6 +3058,7 @@ export const upsertSupabaseTaxExpense = async (expense: Partial<TaxExpense>) => 
             .single();
 
         if (error) throw error;
+        invalidateFinancialCache();
         return data;
     } catch (err) {
         console.error('upsertSupabaseTaxExpense error:', err);
@@ -3048,6 +3075,7 @@ export const deleteSupabaseTaxExpense = async (id: string) => {
             .eq('id', id);
 
         if (error) throw error;
+        invalidateFinancialCache();
     } catch (err) {
         console.error('deleteSupabaseTaxExpense error:', err);
         throw err;
@@ -3055,18 +3083,20 @@ export const deleteSupabaseTaxExpense = async (id: string) => {
 };
 
 export const getSupabaseTaxReports = async (year?: number): Promise<TaxReportArchive[]> => {
-    try {
-        let query = supabase.from('tax_reports').select('*');
-        if (year) query = query.eq('year', year);
-        const { data, error } = await query.order('created_at', { ascending: false });
-        if (error) throw error;
-        return data || [];
-    } catch (err: any) {
-        if (err?.code !== '42P01') {
-            console.error('getSupabaseTaxReports error:', err);
+    return appCache.fetchWithCache('financial', `tax_reports_${year || 'all'}`, async () => {
+        try {
+            let query = supabase.from('tax_reports').select('*');
+            if (year) query = query.eq('year', year);
+            const { data, error } = await query.order('created_at', { ascending: false });
+            if (error) throw error;
+            return data || [];
+        } catch (err: any) {
+            if (err?.code !== '42P01') {
+                console.error('getSupabaseTaxReports error:', err);
+            }
+            return [];
         }
-        return [];
-    }
+    });
 };
 
 export const saveSupabaseTaxReport = async (report: Partial<TaxReportArchive>) => {
@@ -3074,6 +3104,7 @@ export const saveSupabaseTaxReport = async (report: Partial<TaxReportArchive>) =
     try {
         const { data, error } = await supabase.from('tax_reports').insert(report).select().single();
         if (error) throw error;
+        invalidateFinancialCache();
         return data;
     } catch (err: any) {
         if (err?.code !== '42P01') {
@@ -3088,6 +3119,7 @@ export const deleteSupabaseTaxReport = async (id: string) => {
     try {
         const { error } = await supabase.from('tax_reports').delete().eq('id', id);
         if (error) throw error;
+        invalidateFinancialCache();
     } catch (err) {
         console.error('deleteSupabaseTaxReport error:', err);
         throw err;
@@ -3099,17 +3131,19 @@ export const deleteSupabaseTaxReport = async (id: string) => {
 // ------------------------------------------------------------------
 
 export const getSupabaseIncome = async (): Promise<any[]> => {
-    try {
-        const { data, error } = await supabase
-            .from('manual_income')
-            .select('*')
-            .order('date', { ascending: false });
-        if (error) throw error;
-        return data || [];
-    } catch (err) {
-        console.error('getSupabaseIncome error:', err);
-        return [];
-    }
+    return appCache.fetchWithCache('financial', 'manual_income_all', async () => {
+        try {
+            const { data, error } = await supabase
+                .from('manual_income')
+                .select('*')
+                .order('date', { ascending: false });
+            if (error) throw error;
+            return data || [];
+        } catch (err) {
+            console.error('getSupabaseIncome error:', err);
+            return [];
+        }
+    });
 };
 
 export const upsertSupabaseIncome = async (income: any) => {
@@ -3121,6 +3155,7 @@ export const upsertSupabaseIncome = async (income: any) => {
             .select()
             .single();
         if (error) throw error;
+        invalidateFinancialCache();
         return data;
     } catch (err) {
         console.error('upsertSupabaseIncome error:', err);
@@ -3136,6 +3171,7 @@ export const deleteSupabaseIncome = async (id: string) => {
             .delete()
             .eq('id', id);
         if (error) throw error;
+        invalidateFinancialCache();
     } catch (err) {
         console.error('deleteSupabaseIncome error:', err);
         throw err;
@@ -3143,18 +3179,20 @@ export const deleteSupabaseIncome = async (id: string) => {
 };
 
 export const getSupabasePayrollRecords = async (status?: string): Promise<any[]> => {
-    try {
-        let query = supabase.from('payroll_records').select('*');
-        if (status) {
-            query = query.eq('payment_status', status);
+    return appCache.fetchWithCache('financial', `payroll_${status || 'all'}`, async () => {
+        try {
+            let query = supabase.from('payroll_records').select('*');
+            if (status) {
+                query = query.eq('payment_status', status);
+            }
+            const { data, error } = await query.order('created_at', { ascending: false });
+            if (error) throw error;
+            return data || [];
+        } catch (err) {
+            console.error('getSupabasePayrollRecords error:', err);
+            return [];
         }
-        const { data, error } = await query.order('created_at', { ascending: false });
-        if (error) throw error;
-        return data || [];
-    } catch (err) {
-        console.error('getSupabasePayrollRecords error:', err);
-        return [];
-    }
+    });
 };
 
 export const markPayrollPaid = async (id: string, expenseId?: string) => {
@@ -3168,6 +3206,7 @@ export const markPayrollPaid = async (id: string, expenseId?: string) => {
         }
         const { error } = await supabase.from('payroll_records').update(payload).eq('id', id);
         if (error) throw error;
+        invalidateFinancialCache();
     } catch (err) {
         console.error('markPayrollPaid error:', err);
         throw err;
@@ -3178,6 +3217,7 @@ export const updatePayrollRecord = async (id: string, updates: { earned_amount?:
     try {
         const { error } = await supabase.from('payroll_records').update(updates).eq('id', id);
         if (error) throw error;
+        invalidateFinancialCache();
     } catch (err) {
         console.error('updatePayrollRecord error:', err);
         throw err;
@@ -3188,6 +3228,7 @@ export const deletePayrollRecord = async (id: string) => {
     try {
         const { error } = await supabase.from('payroll_records').delete().eq('id', id);
         if (error) throw error;
+        invalidateFinancialCache();
     } catch (err) {
         console.error('deletePayrollRecord error:', err);
         throw err;
@@ -3256,35 +3297,37 @@ export interface AuditSnapshot {
 const AUDIT_FALLBACK_KEY = 'pds_inventory_audit_history_fallback';
 
 export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
-    try {
-        const { data, error } = await supabase
-            .from('inventory_audit_history')
-            .select('*')
-            .order('timestamp', { ascending: false })
-            .limit(50);
-            
-        if (error) {
-            console.warn('getInventoryAuditHistory error (falling back to localStorage):', error.message);
+    return appCache.fetchWithCache('auditHistory', 'audit_history_list', async () => {
+        try {
+            const { data, error } = await supabase
+                .from('inventory_audit_history')
+                .select('*')
+                .order('timestamp', { ascending: false })
+                .limit(50);
+                
+            if (error) {
+                console.warn('getInventoryAuditHistory error (falling back to localStorage):', error.message);
+                const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
+                return local ? JSON.parse(local) : [];
+            }
+
+            return (data || []).map(row => ({
+                id: row.id,
+                timestamp: row.timestamp,
+                status: row.status,
+                note: row.note,
+                chemAudit: row.chem_audit || {},
+                supplyAudit: row.supply_audit || {},
+                equipAudit: row.equip_audit || {},
+                activeTab: row.active_tab,
+                totalCounted: row.total_counted || 0
+            }));
+        } catch (err) {
+            console.warn('getInventoryAuditHistory exception (falling back to localStorage):', err);
             const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
             return local ? JSON.parse(local) : [];
         }
-
-        return (data || []).map(row => ({
-            id: row.id,
-            timestamp: row.timestamp,
-            status: row.status,
-            note: row.note,
-            chemAudit: row.chem_audit || {},
-            supplyAudit: row.supply_audit || {},
-            equipAudit: row.equip_audit || {},
-            activeTab: row.active_tab,
-            totalCounted: row.total_counted || 0
-        }));
-    } catch (err) {
-        console.warn('getInventoryAuditHistory exception (falling back to localStorage):', err);
-        const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
-        return local ? JSON.parse(local) : [];
-    }
+    });
 };
 
 export const upsertInventoryAuditHistory = async (snapshot: AuditSnapshot) => {
@@ -3331,6 +3374,7 @@ export const upsertInventoryAuditHistory = async (snapshot: AuditSnapshot) => {
             console.error('Failed to cleanup old audit history:', cleanupErr);
         }
 
+        invalidateAuditHistoryCache();
         return data || snapshot;
     } catch (err) {
         console.warn('Saving to localStorage fallback due to Supabase error:', err);
@@ -3343,6 +3387,7 @@ export const upsertInventoryAuditHistory = async (snapshot: AuditSnapshot) => {
             history.unshift(snapshot);
         }
         localStorage.setItem(AUDIT_FALLBACK_KEY, JSON.stringify(history.slice(0, 50)));
+        invalidateAuditHistoryCache();
         return snapshot;
     }
 };
@@ -3358,6 +3403,7 @@ export const deleteInventoryAuditHistory = async (id: string) => {
             console.warn('deleteInventoryAuditHistory error (falling back to localStorage):', error.message);
             throw error;
         }
+        invalidateAuditHistoryCache();
     } catch (err) {
         console.warn('deleteInventoryAuditHistory exception (modifying localStorage):', err);
         const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
@@ -3366,6 +3412,7 @@ export const deleteInventoryAuditHistory = async (id: string) => {
             history = history.filter(h => h.id !== id);
             localStorage.setItem(AUDIT_FALLBACK_KEY, JSON.stringify(history));
         }
+        invalidateAuditHistoryCache();
     }
 };
 
