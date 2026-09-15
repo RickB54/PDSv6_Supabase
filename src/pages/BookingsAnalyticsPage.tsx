@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { BookingsAnalytics } from "@/components/bookings/BookingsAnalytics";
 import { EmployeeAnalyticsPanel } from "@/components/analytics/EmployeeAnalyticsPanel";
 import { BusinessIntelligencePanel } from "@/components/analytics/BusinessIntelligencePanel";
 import { useBookingsStore } from "@/store/bookings";
-import { getUnifiedCustomers } from "@/lib/customers";
+import { getSupabaseCustomersLight } from "@/lib/supa-data";
 import ReviewIntelligence from "@/components/analytics/ReviewIntelligence";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -30,47 +30,68 @@ export default function BookingsAnalyticsPage() {
     });
     
     const { isDemoMode } = useDemoMode();
+    const loadedTabsRef = useRef<Set<string>>(new Set());
 
-    const fetchData = useCallback(async (showToast = false) => {
+    const loadTabData = useCallback(async (tab: 'crm' | 'bi' | 'employees' | 'reviews', force = false) => {
+        if (!force && loadedTabsRef.current.has(tab)) return;
         setIsRefreshing(true);
         try {
-            // Refresh store first
-            await refresh();
-            
-            const [custs, invs, ests] = await Promise.all([
-                getUnifiedCustomers(),
-                import("@/lib/supa-data").then(m => m.getSupabaseInvoices()),
-                import("@/lib/supa-data").then(m => m.getSupabaseEstimates())
-            ]);
-            
-            setCustomers(custs);
-            setInvoices(invs);
-            setEstimates(ests);
-            
-            if (showToast) {
-                toast({
-                    title: "Analytics Updated",
-                    description: "All data has been successfully refreshed from Supabase."
-                });
+            if (tab === 'employees') {
+                // Employees panel manages its own app_users query; nothing extra needed
+                loadedTabsRef.current.add(tab);
+                return;
             }
+
+            // Always ensure bookings and light customers are loaded for non-employee tabs
+            const promises: Promise<any>[] = [];
+            promises.push(refresh());
+            if (customers.length === 0 || force) {
+                promises.push(getSupabaseCustomersLight().then(c => setCustomers(c || [])));
+            }
+
+            if (tab === 'crm' || tab === 'bi') {
+                if (invoices.length === 0 || force) {
+                    promises.push(import("@/lib/supa-data").then(m => m.getSupabaseInvoices()).then(invs => setInvoices(invs || [])));
+                }
+                if (estimates.length === 0 || force) {
+                    promises.push(import("@/lib/supa-data").then(m => m.getSupabaseEstimates()).then(ests => setEstimates(ests || [])));
+                }
+            }
+
+            await Promise.all(promises);
+            loadedTabsRef.current.add(tab);
         } catch (err) {
-            console.error('Failed to fetch analytics data:', err);
+            console.error(`Failed to load data for tab ${tab}:`, err);
             toast({
-                title: "Refresh Failed",
-                description: "Could not sync data from the cloud.",
+                title: "Data Sync Warning",
+                description: "Could not sync full analytics data from the cloud.",
                 variant: "destructive"
             });
         } finally {
             setIsRefreshing(false);
         }
-    }, [refresh, toast]);
+    }, [refresh, customers.length, invoices.length, estimates.length, toast]);
+
+    // Fetch tab-specific data on tab switch
+    useEffect(() => {
+        loadTabData(activeTab);
+    }, [activeTab, loadTabData]);
+
+    // Handle explicit refresh
+    const handleFullRefresh = useCallback(async () => {
+        loadedTabsRef.current.clear();
+        await loadTabData(activeTab, true);
+        toast({
+            title: "Analytics Updated",
+            description: "Analytics data has been refreshed from Supabase."
+        });
+    }, [activeTab, loadTabData, toast]);
 
     useEffect(() => {
-        fetchData();
-        const handleRefresh = () => fetchData(true);
+        const handleRefresh = () => handleFullRefresh();
         window.addEventListener('refresh-analytics', handleRefresh);
         return () => window.removeEventListener('refresh-analytics', handleRefresh);
-    }, [fetchData]);
+    }, [handleFullRefresh]);
 
     return (
         <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw]">
