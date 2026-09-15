@@ -66,6 +66,8 @@ export default function EmployeeProfilePage() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const loadedTabsRef = useRef<Set<string>>(new Set());
+
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !emp?.email) return;
@@ -76,72 +78,84 @@ export default function EmployeeProfilePage() {
       toast({ title: "Upload Failed", description: res.error, variant: "destructive" });
     } else {
       toast({ title: "Success", description: "Profile photo updated" });
-      load();
+      loadProfile();
     }
     setIsUploadingPhoto(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  useEffect(() => { load(); }, [id]);
-
-  const load = async () => {
+  const loadProfile = async () => {
     setLoading(true);
-    // Fetch directly from Supabase for full column set
-    const { data, error } = await supabase
-      .from('app_users')
-      .select('*')
-      .or(`id.eq.${id},email.eq.${id}`)
-      .maybeSingle();
+    try {
+      // Fetch core user record
+      const { data, error } = await supabase
+        .from('app_users')
+        .select('*')
+        .or(`id.eq.${id},email.eq.${id}`)
+        .maybeSingle();
 
-    if (error || !data) {
-      // Fallback: search by email match from merged list
-      const emps = await getSupabaseEmployees();
-      const found = emps.find(e => e.id === id || e.email === id);
-      if (found) {
-        const { data: full } = await supabase.from('app_users').select('*').eq('id', found.id!).maybeSingle();
-        setEmp(full || found);
-        setOriginalEmp(JSON.parse(JSON.stringify(full || found)));
+      if (error || !data) {
+        // Fallback: search by email match from merged list
+        const emps = await getSupabaseEmployees();
+        const found = emps.find(e => e.id === id || e.email === id);
+        if (found) {
+          const { data: full } = await supabase.from('app_users').select('*').eq('id', found.id!).maybeSingle();
+          setEmp(full || found);
+          setOriginalEmp(JSON.parse(JSON.stringify(full || found)));
+        } else {
+          toast({ title: 'Employee not found', variant: 'destructive' });
+          navigate('/company-employees');
+        }
       } else {
-        toast({ title: 'Employee not found', variant: 'destructive' });
-        navigate('/company-employees');
+        setEmp(data);
+        setOriginalEmp(JSON.parse(JSON.stringify(data)));
       }
-    } else {
-      setEmp(data);
-      setOriginalEmp(JSON.parse(JSON.stringify(data)));
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (data?.id) {
+  const loadTabData = async (tab: string, empId: string, force = false) => {
+    if (!empId) return;
+    if (!force && loadedTabsRef.current.has(tab)) return;
+
+    if (tab === 'history') {
       const { data: auditData } = await supabase
         .from('employee_profile_audit_log')
         .select('*')
-        .eq('employee_id', data.id)
+        .eq('employee_id', empId)
         .order('changed_at', { ascending: false });
       setAuditLog(auditData || []);
-      
+      loadedTabsRef.current.add(tab);
+    } else if (tab === 'communications') {
       const { data: commData } = await supabase
         .from('employee_communications')
         .select('*')
-        .eq('employee_id', data.id)
+        .eq('employee_id', empId)
         .order('created_at', { ascending: false });
       setCommunications(commData || []);
-      
-      const { data: clData } = await supabase
-        .from('employee_training_progress_checklist')
-        .select('*')
-        .eq('employee_id', data.id);
-      setChecklist(clData || []);
-
-      const { data: exData } = await supabase
-        .from('employee_training_progress')
-        .select('*')
-        .eq('user_id', data.id)
-        .order('completed_at', { ascending: false })
-        .limit(1);
-      if (exData && exData.length > 0) setExamProgress(exData[0]);
+      loadedTabsRef.current.add(tab);
+    } else if (tab === 'training') {
+      const [clRes, exRes] = await Promise.all([
+        supabase.from('employee_training_progress_checklist').select('*').eq('employee_id', empId),
+        supabase.from('employee_training_progress').select('*').eq('user_id', empId).order('completed_at', { ascending: false }).limit(1)
+      ]);
+      setChecklist(clRes.data || []);
+      if (exRes.data && exRes.data.length > 0) setExamProgress(exRes.data[0]);
+      loadedTabsRef.current.add(tab);
     }
-
-    setLoading(false);
   };
+
+  useEffect(() => {
+    loadedTabsRef.current.clear();
+    loadProfile();
+  }, [id]);
+
+  useEffect(() => {
+    if (emp?.id) {
+      loadTabData(activeTab, emp.id);
+    }
+  }, [activeTab, emp?.id]);
 
   const set = (field: string, value: any) => setEmp((prev: any) => ({ ...prev, [field]: value }));
 
@@ -254,7 +268,7 @@ export default function EmployeeProfilePage() {
     
     setSaving(false);
     setShowCommModal(false);
-    load();
+    if (emp?.id) loadTabData('communications', emp.id, true);
   };
 
   const resetCommForm = () => {
@@ -289,7 +303,7 @@ export default function EmployeeProfilePage() {
     e.stopPropagation();
     const newStatus = comm.status === 'Open' ? 'Resolved' : 'Open';
     const { error } = await supabase.from('employee_communications').update({ status: newStatus }).eq('id', comm.id);
-    if (!error) load();
+    if (!error && emp?.id) loadTabData('communications', emp.id, true);
   };
 
   const toggleChecklistItem = async (phase: number, key: string, currentStatus: boolean) => {
