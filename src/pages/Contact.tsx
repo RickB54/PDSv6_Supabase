@@ -20,6 +20,7 @@ import api from "@/lib/api";
 import { isSupabaseEnabled, getCurrentUser } from "@/lib/auth";
 import { useDemoMode } from "@/contexts/DemoContext";
 import * as contactSvc from "@/services/supabase/contact";
+import { checkClientRateLimit } from "@/lib/rateLimit";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
 import { servicePackages as builtInPackages, addOns as builtInAddOns } from "@/lib/services";
 import { getCustomServices, getAllPackageMeta, getAllAddOnMeta } from "@/lib/servicesMeta";
@@ -192,8 +193,17 @@ const Contact = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const rateCheck = checkClientRateLimit('public_contact_form', 3, 60000);
+    if (!rateCheck.allowed) {
+      toast({
+        title: "Too Many Requests",
+        description: `Please wait ${rateCheck.waitSeconds} seconds before submitting another inquiry.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!validateForm()) {
-      const fieldList = Object.keys(errors); // This might be stale due to setState, better use newErrors in validateForm but for now:
       toast({
         title: "Missing Information",
         description: "Please check all required fields (Name, Email, Phone, City, Vehicle, Service).",

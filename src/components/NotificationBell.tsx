@@ -439,14 +439,7 @@ export default function NotificationBell() {
       )
       .subscribe();
 
-    // 3. Fallback interval: 60s (only when active/visible tab)
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        runCheck();
-      }
-    }, 60000);
-
-    // 4. Tab visibility change listener
+    // 3. Tab visibility change listener (syncs state only when user explicitly switches back into tab)
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         runCheck();
@@ -455,7 +448,6 @@ export default function NotificationBell() {
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
-      clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       supabase.removeChannel(channel);
     };

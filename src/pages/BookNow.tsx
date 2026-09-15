@@ -24,6 +24,7 @@ import { useCouponsStore } from "@/store/coupons";
 import { isSupabaseEnabled } from "@/lib/auth";
 import { calculateDiscount } from "@/lib/discountUtils";
 import * as bookingsSvc from "@/services/supabase/bookings";
+import { checkClientRateLimit } from "@/lib/rateLimit";
 import * as supaPkgs from "@/services/supabase/packages";
 import * as supaAddOns from "@/services/supabase/addOns";
 import api from "@/lib/api.js";
@@ -673,10 +674,20 @@ const BookNow = () => {
     e.preventDefault();
     const formEl = e.currentTarget as HTMLFormElement;
 
-    // BOT PROTECTION: If honeypot is filled, silently ignore
+    // BOT & SPAM RATE LIMIT PROTECTION
     if (honey) {
       console.warn("Honeypot triggered - bot suspected");
       navigate(`/thank-you?total=${encodeURIComponent(discountedTotal)}&name=${encodeURIComponent(formData.name)}&time=09:00 AM&date=Soon`);
+      return;
+    }
+
+    const rateCheck = checkClientRateLimit('public_booking_form', 3, 60000);
+    if (!rateCheck.allowed) {
+      toast({
+        title: "Too Many Requests",
+        description: `Please wait ${rateCheck.waitSeconds} seconds before submitting another booking request.`,
+        variant: "destructive"
+      });
       return;
     }
 

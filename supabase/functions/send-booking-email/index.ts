@@ -2,6 +2,28 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
+// ── Rate Limiting State (Sliding Window per IP) ──
+const ipRequestHistory = new Map<string, number[]>()
+const RATE_LIMIT_WINDOW_MS = 60 * 1000 // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 5 // Max 5 emails per IP per minute
+
+function isRateLimited(ip: string): { limited: boolean; remaining: number } {
+  const now = Date.now()
+  const timestamps = ipRequestHistory.get(ip) || []
+  
+  // Prune timestamps older than 60 seconds
+  const validTimestamps = timestamps.filter(ts => now - ts < RATE_LIMIT_WINDOW_MS)
+  
+  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    ipRequestHistory.set(ip, validTimestamps)
+    return { limited: true, remaining: 0 }
+  }
+  
+  validTimestamps.push(now)
+  ipRequestHistory.set(ip, validTimestamps)
+  return { limited: false, remaining: MAX_REQUESTS_PER_WINDOW - validTimestamps.length }
+}
+
 serve(async (req) => {
   // CORS headers
   const corsHeaders = {
@@ -14,8 +36,35 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // Extract Client IP
+  const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+                   req.headers.get('cf-connecting-ip') ||
+                   req.headers.get('x-real-ip') ||
+                   'unknown-client'
+
+  // Check Rate Limit
+  const { limited, remaining } = isRateLimited(clientIp)
+  if (limited) {
+    console.warn(`⚠️ Rate limit exceeded for IP: ${clientIp}`)
+    return new Response(
+      JSON.stringify({ 
+        error: 'Rate limit exceeded: Max 5 submissions per minute. Please wait a moment before trying again.' 
+      }),
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Retry-After': '60',
+          'X-RateLimit-Limit': String(MAX_REQUESTS_PER_WINDOW),
+          'X-RateLimit-Remaining': '0'
+        }, 
+        status: 429 
+      }
+    )
+  }
+
   try {
-    console.log('📧 Edge Function: Received email request');
+    console.log(`📧 Edge Function: Received email request from IP ${clientIp} (${remaining} remaining in window)`);
 
     if (!RESEND_API_KEY) {
       console.error('❌ RESEND_API_KEY not set!');
