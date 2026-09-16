@@ -81,13 +81,81 @@ serve(async (req) => {
     }
 
     if (dailyCount !== null && dailyCount >= DAILY_MAX_EMAILS) {
-      console.warn(`⚠️ Daily sanity cap reached: ${dailyCount}/${DAILY_MAX_EMAILS} alerts sent in past 24h. Skipping.`)
+      console.warn(`⚠️ Daily sanity cap reached: ${dailyCount}/${DAILY_MAX_EMAILS} alerts sent in past 24h.`)
+
+      // Check if we've already sent a cap warning email in the last 24h
+      const { data: capSetting } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'abandoned_drafts_cap_warning')
+        .maybeSingle()
+
+      const lastWarned = capSetting?.value?.warned_at ? new Date(capSetting.value.warned_at).getTime() : 0
+      const nowMs = Date.now()
+
+      // If no warning email sent in past 24 hours, dispatch a 1-time heads-up email to admin
+      if (nowMs - lastWarned > 24 * 60 * 60 * 1000) {
+        console.log('📧 Sending 1-time daily cap warning email to admin...')
+        try {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${RESEND_API_KEY}`,
+            },
+            body: JSON.stringify({
+              from: SENDER_EMAIL,
+              to: [ADMIN_EMAIL],
+              subject: `⚠️ Alert Limit Reached: 25 Abandoned Form Emails Sent in Past 24h`,
+              html: `
+                <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0f172a; color: #f8fafc;">
+                  <div style="background: #eab308; padding: 25px 20px; border-radius: 12px 12px 0 0; text-align: center; color: #713f12;">
+                    <div style="font-size: 12px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 4px;">System Notification</div>
+                    <h1 style="margin: 0; font-size: 24px; font-weight: 800;">⚠️ Daily Alert Cap Reached (25/25)</h1>
+                  </div>
+                  <div style="background-color: #1e293b; padding: 25px; border-radius: 0 0 12px 12px; border: 1px solid #334155; border-top: none;">
+                    <p style="font-size: 15px; line-height: 1.6; color: #e2e8f0; margin-top: 0;">
+                      You have received <strong>25 abandoned booking form alerts</strong> within the last 24 hours.
+                    </p>
+                    <p style="font-size: 14px; line-height: 1.6; color: #94a3b8;">
+                      To prevent your inbox from being flooded, individual email alerts are now paused until the rolling 24-hour count drops below 25.
+                    </p>
+                    <div style="background: #0f172a; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin: 20px 0;">
+                      <p style="margin: 0; font-size: 13px; color: #38bdf8;">
+                        💡 <strong>Don't worry:</strong> Abandoned drafts are still actively captured and stored in your database. You can review all incomplete forms anytime in your CRM dashboard.
+                      </p>
+                    </div>
+                    <div style="text-align: center; margin-top: 25px;">
+                      <a href="https://primeautodetail.com/follow-up-center" style="background: #eab308; color: #713f12; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 800; font-size: 14px; display: inline-block;">
+                        Open Follow-Up Center →
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              `,
+            }),
+          })
+
+          // Save timestamp to prevent repeat warnings
+          await supabase
+            .from('app_settings')
+            .upsert({
+              key: 'abandoned_drafts_cap_warning',
+              value: { warned_at: new Date().toISOString() },
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'key' })
+        } catch (warnErr) {
+          console.error('❌ Failed to send cap warning email:', warnErr)
+        }
+      }
+
       return new Response(
         JSON.stringify({ 
           success: false, 
           reason: 'daily_cap_exceeded', 
           daily_count: dailyCount, 
-          cap: DAILY_MAX_EMAILS 
+          cap: DAILY_MAX_EMAILS,
+          warning_sent: nowMs - lastWarned > 24 * 60 * 60 * 1000
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )

@@ -40,13 +40,9 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Daily sanity cap check (max 25 alert emails in rolling 24 hours)
-  SELECT count(*) INTO v_daily_sent
-  FROM public.booking_drafts
-  WHERE notified_at >= now() - INTERVAL '24 hours';
-
-  IF v_daily_sent >= 25 THEN
-    RAISE WARNING 'Daily abandoned draft email cap (25) reached. Skipping alert dispatch.';
+  -- Secondary hard circuit breaker (30/day) in case edge function is ever unreachable
+  IF v_daily_sent >= 30 THEN
+    RAISE WARNING 'Daily abandoned draft email hard circuit breaker (30) reached. Skipping.';
     RETURN;
   END IF;
 
