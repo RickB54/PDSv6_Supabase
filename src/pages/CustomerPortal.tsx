@@ -681,7 +681,7 @@ const CustomerPortal = () => {
                         {addon.description}
                       </p>
 
-                      {(addon.id === 'ceramic-protection-1yr' || addon.id === 'ceramic-coating-2yr') && (
+                      {(addon.id === 'ceramic-coating-6mo' || addon.id === 'ceramic-protection-2yr-plan') && (
                         <div className="mt-1 p-2.5 bg-amber-50/50 rounded-xl border border-amber-100/50">
                           <p className="text-[10px] text-amber-900 leading-relaxed font-bold italic">
                             "For best results, we strongly recommend adding Clay Bar & Iron Decontamination. This removes embedded contaminants so the ceramic coating bonds properly and lasts the full year."

@@ -116,8 +116,8 @@ function buildAddOnServices(): DisplayService[] {
   ];
   
   const hiddenByDefault = [
-    'paint-sealant', 'odor-eliminator', 'paint-touch-up', 'ceramic-coating', 
-    'paint-correction', 'odor-treatment', 'ceramic-protection-1yr', 'ceramic-coating-2yr'
+    'paint-sealant', 'odor-eliminator', 'paint-touch-up', 
+    'paint-correction', 'odor-treatment', 'ceramic-protection-2yr-plan'
   ];
 
   return merged.filter(a => {

@@ -30,7 +30,7 @@ export const AddOnsModal: React.FC<AddOnsModalProps> = ({
                         'wheel-cleaning', 'clay-bar', 'headlight-restoration', 'leather-conditioning',
                         'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment',
                         'scratch-repair', 'deep-interior', 'paint-sealant', 'odor-eliminator',
-                        'paint-touch-up', 'ceramic-coating', 'paint-correction', 'odor-treatment'
+                        'paint-touch-up', 'ceramic-coating-6mo', 'ceramic-protection-2yr-plan', 'paint-correction', 'odor-treatment'
                     ];
 
                     // STRICT FILTER: Only show active, managed add-ons

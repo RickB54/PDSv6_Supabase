@@ -479,6 +479,14 @@ export default function PackagePricing() {
     try { window.dispatchEvent(new CustomEvent('content-changed', { detail: { kind: 'booknow' } })); } catch { }
   };
 
+  const isPkgArchivedHelper = (p: any, pkgMeta: Record<string, any>) => {
+    return pkgMeta[p.id]?.visible === false || (pkgMeta[p.id]?.visible === undefined && (p.id.startsWith('prime-elite') || ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'].includes(p.id)));
+  };
+
+  const isAddonArchivedHelper = (a: any, addonMeta: Record<string, any>) => {
+    return addonMeta[a.id]?.visible === false || (addonMeta[a.id]?.visible === undefined && (a as any).active === false);
+  };
+
   const openViewAllAddOns = () => {
     const snapshot = {
       savedPrices: savedPrices,
@@ -497,7 +505,9 @@ export default function PackagePricing() {
     const snapshot = liveSnapshot;
     const addonMeta = snapshot?.addOnMeta || {};
     const saved = snapshot?.savedPrices || {};
-    const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+    const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])]
+      .filter(a => !addonMeta[a.id]?.deleted)
+      .filter(a => showArchivedInViewAllAddOns ? true : !isAddonArchivedHelper(a, addonMeta));
 
     const getPrice = (id: string, size: string) => {
       const key = `addon:${id}:${size}`;
@@ -507,24 +517,27 @@ export default function PackagePricing() {
       return { value: (item as any)?.pricing?.[size] || 0, isOverride: false };
     };
 
-    const rowHtml = (name: string, desc: string, id: string) => {
+    const rowHtml = (name: string, desc: string, id: string, isArchived: boolean) => {
       const sizes = ['compact', 'midsize', 'truck', 'luxury'];
       const cells = sizes.map(sz => {
         const { value, isOverride } = getPrice(id, sz);
-        const style = isOverride ? 'color:#dc2626;font-weight:bold;' : '';
+        const style = isOverride ? 'color:#dc2626;font-weight:bold;' : (isArchived ? 'color:#666;' : '');
         return `<td style="padding:8px;border:1px solid #ddd;text-align:right;${style}">$${value.toFixed(2)}</td>`;
       }).join('');
       
-      return `<tr><td style="padding:8px;border:1px solid #ddd;font-weight:bold;">${name}</td><td style="padding:8px;border:1px solid #ddd;color:#555;">${desc}</td>${cells}</tr>`;
+      const badge = isArchived ? ' <span style="font-size:10px;background:#e4e4e7;color:#3f3f46;padding:2px 6px;border-radius:4px;font-weight:bold;margin-left:6px;border:1px solid #d4d4d8;">ARCHIVED</span>' : '';
+      const rowStyle = isArchived ? 'background:#f4f4f5;color:#52525b;' : '';
+      return `<tr style="${rowStyle}"><td style="padding:8px;border:1px solid #ddd;font-weight:${isArchived ? 'normal' : 'bold'};">${name}${badge}</td><td style="padding:8px;border:1px solid #ddd;color:#555;">${desc}</td>${cells}</tr>`;
     };
 
-    const addonRows = visibleAddons.map(a => rowHtml(a.name, (a as any).description || '—', a.id)).join('');
+    const addonRows = visibleAddons.map(a => rowHtml(a.name, (a as any).description || '—', a.id, isAddonArchivedHelper(a, addonMeta))).join('');
     const today = new Date().toLocaleDateString();
+    const title = showArchivedInViewAllAddOns ? "Current Add-Ons Pricing (All)" : "Current Live Add-Ons Pricing";
 
     win.document.write(`
       <html>
         <head>
-          <title>Current Live Add-Ons Pricing</title>
+          <title>${title}</title>
           <style>
             body{font-family:Arial, sans-serif; padding:24px;}
             h1{color:#dc2626;}
@@ -537,7 +550,7 @@ export default function PackagePricing() {
           </style>
         </head>
         <body>
-          <h1>Current Live Add-Ons Pricing</h1>
+          <h1>${title}</h1>
           <p>${today}</p>
           <table>
             <thead>
@@ -562,18 +575,23 @@ export default function PackagePricing() {
   const downloadAddOnsPDF = () => {
     try {
       const doc = new jsPDF({ orientation: 'p' });
+      const snapshot = liveSnapshot;
+      const addonMeta = snapshot?.addOnMeta || {};
+      const saved = snapshot?.savedPrices || {};
+      const isLiveOnly = !showArchivedInViewAllAddOns;
+      const title = isLiveOnly ? "Current Live Add-Ons Pricing — Prime Auto Detail" : "Current Add-Ons Pricing (All) — Prime Auto Detail";
+
       doc.setTextColor(37, 99, 235); // Blue color for addons
       doc.setFontSize(20);
-      doc.text("Current Live Add-Ons Pricing — Prime Auto Detail", 14, 20);
+      doc.text(title, 14, 20);
 
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(9);
       doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
-      const snapshot = liveSnapshot;
-      const addonMeta = snapshot?.addOnMeta || {};
-      const saved = snapshot?.savedPrices || {};
-      const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+      const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])]
+        .filter(a => !addonMeta[a.id]?.deleted)
+        .filter(a => showArchivedInViewAllAddOns ? true : !isAddonArchivedHelper(a, addonMeta));
 
       const getPrice = (id: string, size: string) => {
         const key = `addon:${id}:${size}`;
@@ -584,12 +602,13 @@ export default function PackagePricing() {
       };
 
       const tableData = visibleAddons.map(a => {
+        const isArchived = isAddonArchivedHelper(a, addonMeta);
         const getP = (sz: string) => {
           const { value } = getPrice(a.id, sz);
           return `$${value.toFixed(2)}`;
         };
         return [
-          a.name,
+          isArchived ? `${a.name} (ARCHIVED)` : a.name,
           (a as any).description || '—',
           getP('compact'),
           getP('midsize'),
@@ -762,14 +781,6 @@ export default function PackagePricing() {
     a.download = `pricing-backup-${now}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const isPkgArchivedHelper = (p: any, pkgMeta: Record<string, any>) => {
-    return pkgMeta[p.id]?.visible === false || (pkgMeta[p.id]?.visible === undefined && (p.id.startsWith('prime-elite') || ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'].includes(p.id)));
-  };
-
-  const isAddonArchivedHelper = (a: any, addonMeta: Record<string, any>) => {
-    return addonMeta[a.id]?.visible === false || (addonMeta[a.id]?.visible === undefined && (a as any).active === false);
   };
 
   const printPrices = () => {
@@ -1749,11 +1760,18 @@ export default function PackagePricing() {
       const pkgMeta = snapshot?.packageMeta || {};
       const addonMeta = snapshot?.addOnMeta || {};
       const saved = snapshot?.savedPrices || {};
-      let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => showArchivedInViewAll ? !pkgMeta[p.id]?.deleted : ((pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted));
+      let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => !pkgMeta[p.id]?.deleted);
+      if (!showArchivedInViewAll) {
+        rawPkgs = rawPkgs.filter(p => !isPkgArchivedHelper(p, pkgMeta));
+      }
       if (viewAllPackageFilter === 'essential') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('essential'));
       if (viewAllPackageFilter === 'elite') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('elite'));
       const visiblePkgs = rawPkgs;
-      const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => showArchivedInViewAll ? !addonMeta[a.id]?.deleted : ((addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted));
+      let rawAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => !addonMeta[a.id]?.deleted);
+      if (!showArchivedInViewAll) {
+        rawAddons = rawAddons.filter(a => !isAddonArchivedHelper(a, addonMeta));
+      }
+      const visibleAddons = rawAddons;
 
       const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
         const key = `${type}:${id}:${size}`;
