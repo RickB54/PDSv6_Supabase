@@ -259,9 +259,9 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user) throw new Error('Not authenticated');
 
-    let bsToSave = chemical.bottleSize;
+    let bsToSave = chemical.bottleSize || '';
     if (chemical.containerType && chemical.containerType.trim()) {
-        bsToSave = `${chemical.bottleSize}|__CT__|${chemical.containerType.trim()}`;
+        bsToSave = `${chemical.bottleSize || ''}|__CT__|${chemical.containerType.trim()}`;
     }
 
     let categoryToSave = chemical.category?.trim() || '';
@@ -277,16 +277,6 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
     const cleanShelf = (rawShelf === 'N/A' || rawShelf === 'Unassigned') ? null : (rawShelf || null);
     const rawSec = chemical.section?.trim();
     const cleanSec = (rawSec === 'N/A' || rawSec === 'Unassigned') ? null : (rawSec || null);
-
-    let secLoc = chemical.shelfLocation?.trim() || '';
-    if (secLoc === 'N/A' || secLoc === 'Unassigned') secLoc = '';
-    if (!secLoc && cleanShelf && cleanSec) {
-        secLoc = `${cleanShelf} - ${cleanSec}`;
-    } else if (!secLoc && cleanShelf) {
-        secLoc = cleanShelf;
-    } else if (!secLoc && cleanSec) {
-        secLoc = cleanSec;
-    }
 
     let rawLibId: string | null = null;
     if (chemical.chemicalLibraryId && typeof chemical.chemicalLibraryId === 'string') {
@@ -331,10 +321,11 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         name: chemical.name,
         brand: chemical.brand || null,
         bottle_size: bsToSave,
-        cost_per_bottle: chemical.costPerBottle,
-        threshold: chemical.threshold,
-        current_stock: chemical.currentStock,
-        image_url: chemical.imageUrl,
+        container_type: chemical.containerType?.trim() || null,
+        cost_per_bottle: chemical.costPerBottle ?? 0,
+        threshold: chemical.threshold ?? 1,
+        current_stock: chemical.currentStock ?? 1,
+        image_url: chemical.imageUrl || null,
         chemical_library_id: rawLibId,
         dilution_ratios: chemical.dilutionRatios || [],
         where_purchased: chemical.wherePurchased || null,
@@ -342,9 +333,6 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
         actual_price: chemical.actualPrice || null,
         sale_price: chemical.salePrice || null,
         notes: chemical.notes || null,
-        is_concentrate: chemical.isConcentrate ?? true,
-        tags: chemical.tags || [],
-        shelf_location: secLoc || null,
         shelf: cleanShelf,
         section: cleanSec,
         category: categoryToSave || null,
@@ -364,85 +352,60 @@ export async function saveChemical(chemical: Partial<Chemical>, isNew: boolean =
             console.warn('[saveChemical] Foreign key constraint violation on chemical_library_id, retrying with chemical_library_id: null...', error.message);
             const sanitizedDbData = { ...dbData, chemical_library_id: null };
             const { error: retryErr } = await supabase.from('chemicals').upsert(sanitizedDbData);
-            if (!retryErr) return;
-        }
-
-        const isColumnError = error.code === '42703' || msg.includes('column') || msg.includes('schema') || msg.includes('where_purchased') || msg.includes('brand') || msg.includes('container_type');
-        
-        if (isColumnError) {
-            console.warn('Handling schema mismatch in chemicals table, retrying with sanitized payload...', error.message);
-        
-            let sanitized = { ...dbData };
-            let currentErr = error;
-            let retries = 0;
-            while (currentErr && ((currentErr.code === '42703') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 20) {
-                const errMsg = (currentErr.message || '').toLowerCase();
-                let dropped = false;
-                const isCTError = errMsg.includes('container_type') && 'container_type' in sanitized;
-                if (errMsg.includes('where_purchased') && 'where_purchased' in sanitized) { delete sanitized.where_purchased; dropped = true; }
-                else if (errMsg.includes('brand') && 'brand' in sanitized) { delete sanitized.brand; dropped = true; }
-                else if (isCTError) { delete sanitized.container_type; dropped = true; }
-                else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitized) { delete sanitized.purchase_date; dropped = true; }
-                else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
-                else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
-                else if (errMsg.includes('is_concentrate') && 'is_concentrate' in sanitized) { delete sanitized.is_concentrate; dropped = true; }
-                else if (errMsg.includes('tags') && 'tags' in sanitized) { delete sanitized.tags; dropped = true; }
-                else if (errMsg.includes('shelf_location') && 'shelf_location' in sanitized) { delete sanitized.shelf_location; dropped = true; }
-                else if (errMsg.includes('shelf') && 'shelf' in sanitized) { delete sanitized.shelf; dropped = true; }
-                else if (errMsg.includes('section') && 'section' in sanitized) { delete sanitized.section; dropped = true; }
-                else if (errMsg.includes('category') && 'category' in sanitized) { delete sanitized.category; dropped = true; }
-                
-                if (!dropped) {
-                    delete sanitized.where_purchased;
-                    delete sanitized.brand;
-                    delete sanitized.container_type;
-                    delete sanitized.purchase_date;
-                    delete sanitized.actual_price;
-                    delete sanitized.sale_price;
-                    delete sanitized.is_concentrate;
-                    delete sanitized.tags;
-                    delete sanitized.shelf_location;
-                    delete sanitized.shelf;
-                    delete sanitized.section;
-                    delete sanitized.category;
-                }
-                const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
-                currentErr = retryErr;
-                retries++;
+            if (retryErr) {
+                console.error('[saveChemical] Retry after FK sanitization failed:', retryErr);
+                throw retryErr;
             }
-            if (currentErr) throw currentErr;
-            
-            // Return correctly mapped object to keep UI consistent
-            const parts = (dbData.bottle_size || '').split('|__CT__|');
-            const recoveredBs = parts[0];
-            const recoveredCt = parts[1] || dbData.container_type;
-
-            return {
-                id: dbData.id,
-                name: dbData.name,
-                brand: dbData.brand,
-                category: dbData.category,
-                formula: dbData.formula,
-                bottleSize: recoveredBs,
-                containerType: recoveredCt,
-                currentStock: dbData.current_stock,
-                threshold: dbData.threshold,
-                costPerBottle: dbData.cost_per_bottle,
-                wherePurchased: dbData.where_purchased,
-                purchaseDate: dbData.purchase_date,
-                actualPrice: dbData.actual_price,
-                salePrice: dbData.sale_price,
-                notes: dbData.notes,
-                imageUrl: dbData.image_url,
-                updatedAt: dbData.updated_at,
-                isConcentrate: dbData.is_concentrate,
-                tags: dbData.tags,
-                shelfLocation: dbData.shelf_location,
-                shelf: dbData.shelf,
-                section: dbData.section
-            } as any;
         } else {
-            throw error;
+            const isColumnError = error.code === '42703' || error.code === 'PGRST204' || msg.includes('column') || msg.includes('schema');
+            
+            if (isColumnError) {
+                console.warn('Handling schema mismatch in chemicals table, retrying with sanitized payload...', error.message);
+            
+                let sanitized = { ...dbData };
+                let currentErr: any = error;
+                let retries = 0;
+                while (currentErr && ((currentErr.code === '42703' || currentErr.code === 'PGRST204') || (currentErr.message || '').toLowerCase().includes('column')) && retries < 20) {
+                    const errMsg = (currentErr.message || '').toLowerCase();
+                    let dropped = false;
+                    const isCTError = errMsg.includes('container_type') && 'container_type' in sanitized;
+                    if (errMsg.includes('where_purchased') && 'where_purchased' in sanitized) { delete sanitized.where_purchased; dropped = true; }
+                    else if (errMsg.includes('brand') && 'brand' in sanitized) { delete sanitized.brand; dropped = true; }
+                    else if (isCTError) { delete sanitized.container_type; dropped = true; }
+                    else if (errMsg.includes('purchase_date') && 'purchase_date' in sanitized) { delete sanitized.purchase_date; dropped = true; }
+                    else if (errMsg.includes('actual_price') && 'actual_price' in sanitized) { delete sanitized.actual_price; dropped = true; }
+                    else if (errMsg.includes('sale_price') && 'sale_price' in sanitized) { delete sanitized.sale_price; dropped = true; }
+                    else if (errMsg.includes('is_concentrate') && 'is_concentrate' in sanitized) { delete sanitized.is_concentrate; dropped = true; }
+                    else if (errMsg.includes('tags') && 'tags' in sanitized) { delete sanitized.tags; dropped = true; }
+                    else if (errMsg.includes('shelf_location') && 'shelf_location' in sanitized) { delete sanitized.shelf_location; dropped = true; }
+                    else if (errMsg.includes('shelf') && 'shelf' in sanitized) { delete sanitized.shelf; dropped = true; }
+                    else if (errMsg.includes('section') && 'section' in sanitized) { delete sanitized.section; dropped = true; }
+                    else if (errMsg.includes('category') && 'category' in sanitized) { delete sanitized.category; dropped = true; }
+                    else if (errMsg.includes('hide_from_iac') && 'hide_from_iac' in sanitized) { delete sanitized.hide_from_iac; dropped = true; }
+                    
+                    if (!dropped) {
+                        delete sanitized.where_purchased;
+                        delete sanitized.brand;
+                        delete sanitized.container_type;
+                        delete sanitized.purchase_date;
+                        delete sanitized.actual_price;
+                        delete sanitized.sale_price;
+                        delete sanitized.is_concentrate;
+                        delete sanitized.tags;
+                        delete sanitized.shelf_location;
+                        delete sanitized.shelf;
+                        delete sanitized.section;
+                        delete sanitized.category;
+                        delete sanitized.hide_from_iac;
+                    }
+                    const { error: retryErr } = await supabase.from('chemicals').upsert(sanitized);
+                    currentErr = retryErr;
+                    retries++;
+                }
+                if (currentErr) throw currentErr;
+            } else {
+                throw error;
+            }
         }
     }
 

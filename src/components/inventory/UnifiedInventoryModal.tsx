@@ -786,7 +786,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
         costPerBottle: "",
         currentStock: "1",
         threshold: "1",
-        category: "Other",
+        category: mode === 'chemical' ? "Exterior" : "Other",
         subtype: "",
         quantity: "1",
         costPerItem: "",
@@ -908,7 +908,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
   const save = async () => {
     try {
       // Validate required fields
-      if (!form.name.trim()) {
+      if (!form.name || !form.name.trim()) {
         toast.error("Name is required");
         return;
       }
@@ -960,9 +960,9 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
           
           const payload = {
             id: sizeId,
-            name: form.name.trim(),
+            name: (form.name || '').trim(),
             brand: form.brand?.trim() || undefined,
-            bottleSize: size.bottleSize.trim(),
+            bottleSize: (size.bottleSize || '').trim(),
             containerType: size.containerType?.trim() || undefined,
             costPerBottle: numeric(size.costPerBottle),
             currentStock: numeric(size.currentStock),
@@ -979,7 +979,7 @@ export default function UnifiedInventoryModal({ mode: modeProp, open, onOpenChan
             shelf: size.shelf?.trim() || null,
             section: size.section?.trim() || null,
             location: size.location?.trim() || null,
-            category: form.category || undefined,
+            category: form.category || 'Exterior',
             chemicalCategory: form.chemicalCategory || undefined,
             hideFromIac: form.hideFromIac,
           };
