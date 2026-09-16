@@ -5,7 +5,7 @@ import { useBookingsStore } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { getSupabaseCustomers, Customer, supabase, upsertSupabaseCustomer } from "@/lib/supa-data";
 import { RetentionHub } from "@/components/customers/RetentionHub";
-import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff, HelpCircle, PenTool, CheckCircle2, Ghost } from "lucide-react";
+import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff, HelpCircle, PenTool, CheckCircle2, Ghost, Bell } from "lucide-react";
 import { format, isSameMonth } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -911,6 +911,11 @@ export default function FollowUpCenter() {
                         <div className="flex flex-wrap items-center gap-3">
                           <h5 className="text-xl font-black uppercase tracking-tight text-zinc-200 truncate">{draft.name || 'Unknown Name'}</h5>
                           <Badge className="bg-orange-500/20 text-orange-400 text-[9px] uppercase font-black px-2 py-0.5 border-none">Abandoned Form</Badge>
+                          {draft.notified_at && (
+                            <Badge className="bg-amber-500/15 text-amber-300 text-[9px] uppercase font-black px-2 py-0.5 border border-amber-500/30 flex items-center gap-1">
+                              <Bell className="h-2.5 w-2.5" /> Alert Sent
+                            </Badge>
+                          )}
                           {draft.service_package && (
                             <Badge className="bg-zinc-800 text-zinc-400 text-[9px] uppercase font-black px-2 py-0.5 border-none">{draft.service_package}</Badge>
                           )}
