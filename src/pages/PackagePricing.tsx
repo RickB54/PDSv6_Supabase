@@ -152,8 +152,10 @@ export default function PackagePricing() {
   const [comparisonVehicle, setComparisonVehicle] = useState('compact');
   const [comparisonSelection, setComparisonSelection] = useState<Record<string, boolean>>({});
   const [liveSnapshot, setLiveSnapshot] = useState<any>(null);
-  const [viewAllPackageFilter, setViewAllPackageFilter] = useState<'both' | 'essential' | 'elite'>('both');
+  const [viewAllPackageFilter, setViewAllPackageFilter] = useState<string>('both');
+  const [viewAllStatusFilter, setViewAllStatusFilter] = useState<'live' | 'all' | 'archived'>('live');
   const [showArchivedInViewAll, setShowArchivedInViewAll] = useState(false);
+  const [showArchivedInViewAllAddOns, setShowArchivedInViewAllAddOns] = useState(false);
   const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<string>("current");
   const builtInSizes: string[] = ["compact", "midsize", "truck", "luxury"];
   const [vehicleType, setVehicleType] = useState<string>("compact");
@@ -762,6 +764,14 @@ export default function PackagePricing() {
     URL.revokeObjectURL(url);
   };
 
+  const isPkgArchivedHelper = (p: any, pkgMeta: Record<string, any>) => {
+    return pkgMeta[p.id]?.visible === false || (pkgMeta[p.id]?.visible === undefined && (p.id.startsWith('prime-elite') || ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'].includes(p.id)));
+  };
+
+  const isAddonArchivedHelper = (a: any, addonMeta: Record<string, any>) => {
+    return addonMeta[a.id]?.visible === false || (addonMeta[a.id]?.visible === undefined && (a as any).active === false);
+  };
+
   const printPrices = () => {
     const win = window.open('', '_blank');
     if (!win) return;
@@ -769,11 +779,29 @@ export default function PackagePricing() {
     const pkgMeta = snapshot?.packageMeta || {};
     const addonMeta = snapshot?.addOnMeta || {};
     const saved = snapshot?.savedPrices || {};
-    let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => showArchivedInViewAll ? !pkgMeta[p.id]?.deleted : ((pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted));
+
+    const showPackagesSection = ['both', 'all', 'packages', 'essential', 'elite'].includes(viewAllPackageFilter);
+    const showAddonsSection = ['both', 'all', 'addons', 'exterior_addons', 'interior_addons'].includes(viewAllPackageFilter);
+
+    let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => !pkgMeta[p.id]?.deleted);
+    if (viewAllStatusFilter === 'live') {
+      rawPkgs = rawPkgs.filter(p => !isPkgArchivedHelper(p, pkgMeta));
+    } else if (viewAllStatusFilter === 'archived') {
+      rawPkgs = rawPkgs.filter(p => isPkgArchivedHelper(p, pkgMeta));
+    }
     if (viewAllPackageFilter === 'essential') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('essential'));
     if (viewAllPackageFilter === 'elite') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('elite'));
-    const visiblePkgs = rawPkgs;
-    const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => showArchivedInViewAll ? !addonMeta[a.id]?.deleted : ((addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted));
+    const visiblePkgs = showPackagesSection ? rawPkgs : [];
+
+    let rawAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => !addonMeta[a.id]?.deleted);
+    if (viewAllStatusFilter === 'live') {
+      rawAddons = rawAddons.filter(a => !isAddonArchivedHelper(a, addonMeta));
+    } else if (viewAllStatusFilter === 'archived') {
+      rawAddons = rawAddons.filter(a => isAddonArchivedHelper(a, addonMeta));
+    }
+    if (viewAllPackageFilter === 'exterior_addons') rawAddons = rawAddons.filter(a => a.category === 'exterior');
+    if (viewAllPackageFilter === 'interior_addons') rawAddons = rawAddons.filter(a => a.category === 'interior');
+    const visibleAddons = showAddonsSection ? rawAddons : [];
 
     const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
       const key = `${type}:${id}:${size}`;
@@ -787,29 +815,42 @@ export default function PackagePricing() {
 
       return { value: (item as any)?.pricing?.[size] || 0, isOverride: false };
     };
-    const rowHtml = (name: string, type: 'package' | 'addon', id: string) => {
+    const rowHtml = (name: string, type: 'package' | 'addon', id: string, isArchived: boolean) => {
       const sizes = ['compact', 'midsize', 'truck', 'luxury'];
       const cells = sizes.map(sz => {
         const { value, isOverride } = getPrice(type, id, sz);
-        const style = isOverride ? 'color:#dc2626;font-weight:bold;' : '';
+        const style = isOverride ? 'color:#dc2626;font-weight:bold;' : (isArchived ? 'color:#666;' : '');
         return `<td style="padding:8px;border:1px solid #ddd;text-align:right;${style}">$${value.toFixed(2)}</td>`;
       }).join('');
       
-      return `<tr><td style="padding:8px;border:1px solid #ddd">${name}</td>${cells}</tr>`;
+      const badge = isArchived ? ' <span style="font-size:10px;background:#e4e4e7;color:#3f3f46;padding:2px 6px;border-radius:4px;font-weight:bold;margin-left:6px;border:1px solid #d4d4d8;">ARCHIVED</span>' : '';
+      const rowStyle = isArchived ? 'background:#f4f4f5;color:#52525b;' : '';
+      return `<tr style="${rowStyle}"><td style="padding:8px;border:1px solid #ddd;font-weight:${isArchived ? 'normal' : '500'}">${name}${badge}</td>${cells}</tr>`;
     };
 
-    const pkgRows = visiblePkgs.map(p => rowHtml(p.name, 'package', p.id)).join('');
-    const addonRows = visibleAddons.map(a => rowHtml(a.name, 'addon', a.id)).join('');
+    const pkgRows = visiblePkgs.map(p => rowHtml(p.name, 'package', p.id, isPkgArchivedHelper(p, pkgMeta))).join('');
+    const addonRows = visibleAddons.map(a => rowHtml(a.name, 'addon', a.id, isAddonArchivedHelper(a, addonMeta))).join('');
     const dateStr = new Date(liveSnapshot?.timestamp || Date.now()).toLocaleString();
     const titleStr = liveSnapshot?.label?.replace("Current Live Pricing", "Current Pricing") || 'Current Pricing';
+
+    const packagesTableHtml = visiblePkgs.length > 0 ? `
+      <h2>Packages</h2>
+      <table><thead><tr><th>Service</th><th>Compact</th><th>Midsize</th><th>Truck</th><th>Luxury</th></tr></thead><tbody>${pkgRows}</tbody></table>
+    ` : (showPackagesSection ? '<p><em>No packages match the current filter.</em></p>' : '');
+
+    const addonsTableHtml = visibleAddons.length > 0 ? `
+      <h2>Add-Ons</h2>
+      <table><thead><tr><th>Service</th><th>Compact</th><th>Midsize</th><th>Truck</th><th>Luxury</th></tr></thead><tbody>${addonRows}</tbody></table>
+    ` : (showAddonsSection ? '<p><em>No add-ons match the current filter.</em></p>' : '');
 
     win.document.write(`
       <html>
         <head>
-          <title>Current Live Pricing</title>
+          <title>${titleStr}</title>
           <style>
             body{font-family:Arial, sans-serif; padding:24px;}
-            h1{color:#dc2626;}
+            h1{color:#dc2626;margin-bottom:4px;}
+            h2{color:#b91c1c;margin-top:24px;margin-bottom:8px;}
             table{border-collapse:collapse;width:100%;margin-bottom:20px;}
             th{background:#dc2626;color:white;padding:10px;text-align:right;}
             th:first-child{text-align:left;}
@@ -820,11 +861,9 @@ export default function PackagePricing() {
         </head>
         <body>
           <h1>${titleStr}</h1>
-          <p>Prices As Of: ${dateStr}</p>
-          <h2>Packages</h2>
-          <table><thead><tr><th>Service</th><th>Compact</th><th>Midsize</th><th>Truck</th><th>Luxury</th></tr></thead><tbody>${pkgRows}</tbody></table>
-          <h2>Add-Ons</h2>
-          <table><thead><tr><th>Service</th><th>Compact</th><th>Midsize</th><th>Truck</th><th>Luxury</th></tr></thead><tbody>${addonRows}</tbody></table>
+          <p style="color:#666;font-size:12px;margin-bottom:20px;">Prices As Of: ${dateStr} | Filter: ${viewAllPackageFilter.toUpperCase()} | Status: ${viewAllStatusFilter.toUpperCase()}</p>
+          ${packagesTableHtml}
+          ${addonsTableHtml}
           <script>window.onload = function(){ window.print(); }</script>
         </body>
       </html>
@@ -841,17 +880,35 @@ export default function PackagePricing() {
 
       doc.setTextColor(100, 100, 100);
       doc.setFontSize(9);
-      doc.text(`Prices As Of: ${new Date(liveSnapshot?.timestamp || Date.now()).toLocaleString()}`, 14, 28);
+      doc.text(`Prices As Of: ${new Date(liveSnapshot?.timestamp || Date.now()).toLocaleString()} | Status: ${viewAllStatusFilter.toUpperCase()}`, 14, 28);
 
       const snapshot = liveSnapshot;
       const pkgMeta = snapshot?.packageMeta || {};
       const addonMeta = snapshot?.addOnMeta || {};
       const saved = snapshot?.savedPrices || {};
-      let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => showArchivedInViewAll ? !pkgMeta[p.id]?.deleted : ((pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted));
+
+      const showPackagesSection = ['both', 'all', 'packages', 'essential', 'elite'].includes(viewAllPackageFilter);
+      const showAddonsSection = ['both', 'all', 'addons', 'exterior_addons', 'interior_addons'].includes(viewAllPackageFilter);
+
+      let rawPkgs = [...builtInPackages, ...(snapshot?.customPackages || [])].filter(p => !pkgMeta[p.id]?.deleted);
+      if (viewAllStatusFilter === 'live') {
+        rawPkgs = rawPkgs.filter(p => !isPkgArchivedHelper(p, pkgMeta));
+      } else if (viewAllStatusFilter === 'archived') {
+        rawPkgs = rawPkgs.filter(p => isPkgArchivedHelper(p, pkgMeta));
+      }
       if (viewAllPackageFilter === 'essential') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('essential'));
       if (viewAllPackageFilter === 'elite') rawPkgs = rawPkgs.filter(p => p.name.toLowerCase().includes('elite'));
-      const visiblePkgs = rawPkgs;
-      const visibleAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => showArchivedInViewAll ? !addonMeta[a.id]?.deleted : ((addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted));
+      const visiblePkgs = showPackagesSection ? rawPkgs : [];
+
+      let rawAddons = [...builtInAddOns, ...(snapshot?.customAddOns || [])].filter(a => !addonMeta[a.id]?.deleted);
+      if (viewAllStatusFilter === 'live') {
+        rawAddons = rawAddons.filter(a => !isAddonArchivedHelper(a, addonMeta));
+      } else if (viewAllStatusFilter === 'archived') {
+        rawAddons = rawAddons.filter(a => isAddonArchivedHelper(a, addonMeta));
+      }
+      if (viewAllPackageFilter === 'exterior_addons') rawAddons = rawAddons.filter(a => a.category === 'exterior');
+      if (viewAllPackageFilter === 'interior_addons') rawAddons = rawAddons.filter(a => a.category === 'interior');
+      const visibleAddons = showAddonsSection ? rawAddons : [];
 
       const getPrice = (type: 'package' | 'addon', id: string, size: string) => {
         const key = `${type}:${id}:${size}`;
@@ -897,50 +954,65 @@ export default function PackagePricing() {
       };
 
       // Packages
-      drawHeader("Packages");
-      visiblePkgs.forEach(p => {
-        checkPageBreak();
-        doc.setFontSize(9);
-        doc.text(p.name, 18, y);
-        vehicleOptions.forEach((v, i) => {
-          const { value, isOverride } = getPrice('package', p.id, v);
-          if (isOverride) {
-            doc.setTextColor(200, 0, 0);
-            doc.setFont("helvetica", "bold");
-          } else {
-            doc.setTextColor(0, 0, 0);
-            doc.setFont("helvetica", "normal");
-          }
-          doc.text(`$${value.toFixed(2)}`, xPos[i], y, { align: 'right' });
+      if (visiblePkgs.length > 0) {
+        drawHeader("Packages");
+        visiblePkgs.forEach(p => {
+          checkPageBreak();
+          const isArchived = isPkgArchivedHelper(p, pkgMeta);
+          doc.setFontSize(9);
+          const displayName = isArchived ? `${p.name} [Archived]` : p.name;
+          doc.setTextColor(isArchived ? 100 : 0, isArchived ? 100 : 0, isArchived ? 100 : 0);
+          doc.text(displayName, 18, y);
+          vehicleOptions.forEach((v, i) => {
+            const { value, isOverride } = getPrice('package', p.id, v);
+            if (isOverride) {
+              doc.setTextColor(200, 0, 0);
+              doc.setFont("helvetica", "bold");
+            } else if (isArchived) {
+              doc.setTextColor(120, 120, 120);
+              doc.setFont("helvetica", "normal");
+            } else {
+              doc.setTextColor(0, 0, 0);
+              doc.setFont("helvetica", "normal");
+            }
+            doc.text(`$${value.toFixed(2)}`, xPos[i], y, { align: 'right' });
+          });
+          doc.setTextColor(0, 0, 0);
+          doc.setFont("helvetica", "normal");
+          y += 7;
         });
-        doc.setTextColor(0, 0, 0);
-        doc.setFont("helvetica", "normal");
-        y += 7;
-      });
-
-      y += 8;
+        y += 8;
+      }
 
       // Add-Ons
-      drawHeader("Add-Ons");
-      visibleAddons.forEach(a => {
-        checkPageBreak();
-        doc.setFontSize(9);
-        doc.text(a.name, 18, y);
-        vehicleOptions.forEach((v, i) => {
-          const { value, isOverride } = getPrice('addon', a.id, v);
-          if (isOverride) {
-            doc.setTextColor(200, 0, 0);
-            doc.setFont("helvetica", "bold");
-          } else {
-            doc.setTextColor(0, 0, 0);
-            doc.setFont("helvetica", "normal");
-          }
-          doc.text(`$${value.toFixed(2)}`, xPos[i], y, { align: 'right' });
+      if (visibleAddons.length > 0) {
+        drawHeader("Add-Ons");
+        visibleAddons.forEach(a => {
+          checkPageBreak();
+          const isArchived = isAddonArchivedHelper(a, addonMeta);
+          doc.setFontSize(9);
+          const displayName = isArchived ? `${a.name} [Archived]` : a.name;
+          doc.setTextColor(isArchived ? 100 : 0, isArchived ? 100 : 0, isArchived ? 100 : 0);
+          doc.text(displayName, 18, y);
+          vehicleOptions.forEach((v, i) => {
+            const { value, isOverride } = getPrice('addon', a.id, v);
+            if (isOverride) {
+              doc.setTextColor(200, 0, 0);
+              doc.setFont("helvetica", "bold");
+            } else if (isArchived) {
+              doc.setTextColor(120, 120, 120);
+              doc.setFont("helvetica", "normal");
+            } else {
+              doc.setTextColor(0, 0, 0);
+              doc.setFont("helvetica", "normal");
+            }
+            doc.text(`$${value.toFixed(2)}`, xPos[i], y, { align: 'right' });
+          });
+          doc.setTextColor(0, 0, 0);
+          doc.setFont("helvetica", "normal");
+          y += 7;
         });
-        doc.setTextColor(0, 0, 0);
-        doc.setFont("helvetica", "normal");
-        y += 7;
-      });
+      }
 
       // --- NEW: SERVICE FEATURE COMPARISON MATRIX ---
       doc.addPage();
@@ -4196,7 +4268,7 @@ export default function PackagePricing() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-zinc-400">View Snapshot:</span>
                 <Select value={selectedHistoryIndex} onValueChange={setSelectedHistoryIndex}>
-                  <SelectTrigger className="w-[300px]">
+                  <SelectTrigger className="w-[240px]">
                     <SelectValue placeholder="Current Live Pricing" />
                   </SelectTrigger>
                   <SelectContent>
@@ -4210,154 +4282,244 @@ export default function PackagePricing() {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-zinc-400">Filter Packages:</span>
+                <span className="text-sm font-semibold text-zinc-400">Filter Items:</span>
                 <Select value={viewAllPackageFilter} onValueChange={(val: any) => setViewAllPackageFilter(val)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="All Packages" />
+                  <SelectTrigger className="w-[190px]">
+                    <SelectValue placeholder="All Services & Add-Ons" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="both">All Packages</SelectItem>
-                    <SelectItem value="essential">Essential Packages</SelectItem>
-                    <SelectItem value="elite">Elite Packages</SelectItem>
+                    <SelectItem value="both">All Services & Add-Ons</SelectItem>
+                    <SelectItem value="packages">All Packages Only</SelectItem>
+                    <SelectItem value="essential">Essential Packages Only</SelectItem>
+                    <SelectItem value="elite">Elite Packages Only</SelectItem>
+                    <SelectItem value="addons">All Add-Ons Only</SelectItem>
+                    <SelectItem value="exterior_addons">Exterior Add-Ons Only</SelectItem>
+                    <SelectItem value="interior_addons">Interior Add-Ons Only</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2 mr-4">
-                <Switch checked={showArchivedInViewAll} onCheckedChange={setShowArchivedInViewAll} />
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-zinc-400">Status:</span>
+                <Select 
+                  value={viewAllStatusFilter} 
+                  onValueChange={(val: 'live' | 'all' | 'archived') => {
+                    setViewAllStatusFilter(val);
+                    setShowArchivedInViewAll(val !== 'live');
+                  }}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Live Only" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="live">Live Only</SelectItem>
+                    <SelectItem value="all">Show All (Live + Archived)</SelectItem>
+                    <SelectItem value="archived">Archived Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 mr-2">
+                <Switch 
+                  checked={showArchivedInViewAll} 
+                  onCheckedChange={(checked) => {
+                    setShowArchivedInViewAll(checked);
+                    setViewAllStatusFilter(checked ? 'all' : 'live');
+                  }} 
+                />
                 <span className="text-sm font-semibold text-zinc-400">Show Archived</span>
               </div>
-              <div className="flex items-center gap-3">
-              <Button variant="outline" onClick={printPrices}>Print</Button>
-              <Button variant="outline" onClick={downloadPricesPDF}>Download PDF</Button>
-              <Button variant="outline" onClick={downloadMarketAnalysisPDF}>Market Analysis PDF</Button>
-              <Button variant="outline" onClick={downloadPricesJSON}>Backup as JSON</Button>
-              <label>
-                <Button variant="outline" asChild>
-                  <span>Restore Pricing from JSON</span>
-                </Button>
-                <input type="file" accept=".json" className="hidden" onChange={handleModalPricingRestore} />
-              </label>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button variant="outline" onClick={printPrices}>Print</Button>
+                <Button variant="outline" onClick={downloadPricesPDF}>Download PDF</Button>
+                <Button variant="outline" onClick={downloadMarketAnalysisPDF}>Market Analysis PDF</Button>
+                <Button variant="outline" onClick={downloadPricesJSON}>Backup as JSON</Button>
+                <label>
+                  <Button variant="outline" asChild>
+                    <span>Restore Pricing from JSON</span>
+                  </Button>
+                  <input type="file" accept=".json" className="hidden" onChange={handleModalPricingRestore} />
+                </label>
               </div>
             </div>
             <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
-              <div>
-                <h3 className="text-red-600 font-bold mb-2">Packages</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-red-600 text-white">
-                        <th className="p-2 border">Service</th>
-                        <th className="p-2 border">Compact</th>
-                        <th className="p-2 border">Midsize</th>
-                        <th className="p-2 border">Truck</th>
-                        <th className="p-2 border">Luxury</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const snap = liveSnapshot;
-                        if (!snap) return null;
-                        const pkgMeta = snap.packageMeta || {};
-                        const saved = snap.savedPrices || {};
-                        const visible = Array.from(new Map([...builtInPackages, ...(snap.customPackages || [])].map(p => [p.id, p])).values())
+              {['both', 'all', 'packages', 'essential', 'elite'].includes(viewAllPackageFilter) && (
+                <div>
+                  <h3 className="text-red-600 font-bold mb-2">Packages</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-red-600 text-white">
+                          <th className="p-2 border text-left">Service</th>
+                          <th className="p-2 border text-right">Compact</th>
+                          <th className="p-2 border text-right">Midsize</th>
+                          <th className="p-2 border text-right">Truck</th>
+                          <th className="p-2 border text-right">Luxury</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const snap = liveSnapshot;
+                          if (!snap) return null;
+                          const pkgMeta = snap.packageMeta || {};
+                          const saved = snap.savedPrices || {};
+                          let list = Array.from(new Map([...builtInPackages, ...(snap.customPackages || [])].map(p => [p.id, p])).values())
+                            .filter(p => !pkgMeta[p.id]?.deleted);
 
+                          if (viewAllStatusFilter === 'live') {
+                            list = list.filter(p => !isPkgArchivedHelper(p, pkgMeta));
+                          } else if (viewAllStatusFilter === 'archived') {
+                            list = list.filter(p => isPkgArchivedHelper(p, pkgMeta));
+                          }
 
-                          .filter(p => showArchivedInViewAll ? !pkgMeta[p.id]?.deleted : ((pkgMeta[p.id]?.visible) !== false && !pkgMeta[p.id]?.deleted))
-                          .filter(p => {
-                            if (viewAllPackageFilter === 'essential') return p.name.toLowerCase().includes('essential');
-                            if (viewAllPackageFilter === 'elite') return p.name.toLowerCase().includes('elite');
-                            return true;
+                          if (viewAllPackageFilter === 'essential') list = list.filter(p => p.name.toLowerCase().includes('essential'));
+                          if (viewAllPackageFilter === 'elite') list = list.filter(p => p.name.toLowerCase().includes('elite'));
+
+                          if (list.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={5} className="p-4 text-center text-zinc-400 italic">No packages match the current filter.</td>
+                              </tr>
+                            );
+                          }
+
+                          return list.map(p => {
+                            const isArchived = isPkgArchivedHelper(p, pkgMeta);
+                            const getP = (sz: string) => {
+                              const val = saved[liveGetKey('package', p.id, sz)];
+                              const isO = val !== undefined && val !== null && val !== "";
+                              return { v: isO ? parseFloat(val) : p.pricing[sz as keyof typeof p.pricing], isO };
+                            };
+                            const pr = {
+                              compact: getP('compact'),
+                              midsize: getP('midsize'),
+                              truck: getP('truck'),
+                              luxury: getP('luxury'),
+                            };
+                            return (
+                              <tr key={p.id} className={isArchived ? "bg-zinc-100/90 text-zinc-600 hover:bg-zinc-200/80 transition-colors" : "odd:bg-white even:bg-zinc-50 hover:bg-zinc-100/50 transition-colors"}>
+                                <td className="p-2 border font-medium">
+                                  <div className="flex items-center justify-between">
+                                    <span>{p.name}</span>
+                                    {isArchived && (
+                                      <span className="ml-2 text-[9px] bg-zinc-200 text-zinc-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border border-zinc-300">
+                                        Archived
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className={`p-2 border text-right font-black ${isArchived ? 'text-zinc-500 font-semibold' : 'text-black'}`}>${pr.compact.v}</td>
+                                <td className={`p-2 border text-right font-black ${isArchived ? 'text-zinc-500 font-semibold' : 'text-black'}`}>${pr.midsize.v}</td>
+                                <td className={`p-2 border text-right font-black ${isArchived ? 'text-zinc-500 font-semibold' : 'text-black'}`}>${pr.truck.v}</td>
+                                <td className={`p-2 border text-right font-black ${isArchived ? 'text-zinc-500 font-semibold' : 'text-black'}`}>${pr.luxury.v}</td>
+                              </tr>
+                            );
                           });
-                        return visible.map(p => {
-                          const getP = (sz: string) => {
-                            const val = saved[liveGetKey('package', p.id, sz)];
-                            const isO = val !== undefined && val !== null && val !== "";
-                            return { v: isO ? parseFloat(val) : p.pricing[sz as keyof typeof p.pricing], isO };
-                          };
-                          const pr = {
-                            compact: getP('compact'),
-                            midsize: getP('midsize'),
-                            truck: getP('truck'),
-                            luxury: getP('luxury'),
-                          };
-                          return (
-                            <tr key={p.id} className="odd:bg-white even:bg-zinc-50">
-                              <td className="p-2 border font-medium">{p.name}</td>
-                              <td className="p-2 border text-right font-black text-black">${pr.compact.v}</td>
-                              <td className="p-2 border text-right font-black text-black">${pr.midsize.v}</td>
-                              <td className="p-2 border text-right font-black text-black">${pr.truck.v}</td>
-                              <td className="p-2 border text-right font-black text-black">${pr.luxury.v}</td>
-                            </tr>
-                          );
-                        });
-                      })()}
-                    </tbody>
-                  </table>
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-red-600 font-bold mb-2">Add-Ons</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-red-600 text-white">
-                        <th className="p-2 border">Service</th>
-                        <th className="p-2 border">Compact</th>
-                        <th className="p-2 border">Midsize</th>
-                        <th className="p-2 border">Truck</th>
-                        <th className="p-2 border">Luxury</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        const snap = liveSnapshot;
-                        if (!snap) return null;
-                        const addonMeta = snap.addOnMeta || {};
-                        const saved = snap.savedPrices || {};
-                        const visible = Array.from(new Map([...builtInAddOns, ...(snap.customAddOns || [])].map(a => [a.id, a])).values())
+              )}
 
+              {['both', 'all', 'addons', 'exterior_addons', 'interior_addons'].includes(viewAllPackageFilter) && (
+                <div>
+                  <h3 className="text-red-600 font-bold mb-2">Add-Ons</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-red-600 text-white">
+                          <th className="p-2 border text-left">Service</th>
+                          <th className="p-2 border text-right">Compact</th>
+                          <th className="p-2 border text-right">Midsize</th>
+                          <th className="p-2 border text-right">Truck</th>
+                          <th className="p-2 border text-right">Luxury</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const snap = liveSnapshot;
+                          if (!snap) return null;
+                          const addonMeta = snap.addOnMeta || {};
+                          const saved = snap.savedPrices || {};
+                          let list = Array.from(new Map([...builtInAddOns, ...(snap.customAddOns || [])].map(a => [a.id, a])).values())
+                            .filter(a => !addonMeta[a.id]?.deleted);
 
-                          .filter(a => showArchivedInViewAll ? !addonMeta[a.id]?.deleted : ((addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted));
-                        return visible.map(a => {
-                          const getP = (sz: string) => {
-                            const val = saved[liveGetKey('addon', a.id, sz)];
-                            const isO = val !== undefined && val !== null && val !== "";
-                            return { v: isO ? parseFloat(val) : (a.pricing as any)[sz], isO };
-                          };
-                          const pr = {
-                            compact: getP('compact'),
-                            midsize: getP('midsize'),
-                            truck: getP('truck'),
-                            luxury: getP('luxury'),
-                          };
-                          return (
-                            <tr key={a.id} className="odd:bg-white even:bg-zinc-50">
-                              <td className="p-2 border font-medium">{a.name}</td>
-                              <td className="p-2 border text-right font-black text-black">${pr.compact.v}</td>
-                              <td className="p-2 border text-right font-black text-black">${pr.midsize.v}</td>
-                              <td className="p-2 border text-right font-black text-black">${pr.truck.v}</td>
-                              <td className="p-2 border text-right font-black text-black">${pr.luxury.v}</td>
-                            </tr>
-                          );
-                        });
-                      })()}
-                    </tbody>
-                  </table>
+                          if (viewAllStatusFilter === 'live') {
+                            list = list.filter(a => !isAddonArchivedHelper(a, addonMeta));
+                          } else if (viewAllStatusFilter === 'archived') {
+                            list = list.filter(a => isAddonArchivedHelper(a, addonMeta));
+                          }
+
+                          if (viewAllPackageFilter === 'exterior_addons') list = list.filter(a => a.category === 'exterior');
+                          if (viewAllPackageFilter === 'interior_addons') list = list.filter(a => a.category === 'interior');
+
+                          if (list.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={5} className="p-4 text-center text-zinc-400 italic">No add-ons match the current filter.</td>
+                              </tr>
+                            );
+                          }
+
+                          return list.map(a => {
+                            const isArchived = isAddonArchivedHelper(a, addonMeta);
+                            const getP = (sz: string) => {
+                              const val = saved[liveGetKey('addon', a.id, sz)];
+                              const isO = val !== undefined && val !== null && val !== "";
+                              return { v: isO ? parseFloat(val) : (a.pricing as any)[sz], isO };
+                            };
+                            const pr = {
+                              compact: getP('compact'),
+                              midsize: getP('midsize'),
+                              truck: getP('truck'),
+                              luxury: getP('luxury'),
+                            };
+                            return (
+                              <tr key={a.id} className={isArchived ? "bg-zinc-100/90 text-zinc-600 hover:bg-zinc-200/80 transition-colors" : "odd:bg-white even:bg-zinc-50 hover:bg-zinc-100/50 transition-colors"}>
+                                <td className="p-2 border font-medium">
+                                  <div className="flex items-center justify-between">
+                                    <span>{a.name}</span>
+                                    {isArchived && (
+                                      <span className="ml-2 text-[9px] bg-zinc-200 text-zinc-700 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border border-zinc-300">
+                                        Archived
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className={`p-2 border text-right font-black ${isArchived ? 'text-zinc-500 font-semibold' : 'text-black'}`}>${pr.compact.v}</td>
+                                <td className={`p-2 border text-right font-black ${isArchived ? 'text-zinc-500 font-semibold' : 'text-black'}`}>${pr.midsize.v}</td>
+                                <td className={`p-2 border text-right font-black ${isArchived ? 'text-zinc-500 font-semibold' : 'text-black'}`}>${pr.truck.v}</td>
+                                <td className={`p-2 border text-right font-black ${isArchived ? 'text-zinc-500 font-semibold' : 'text-black'}`}>${pr.luxury.v}</td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>
 
         <Dialog open={viewAllAddOnsOpen} onOpenChange={setViewAllAddOnsOpen}>
           <DialogContent className="sm:max-w-[95vw] lg:max-w-4xl max-h-[80vh] overflow-y-auto bg-zinc-950 border-zinc-800 text-white">
-            <DialogHeader className="border-b border-zinc-800 pb-4 mb-4">
-              <DialogTitle className="text-2xl font-black text-blue-500 uppercase tracking-tight">Current Live Add-Ons — Prime Auto Detail</DialogTitle>
+            <DialogHeader className="border-b border-zinc-800 pb-4 mb-4 flex flex-row items-center justify-between">
+              <DialogTitle className="text-2xl font-black text-blue-500 uppercase tracking-tight">Current Add-Ons — Prime Auto Detail</DialogTitle>
             </DialogHeader>
-            <div className="flex items-center justify-end gap-3 mb-6">
-              <Button className="bg-white hover:bg-zinc-200 text-zinc-950 font-bold border border-zinc-300" onClick={printAddOns}>Print</Button>
-              <Button className="bg-white hover:bg-zinc-200 text-zinc-950 font-bold border border-zinc-300" onClick={downloadAddOnsPDF}>Download PDF</Button>
-              <Button className="bg-white hover:bg-zinc-200 text-zinc-950 font-bold border border-zinc-300" onClick={() => setViewAllAddOnsOpen(false)}>Close</Button>
+            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Switch 
+                  checked={showArchivedInViewAllAddOns} 
+                  onCheckedChange={setShowArchivedInViewAllAddOns} 
+                />
+                <span className="text-sm font-semibold text-zinc-400">Show Archived Add-Ons</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button className="bg-white hover:bg-zinc-200 text-zinc-950 font-bold border border-zinc-300" onClick={printAddOns}>Print</Button>
+                <Button className="bg-white hover:bg-zinc-200 text-zinc-950 font-bold border border-zinc-300" onClick={downloadAddOnsPDF}>Download PDF</Button>
+                <Button className="bg-white hover:bg-zinc-200 text-zinc-950 font-bold border border-zinc-300" onClick={() => setViewAllAddOnsOpen(false)}>Close</Button>
+              </div>
             </div>
             <div className="bg-black/40 border border-zinc-800 rounded-xl p-4 overflow-x-auto">
               <table className="w-full border-collapse">
@@ -4378,8 +4540,10 @@ export default function PackagePricing() {
                     const addonMeta = snap.addOnMeta || {};
                     const saved = snap.savedPrices || {};
                     const visible = Array.from(new Map([...builtInAddOns, ...(snap.customAddOns || [])].map(a => [a.id, a])).values())
-                      .filter(a => (addonMeta[a.id]?.visible) !== false && !addonMeta[a.id]?.deleted);
+                      .filter(a => !addonMeta[a.id]?.deleted)
+                      .filter(a => showArchivedInViewAllAddOns ? true : !isAddonArchivedHelper(a, addonMeta));
                     return visible.map(a => {
+                      const isArchived = isAddonArchivedHelper(a, addonMeta);
                       const getP = (sz: string) => {
                         const val = saved[liveGetKey('addon', a.id, sz)];
                         const isO = val !== undefined && val !== null && val !== "";
@@ -4392,13 +4556,22 @@ export default function PackagePricing() {
                         luxury: getP('luxury'),
                       };
                       return (
-                        <tr key={a.id} className="border-b border-zinc-800 hover:bg-zinc-900/50">
-                          <td className="p-3 border border-zinc-800 font-bold text-white">{a.name}</td>
+                        <tr key={a.id} className={`border-b border-zinc-800 ${isArchived ? 'bg-zinc-900/80 text-zinc-400' : 'hover:bg-zinc-900/50'}`}>
+                          <td className="p-3 border border-zinc-800 font-bold text-white">
+                            <div className="flex items-center justify-between">
+                              <span>{a.name}</span>
+                              {isArchived && (
+                                <span className="ml-2 text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider border border-zinc-700">
+                                  Archived
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="p-3 border border-zinc-800 text-zinc-400 text-sm">{(a as any).description || '—'}</td>
-                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.compact.isO ? "text-blue-400" : "text-zinc-300")}>${pr.compact.v.toFixed(2)}</td>
-                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.midsize.isO ? "text-blue-400" : "text-zinc-300")}>${pr.midsize.v.toFixed(2)}</td>
-                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.truck.isO ? "text-blue-400" : "text-zinc-300")}>${pr.truck.v.toFixed(2)}</td>
-                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.luxury.isO ? "text-blue-400" : "text-zinc-300")}>${pr.luxury.v.toFixed(2)}</td>
+                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.compact.isO ? "text-blue-400" : (isArchived ? "text-zinc-500" : "text-zinc-300"))}>${pr.compact.v.toFixed(2)}</td>
+                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.midsize.isO ? "text-blue-400" : (isArchived ? "text-zinc-500" : "text-zinc-300"))}>${pr.midsize.v.toFixed(2)}</td>
+                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.truck.isO ? "text-blue-400" : (isArchived ? "text-zinc-500" : "text-zinc-300"))}>${pr.truck.v.toFixed(2)}</td>
+                          <td className={cn("p-3 border border-zinc-800 text-right font-mono font-black", pr.luxury.isO ? "text-blue-400" : (isArchived ? "text-zinc-500" : "text-zinc-300"))}>${pr.luxury.v.toFixed(2)}</td>
                         </tr>
                       );
                     });

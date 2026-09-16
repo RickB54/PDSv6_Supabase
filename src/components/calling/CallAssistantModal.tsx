@@ -361,6 +361,22 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
         });
     }, [addOnMetaLive, customAddOnsLive, savedPrices]);
 
+    const allPackagesForModal = useMemo(() => {
+        return [...servicePackages, ...customPackagesLive].map(p => ({
+            ...p,
+            isArchived: (packageMetaLive[p.id]?.visible === false) || (packageMetaLive[p.id]?.visible === undefined && (p.id.startsWith('prime-elite') || ['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'].includes(p.id))),
+            isDeleted: packageMetaLive[p.id]?.deleted === true
+        })).filter(p => !p.isDeleted);
+    }, [packageMetaLive, customPackagesLive]);
+
+    const allAddOnsForModal = useMemo(() => {
+        return [...addOns, ...customAddOnsLive].map((a: any) => ({
+            ...a,
+            isArchived: (addOnMetaLive[a.id]?.visible === false) || (addOnMetaLive[a.id]?.visible === undefined && a.active === false),
+            isDeleted: addOnMetaLive[a.id]?.deleted === true
+        })).filter(a => !a.isDeleted);
+    }, [addOnMetaLive, customAddOnsLive]);
+
     // Call state
     const [vehicles, setVehicles] = useState<Vehicle[]>(() => {
         const saved = localStorage.getItem("phone_assistant_draft_vehicles");
@@ -1801,8 +1817,8 @@ ${firstVehicle.notes || ''}`.trim(),
             <PublicPriceListModal 
                 open={priceListOpen} 
                 onOpenChange={setPriceListOpen} 
-                packages={livePackages} 
-                addons={liveAddOns} 
+                packages={allPackagesForModal} 
+                addons={allAddOnsForModal} 
                 currentPrices={savedPrices} 
             />
             <AlertDialog open={showCloseWarning} onOpenChange={setShowCloseWarning}>
