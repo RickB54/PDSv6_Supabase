@@ -359,20 +359,14 @@ const BookNow = () => {
     let finalCustomAddOns: any[] = [];
 
     // Initialize with built-ins as HIDDEN by default. 
-    // They ONLY become visible if Supabase says is_active = true.
-    // Smart Defaults: Show only what the user wants by default
+    // They ONLY become visible if Supabase says is_active = true or defaults to active.
     builtInPackages.forEach(p => {
       const isEssential = p.id.startsWith('prime-essential');
       finalPackageMeta[p.id] = { id: p.id, visible: isEssential, deleted: false };
     });
     
-    const defaultAddonIds = [
-      'wheel-cleaning', 'clay-bar', 'headlight-restoration', 'leather-conditioning',
-      'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment', '3rd-row-seating'
-    ];
     builtInAddOns.forEach(a => {
-      const isDefault = defaultAddonIds.includes(a.id);
-      finalAddOnMeta[a.id] = { id: a.id, visible: isDefault, deleted: false };
+      finalAddOnMeta[a.id] = { id: a.id, visible: a.active !== false, deleted: false };
     });
 
     if (isSupabaseEnabled()) {
@@ -405,9 +399,10 @@ const BookNow = () => {
         if (addons.length > 0) {
           addons.forEach((a: any) => {
             const id = a.id;
+            const builtIn = builtInAddOns.find(b => b.id === id);
             finalAddOnMeta[id] = {
               id,
-              visible: a.is_active != null ? Boolean(a.is_active) : defaultAddonIds.includes(id),
+              visible: a.is_active != null ? Boolean(a.is_active) : (builtIn ? builtIn.active !== false : true),
               deleted: false
             };
             if (a.compact_price != null) finalSavedPrices[`addon:${id}:compact`] = String(a.compact_price);

@@ -229,14 +229,8 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
             finalPackageMeta[p.id] = { id: p.id, visible: isEssential, deleted: false };
         });
 
-        // Smart defaults for add-ons
-        const defaultAddonIds = [
-            'wheel-cleaning', 'clay-bar', 'headlight-restoration', 'leather-conditioning',
-            'ceramic-trim-coat', 'engine-bay', 'pet-hair', 'stain-treatment', '3rd-row-seating'
-        ];
         addOns.forEach(a => {
-            const isDefault = defaultAddonIds.includes(a.id);
-            finalAddOnMeta[a.id] = { id: a.id, visible: isDefault, deleted: false };
+            finalAddOnMeta[a.id] = { id: a.id, visible: a.active !== false, deleted: false };
         });
 
         // Try localforage for local cache first
@@ -293,9 +287,10 @@ export function CallAssistantModal({ open, onOpenChange }: { open: boolean; onOp
                 if (supabaseAddons && supabaseAddons.length > 0) {
                     supabaseAddons.forEach((a: any) => {
                         const id = a.id;
+                        const builtIn = addOns.find(b => b.id === id);
                         finalAddOnMeta[id] = {
                             id,
-                            visible: a.is_active != null ? Boolean(a.is_active) : defaultAddonIds.includes(id),
+                            visible: a.is_active != null ? Boolean(a.is_active) : (builtIn ? builtIn.active !== false : true),
                             deleted: false
                         };
                         if (a.compact_price != null) finalSavedPrices[`addon:${id}:compact`] = String(a.compact_price);

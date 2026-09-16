@@ -412,16 +412,20 @@ export default function PackagePricing() {
         const allAddons = [...builtInAddOns, ...getCustomAddOns()];
         const addRows = allAddons
           .filter(a => !getAddOnMeta(a.id)?.deleted)
-          .map(a => ({
-            id: a.id,
-            name: a.name,
-            description: (a as any).description || "",
-            compact_price: Number(updated[`addon:${a.id}:compact`] || a.pricing.compact),
-            midsize_price: Number(updated[`addon:${a.id}:midsize`] || a.pricing.midsize),
-            truck_price: Number(updated[`addon:${a.id}:truck`] || a.pricing.truck),
-            luxury_price: Number(updated[`addon:${a.id}:luxury`] || a.pricing.luxury),
-            is_active: (getAddOnMeta(a.id)?.visible !== false)
-          }));
+          .map(a => {
+            const meta = getAddOnMeta(a.id);
+            const isVisible = meta?.visible !== undefined ? meta.visible : ((a as any).active !== false);
+            return {
+              id: a.id,
+              name: a.name,
+              description: (a as any).description || "",
+              compact_price: Number(updated[`addon:${a.id}:compact`] || a.pricing.compact),
+              midsize_price: Number(updated[`addon:${a.id}:midsize`] || a.pricing.midsize),
+              truck_price: Number(updated[`addon:${a.id}:truck`] || a.pricing.truck),
+              luxury_price: Number(updated[`addon:${a.id}:luxury`] || a.pricing.luxury),
+              is_active: isVisible
+            };
+          });
 
         // DELETE "GHOSTS" (Any ID in Supabase not in our current defined collections)
         try {
@@ -3363,23 +3367,29 @@ export default function PackagePricing() {
                       <div className="min-w-0 flex-1 w-full">
                         <Label className="text-xs text-white mb-1 block">Change Package Image</Label>
                         <input type="file" accept="image/png,image/jpeg" onChange={(e) => e.target.files && handleImageUpload(pkg.id, e.target.files[0])} />
-                        <div className="mt-2 flex items-center gap-2">
-                          <Label className="text-white">Show on Live Website</Label>
-                          <Switch
-                            className={(typeof pendingVisibilityPkg[pkg.id] !== 'undefined')
-                              ? "data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-red-600"
-                              : "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"}
-                            checked={(pendingVisibilityPkg[pkg.id] ?? (getPackageMeta(pkg.id)?.visible !== false)) as boolean}
-                            onCheckedChange={(checked) => queueVisibility('package', pkg.id, checked)}
-                          />
-                          {typeof pendingVisibilityPkg[pkg.id] !== 'undefined' ? (
-                            <span className="text-red-500 text-xs">Pending</span>
-                          ) : (getPackageMeta(pkg.id)?.visible === false ? (
-                            <span className="text-red-500 text-xs">Hidden</span>
-                          ) : (
-                            <span className="text-green-500 text-xs">Live</span>
-                          ))}
-                        </div>
+                        {(() => {
+                          const meta = getPackageMeta(pkg.id);
+                          const isVisible = pendingVisibilityPkg[pkg.id] ?? (meta?.visible !== undefined ? meta.visible : (!pkg.id.startsWith('prime-elite') && !['basic-exterior', 'express-wax', 'full-exterior', 'interior-cleaning', 'full-detail', 'premium-detail'].includes(pkg.id)));
+                          return (
+                            <div className="mt-2 flex items-center gap-2">
+                              <Label className="text-white">Show on Live Website</Label>
+                              <Switch
+                                className={(typeof pendingVisibilityPkg[pkg.id] !== 'undefined')
+                                  ? "data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-red-600"
+                                  : "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"}
+                                checked={Boolean(isVisible)}
+                                onCheckedChange={(checked) => queueVisibility('package', pkg.id, checked)}
+                              />
+                              {typeof pendingVisibilityPkg[pkg.id] !== 'undefined' ? (
+                                <span className="text-red-500 text-xs">Pending</span>
+                              ) : (!isVisible ? (
+                                <span className="text-red-500 text-xs">Hidden</span>
+                              ) : (
+                                <span className="text-green-500 text-xs">Live</span>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
@@ -3456,23 +3466,29 @@ export default function PackagePricing() {
                       </div>
                       {isArchivedAddon && <span className="text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded border border-zinc-700 font-black uppercase tracking-widest shrink-0">Archived</span>}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-white">Show on Live Website</Label>
-                      <Switch
-                        className={(typeof pendingVisibilityAddon[addon.id] !== 'undefined')
-                          ? "data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-red-600"
-                          : "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"}
-                        checked={(pendingVisibilityAddon[addon.id] ?? (getAddOnMeta(addon.id)?.visible !== false)) as boolean}
-                        onCheckedChange={(checked) => queueVisibility('addon', addon.id, checked)}
-                      />
-                      {typeof pendingVisibilityAddon[addon.id] !== 'undefined' ? (
-                        <span className="text-red-500 text-xs">Pending</span>
-                      ) : (getAddOnMeta(addon.id)?.visible === false ? (
-                        <span className="text-red-500 text-xs">Hidden</span>
-                      ) : (
-                        <span className="text-green-500 text-xs">Live</span>
-                      ))}
-                    </div>
+                    {(() => {
+                      const meta = getAddOnMeta(addon.id);
+                      const isVisible = pendingVisibilityAddon[addon.id] ?? (meta?.visible !== undefined ? meta.visible : (addon.active !== false));
+                      return (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-white">Show on Live Website</Label>
+                          <Switch
+                            className={(typeof pendingVisibilityAddon[addon.id] !== 'undefined')
+                              ? "data-[state=checked]:bg-red-600 data-[state=unchecked]:bg-red-600"
+                              : "data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-red-600"}
+                            checked={Boolean(isVisible)}
+                            onCheckedChange={(checked) => queueVisibility('addon', addon.id, checked)}
+                          />
+                          {typeof pendingVisibilityAddon[addon.id] !== 'undefined' ? (
+                            <span className="text-red-500 text-xs">Pending</span>
+                          ) : (!isVisible ? (
+                            <span className="text-red-500 text-xs">Hidden</span>
+                          ) : (
+                            <span className="text-green-500 text-xs">Live</span>
+                          ))}
+                        </div>
+                      );
+                    })()}
                     <div className="grid grid-cols-1 gap-3">
                       <div>
                         <label className="text-xs text-muted-foreground">{vehicleLabels[vehicleType] || vehicleType}</label>

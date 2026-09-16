@@ -73,9 +73,16 @@ export function getAllPackageMeta(): Record<string, PackageMeta> {
   return all;
 }
 
+import { addOns as builtInAddOns } from './services';
+
 export function getAddOnMeta(id: string): AddOnMeta | undefined {
   const all = loadMap<AddOnMeta>(ADDON_META_KEY);
-  return all[id];
+  if (all[id] !== undefined) return all[id];
+  const builtIn = builtInAddOns.find(a => a.id === id);
+  if (builtIn) {
+    return { id, visible: builtIn.active !== false };
+  }
+  return undefined;
 }
 export function setAddOnMeta(id: string, meta: Partial<AddOnMeta>) {
   const all = loadMap<AddOnMeta>(ADDON_META_KEY);
@@ -84,7 +91,13 @@ export function setAddOnMeta(id: string, meta: Partial<AddOnMeta>) {
   saveMap(ADDON_META_KEY, all);
 }
 export function getAllAddOnMeta(): Record<string, AddOnMeta> {
-  return loadMap<AddOnMeta>(ADDON_META_KEY);
+  const all = loadMap<AddOnMeta>(ADDON_META_KEY);
+  builtInAddOns.forEach(a => {
+    if (all[a.id] === undefined) {
+      all[a.id] = { id: a.id, visible: a.active !== false };
+    }
+  });
+  return all;
 }
 
 export interface CustomServicePackageDef {

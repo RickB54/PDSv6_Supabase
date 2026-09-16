@@ -25,22 +25,10 @@
       "package:prime-essential-interior:midsize": "220",
       "package:prime-essential-interior:truck": "231",
       "package:prime-essential-interior:luxury": "264",
-      "addon:ceramic-protection-1yr:compact": "87",
-      "addon:ceramic-protection-1yr:midsize": "120",
-      "addon:ceramic-protection-1yr:truck": "142",
-      "addon:ceramic-protection-1yr:luxury": "164",
-      "addon:ceramic-coating-2yr:compact": "296",
-      "addon:ceramic-coating-2yr:midsize": "329",
-      "addon:ceramic-coating-2yr:truck": "384",
-      "addon:ceramic-coating-2yr:luxury": "494",
       "addon:3rd-row-seating:compact": "55",
       "addon:3rd-row-seating:midsize": "55",
       "addon:3rd-row-seating:truck": "55",
       "addon:3rd-row-seating:luxury": "55",
-      "addon:ceramic-coating:compact": "550",
-      "addon:ceramic-coating:midsize": "550",
-      "addon:ceramic-coating:truck": "605",
-      "addon:ceramic-coating:luxury": "660",
       "addon:ceramic-trim-coat:compact": "66",
       "addon:ceramic-trim-coat:midsize": "83",
       "addon:ceramic-trim-coat:truck": "105",
@@ -100,10 +88,6 @@
       "addon:stain-treatment:midsize": "99",
       "addon:stain-treatment:truck": "110",
       "addon:stain-treatment:luxury": "121",
-      "addon:custom-addon-1785938573586:compact": "125",
-      "addon:custom-addon-1785938573586:midsize": "175",
-      "addon:custom-addon-1785938573586:truck": "250",
-      "addon:custom-addon-1785938573586:luxury": "275",
       "addon:water-spot-removal:compact": "125",
       "addon:water-spot-removal:midsize": "175",
       "addon:water-spot-removal:truck": "250",
@@ -111,7 +95,16 @@
       "addon:wheel-cleaning:compact": "25",
       "addon:wheel-cleaning:midsize": "30",
       "addon:wheel-cleaning:truck": "40",
-      "addon:wheel-cleaning:luxury": "50"
+      "addon:wheel-cleaning:luxury": "50",
+      "addon:large-wheel-cleaning:compact": "0",
+      "addon:ceramic-coating-6mo:compact": "350",
+      "addon:ceramic-coating-6mo:midsize": "400",
+      "addon:ceramic-coating-6mo:truck": "450",
+      "addon:ceramic-coating-6mo:luxury": "500",
+      "addon:ceramic-protection-2yr-plan:compact": "650",
+      "addon:ceramic-protection-2yr-plan:midsize": "800",
+      "addon:ceramic-protection-2yr-plan:truck": "950",
+      "addon:ceramic-protection-2yr-plan:luxury": "1150"
     },
     "packageMeta": {
       "prime-elite-exterior": {
@@ -176,49 +169,9 @@
       }
     },
     "addOnMeta": {
-      "ceramic-protection-1yr": {
-        "id": "ceramic-protection-1yr",
-        "visible": false,
-        "deleted": false
-      },
-      "ceramic-coating-2yr": {
-        "id": "ceramic-coating-2yr",
-        "visible": false,
-        "deleted": false
-      },
-      "3rd-row-seating": {
-        "id": "3rd-row-seating",
+      "wheel-cleaning": {
+        "id": "wheel-cleaning",
         "visible": true,
-        "deleted": false
-      },
-      "ceramic-coating": {
-        "id": "ceramic-coating",
-        "visible": false,
-        "deleted": false
-      },
-      "ceramic-trim-coat": {
-        "id": "ceramic-trim-coat",
-        "visible": true,
-        "deleted": false
-      },
-      "clay-bar": {
-        "id": "clay-bar",
-        "visible": true,
-        "deleted": false
-      },
-      "deep-interior": {
-        "id": "deep-interior",
-        "visible": true,
-        "deleted": false
-      },
-      "engine-bay": {
-        "id": "engine-bay",
-        "visible": true,
-        "deleted": false
-      },
-      "headlight-restoration": {
-        "id": "headlight-restoration",
-        "visible": false,
         "deleted": false
       },
       "large-wheel-cleaning": {
@@ -231,29 +184,9 @@
         "visible": true,
         "deleted": false
       },
-      "paint-touch-up": {
-        "id": "paint-touch-up",
-        "visible": false,
-        "deleted": false
-      },
-      "odor-treatment": {
-        "id": "odor-treatment",
-        "visible": false,
-        "deleted": false
-      },
-      "odor-eliminator": {
-        "id": "odor-eliminator",
-        "visible": false,
-        "deleted": false
-      },
-      "paint-correction": {
-        "id": "paint-correction",
-        "visible": false,
-        "deleted": false
-      },
-      "paint-sealant": {
-        "id": "paint-sealant",
-        "visible": false,
+      "engine-bay": {
+        "id": "engine-bay",
+        "visible": true,
         "deleted": false
       },
       "pet-hair": {
@@ -261,18 +194,23 @@
         "visible": true,
         "deleted": false
       },
-      "scratch-repair": {
-        "id": "scratch-repair",
-        "visible": false,
-        "deleted": false
-      },
       "stain-treatment": {
         "id": "stain-treatment",
         "visible": true,
         "deleted": false
       },
-      "custom-addon-1785938573586": {
-        "id": "custom-addon-1785938573586",
+      "odor-eliminator": {
+        "id": "odor-eliminator",
+        "visible": false,
+        "deleted": false
+      },
+      "3rd-row-seating": {
+        "id": "3rd-row-seating",
+        "visible": true,
+        "deleted": false
+      },
+      "ceramic-coating-6mo": {
+        "id": "ceramic-coating-6mo",
         "visible": true,
         "deleted": false
       },
@@ -281,15 +219,60 @@
         "visible": true,
         "deleted": false
       },
-      "wheel-cleaning": {
-        "id": "wheel-cleaning",
+      "ceramic-protection-2yr-plan": {
+        "id": "ceramic-protection-2yr-plan",
         "visible": true,
+        "deleted": false
+      },
+      "clay-bar": {
+        "id": "clay-bar",
+        "visible": true,
+        "deleted": false
+      },
+      "ceramic-trim-coat": {
+        "id": "ceramic-trim-coat",
+        "visible": true,
+        "deleted": false
+      },
+      "deep-interior": {
+        "id": "deep-interior",
+        "visible": true,
+        "deleted": false
+      },
+      "headlight-restoration": {
+        "id": "headlight-restoration",
+        "visible": false,
+        "deleted": false
+      },
+      "scratch-repair": {
+        "id": "scratch-repair",
+        "visible": false,
+        "deleted": false
+      },
+      "paint-sealant": {
+        "id": "paint-sealant",
+        "visible": false,
+        "deleted": false
+      },
+      "paint-touch-up": {
+        "id": "paint-touch-up",
+        "visible": false,
+        "deleted": false
+      },
+      "paint-correction": {
+        "id": "paint-correction",
+        "visible": false,
+        "deleted": false
+      },
+      "odor-treatment": {
+        "id": "odor-treatment",
+        "visible": false,
         "deleted": false
       }
     },
     "customPackages": [],
     "customAddOns": [],
-    "version": 1789589814968
+    "version": 1789593477335
   },
   "vehicleTypesLive": [
     {
