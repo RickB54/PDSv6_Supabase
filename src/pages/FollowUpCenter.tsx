@@ -905,63 +905,92 @@ export default function FollowUpCenter() {
             <AccordionContent className="pt-2 pb-6">
               {filteredAbandonedDrafts.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4">
-                  {filteredAbandonedDrafts.map(draft => (
-                    <div key={draft.id} className="bg-zinc-900/40 border border-orange-500/20 rounded-2xl p-6 flex flex-col xl:flex-row justify-between gap-6 hover:bg-zinc-900/60 transition-colors shadow-lg relative group">
-                      <div className="space-y-3 flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <h5 className="text-xl font-black uppercase tracking-tight text-zinc-200 truncate">{draft.name || 'Unknown Name'}</h5>
-                          <Badge className="bg-orange-500/20 text-orange-400 text-[9px] uppercase font-black px-2 py-0.5 border-none">Abandoned Form</Badge>
-                          {draft.notified_at && (
-                            <Badge className="bg-amber-500/15 text-amber-300 text-[9px] uppercase font-black px-2 py-0.5 border border-amber-500/30 flex items-center gap-1">
-                              <Bell className="h-2.5 w-2.5" /> Alert Sent
-                            </Badge>
-                          )}
-                          {draft.service_package && (
-                            <Badge className="bg-zinc-800 text-zinc-400 text-[9px] uppercase font-black px-2 py-0.5 border-none">{draft.service_package}</Badge>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-zinc-500">
-                          {draft.email && <span className="truncate text-zinc-300">{draft.email}</span>}
-                          {draft.email && draft.phone && <span>&bull;</span>}
-                          {draft.phone && <span>{draft.phone}</span>}
-                          {!draft.email && !draft.phone && <span className="text-zinc-600 italic">No contact info on file</span>}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-4 mt-4">
-                          <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
-                            <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Abandoned</span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Clock className="h-3.5 w-3.5 text-orange-500" />
-                              <span className="text-xs font-bold text-zinc-300">{relativeTime(draft.updated_at)}</span>
-                            </div>
+                  {filteredAbandonedDrafts.map(draft => {
+                    const isContact = draft.source === 'contact';
+                    return (
+                      <div key={draft.id} className={`bg-zinc-900/40 border ${isContact ? 'border-indigo-500/30 hover:border-indigo-500/50' : 'border-orange-500/20 hover:border-orange-500/40'} rounded-2xl p-6 flex flex-col xl:flex-row justify-between gap-6 hover:bg-zinc-900/60 transition-colors shadow-lg relative group`}>
+                        <div className="space-y-3 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h5 className="text-xl font-black uppercase tracking-tight text-zinc-200 truncate">{draft.name || 'Unknown Name'}</h5>
+                            {isContact ? (
+                              <Badge className="bg-indigo-500/20 text-indigo-300 text-[9px] uppercase font-black px-2.5 py-0.5 border border-indigo-500/40 shadow-sm">
+                                ✉️ Contact Inquiry
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-orange-500/20 text-orange-400 text-[9px] uppercase font-black px-2.5 py-0.5 border-none">
+                                📋 Booking Form
+                              </Badge>
+                            )}
+                            {draft.notified_at && (
+                              <Badge className="bg-amber-500/15 text-amber-300 text-[9px] uppercase font-black px-2 py-0.5 border border-amber-500/30 flex items-center gap-1">
+                                <Bell className="h-2.5 w-2.5" /> Alert Sent
+                              </Badge>
+                            )}
+                            {draft.service_package && (
+                              <Badge className="bg-zinc-800 text-zinc-400 text-[9px] uppercase font-black px-2 py-0.5 border-none">{draft.service_package}</Badge>
+                            )}
                           </div>
 
-                          {(draft.vehicle_make || draft.vehicle_model) && (
+                          <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-zinc-500">
+                            {draft.email && <span className="truncate text-zinc-300">{draft.email}</span>}
+                            {draft.email && draft.phone && <span>&bull;</span>}
+                            {draft.phone && <span>{draft.phone}</span>}
+                            {draft.city && <span>&bull;</span>}
+                            {draft.city && <span className="text-zinc-400">📍 {draft.city}</span>}
+                            {!draft.email && !draft.phone && <span className="text-zinc-600 italic">No contact info on file</span>}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-4 mt-4">
                             <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
-                              <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Vehicle</span>
+                              <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Abandoned</span>
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs font-bold text-zinc-300">{[draft.vehicle_year, draft.vehicle_make, draft.vehicle_model].filter(Boolean).join(' ')}</span>
+                                <Clock className={`h-3.5 w-3.5 ${isContact ? 'text-indigo-400' : 'text-orange-500'}`} />
+                                <span className="text-xs font-bold text-zinc-300">{relativeTime(draft.updated_at)}</span>
                               </div>
                             </div>
-                          )}
 
-                          {draft.preferred_date && (
-                            <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
-                              <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Wanted Date</span>
-                              <div className="flex items-center gap-2 mt-1">
-                                <CalendarDays className="h-3.5 w-3.5 text-blue-500" />
-                                <span className="text-xs font-bold text-zinc-300">{new Date(draft.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            {(draft.vehicle_make || draft.vehicle_model) && (
+                              <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
+                                <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Vehicle</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs font-bold text-zinc-300">{[draft.vehicle_year, draft.vehicle_make, draft.vehicle_model].filter(Boolean).join(' ')}</span>
+                                </div>
                               </div>
+                            )}
+
+                            {draft.preferred_timing && (
+                              <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
+                                <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Timing</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Clock className="h-3.5 w-3.5 text-blue-400" />
+                                  <span className="text-xs font-bold text-zinc-300">{draft.preferred_timing}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {draft.preferred_date && (
+                              <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
+                                <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Wanted Date</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <CalendarDays className="h-3.5 w-3.5 text-blue-500" />
+                                  <span className="text-xs font-bold text-zinc-300">{new Date(draft.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {draft.message && (
+                            <div className="mt-3 bg-zinc-950/70 p-3.5 rounded-xl border border-indigo-500/20 text-xs text-zinc-200">
+                              <span className="font-black text-indigo-400 uppercase text-[9px] tracking-wider block mb-1">Typed Inquiry Message:</span>
+                              <p className="italic m-0 text-zinc-300">"{draft.message}"</p>
                             </div>
                           )}
                         </div>
-                      </div>
 
                       <div className="flex flex-wrap lg:flex-col gap-2 justify-center shrink-0 w-full xl:w-56">
                         {draft.email && (
                           <Button
-                            onClick={() => window.open(`mailto:${draft.email}?subject=Your%20Detailing%20Request&body=Hi%20${encodeURIComponent(draft.name || '')}%2C%0A%0AWe%20noticed%20you%20started%20a%20booking%20request%20and%20wanted%20to%20follow%20up!`, '_blank')}
+                            onClick={() => window.open(`mailto:${draft.email}?subject=${encodeURIComponent(isContact ? 'Your Detailing Inquiry - Prime Auto Detail' : 'Your Detailing Request - Prime Auto Detail')}&body=${encodeURIComponent(`Hi ${draft.name || ''},\n\nWe noticed you reached out with a detailing inquiry and wanted to follow up!`)}`, '_blank')}
                             className="flex-1 xl:flex-none bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-[10px] h-9"
                           >
                             <Mail className="h-3.5 w-3.5 mr-1.5" /> Send Email
@@ -984,7 +1013,8 @@ export default function FollowUpCenter() {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-10 bg-zinc-900/20 rounded-2xl border border-zinc-800 border-dashed">

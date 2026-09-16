@@ -193,6 +193,7 @@ serve(async (req) => {
 
     // 4. Send alert for each draft
     for (const draft of drafts) {
+      const isContact = draft.source === 'contact'
       const vehicleInfo = [draft.vehicle_year, draft.vehicle_make, draft.vehicle_model, draft.vehicle_type ? `(${draft.vehicle_type})` : '']
         .filter(Boolean)
         .join(' ')
@@ -205,12 +206,23 @@ serve(async (req) => {
         ? draft.add_ons.join(', ') 
         : 'None'
 
+      const headerGradient = isContact 
+        ? 'linear-gradient(135deg, #6366f1 0%, #4338ca 100%)' 
+        : 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)'
+      const headerTitle = isContact ? '🚨 Abandoned Contact Form' : '🚨 Abandoned Booking Form'
+      const headerSubtitle = isContact
+        ? "A visitor started filling out a contact / evaluation inquiry 15 minutes ago but didn't submit."
+        : "A customer started filling out the booking form 15 minutes ago but didn't finish."
+      const subject = isContact
+        ? `🚨 Abandoned Contact Form: ${customerName} - ${draft.service_package || draft.vehicle_type || 'General Inquiry'}`
+        : `🚨 Abandoned Booking: ${customerName} - ${draft.service_package || 'Incomplete Booking'}`
+
       const emailHtml = `
         <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0f172a; color: #f8fafc;">
-          <div style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); padding: 30px 20px; border-radius: 12px 12px 0 0; text-align: center; color: white;">
+          <div style="background: ${headerGradient}; padding: 30px 20px; border-radius: 12px 12px 0 0; text-align: center; color: white;">
             <div style="font-size: 13px; font-weight: 800; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 6px; opacity: 0.9;">Lead Recovery Alert</div>
-            <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em;">🚨 Abandoned Booking Form</h1>
-            <p style="margin: 8px 0 0; font-size: 14px; opacity: 0.95;">A customer started filling out the booking form 15 minutes ago but didn't finish.</p>
+            <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em;">${headerTitle}</h1>
+            <p style="margin: 8px 0 0; font-size: 14px; opacity: 0.95;">${headerSubtitle}</p>
           </div>
           
           <div style="background-color: #1e293b; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #334155; border-top: none;">
@@ -218,12 +230,12 @@ serve(async (req) => {
             <!-- Quick Action Buttons -->
             <div style="display: flex; gap: 10px; margin-bottom: 25px;">
               ${draft.phone ? `
-                <a href="tel:${phoneClean}" style="flex: 1; background: #ea580c; color: #ffffff; text-decoration: none; padding: 12px 16px; border-radius: 8px; font-weight: 700; font-size: 14px; text-align: center; display: inline-block;">
+                <a href="tel:${phoneClean}" style="flex: 1; background: ${isContact ? '#6366f1' : '#ea580c'}; color: #ffffff; text-decoration: none; padding: 12px 16px; border-radius: 8px; font-weight: 700; font-size: 14px; text-align: center; display: inline-block;">
                   📞 Call ${draft.phone}
                 </a>
               ` : ''}
               ${draft.email ? `
-                <a href="mailto:${draft.email}?subject=Your%20Detailing%20Quote%20-%20Prime%20Auto%20Detail" style="flex: 1; background: #334155; color: #38bdf8; text-decoration: none; padding: 12px 16px; border-radius: 8px; font-weight: 700; font-size: 14px; text-align: center; border: 1px solid #475569; display: inline-block;">
+                <a href="mailto:${draft.email}?subject=Your%20Detailing%20Inquiry%20-%20Prime%20Auto%20Detail" style="flex: 1; background: #334155; color: #38bdf8; text-decoration: none; padding: 12px 16px; border-radius: 8px; font-weight: 700; font-size: 14px; text-align: center; border: 1px solid #475569; display: inline-block;">
                   ✉️ Email Customer
                 </a>
               ` : ''}
@@ -235,23 +247,33 @@ serve(async (req) => {
               <p style="font-size: 18px; color: #ffffff; margin: 0 0 8px 0; font-weight: 700;">${customerName}</p>
               ${draft.phone ? `<p style="font-size: 14px; color: #cbd5e1; margin: 4px 0;"><strong>Phone:</strong> <a href="tel:${phoneClean}" style="color: #fb923c; text-decoration: none;">${draft.phone}</a></p>` : ''}
               ${draft.email ? `<p style="font-size: 14px; color: #cbd5e1; margin: 4px 0;"><strong>Email:</strong> <a href="mailto:${draft.email}" style="color: #38bdf8; text-decoration: none;">${draft.email}</a></p>` : ''}
+              ${draft.city ? `<p style="font-size: 14px; color: #cbd5e1; margin: 4px 0;"><strong>City / Location:</strong> ${draft.city}</p>` : ''}
               ${draft.address ? `<p style="font-size: 14px; color: #cbd5e1; margin: 4px 0;"><strong>Address:</strong> ${draft.address}</p>` : ''}
             </div>
 
-            <!-- Selected Options Card -->
-            <div style="background-color: #0f172a; padding: 20px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 25px;">
-              <h2 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 12px 0;">Form Selections</h2>
-              <p style="margin: 6px 0; color: #e2e8f0; font-size: 14px;"><strong>Service Package:</strong> <span style="color: #fdba74; font-weight: 600;">${draft.service_package || 'None selected'}</span></p>
+            <!-- Form Selections Card -->
+            <div style="background-color: #0f172a; padding: 20px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 20px;">
+              <h2 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 12px 0;">Form Selections (${isContact ? 'Contact Form' : 'Booking Form'})</h2>
+              <p style="margin: 6px 0; color: #e2e8f0; font-size: 14px;"><strong>Service:</strong> <span style="color: #fdba74; font-weight: 600;">${draft.service_package || 'None selected'}</span></p>
               <p style="margin: 6px 0; color: #e2e8f0; font-size: 14px;"><strong>Vehicle:</strong> ${vehicleInfo}</p>
-              <p style="margin: 6px 0; color: #e2e8f0; font-size: 14px;"><strong>Add-ons:</strong> ${addOnsList}</p>
-              <p style="margin: 6px 0; color: #e2e8f0; font-size: 14px;"><strong>Preferred Date:</strong> ${preferredDateFormatted}</p>
+              ${!isContact && draft.add_ons ? `<p style="margin: 6px 0; color: #e2e8f0; font-size: 14px;"><strong>Add-ons:</strong> ${addOnsList}</p>` : ''}
+              ${draft.preferred_timing ? `<p style="margin: 6px 0; color: #e2e8f0; font-size: 14px;"><strong>Preferred Timing:</strong> ${draft.preferred_timing}</p>` : ''}
+              ${draft.preferred_date ? `<p style="margin: 6px 0; color: #e2e8f0; font-size: 14px;"><strong>Preferred Date:</strong> ${preferredDateFormatted}</p>` : ''}
               <p style="margin: 6px 0; color: #94a3b8; font-size: 12px;"><strong>Last Activity:</strong> ${new Date(draft.updated_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })} ET</p>
             </div>
 
+            ${draft.message ? `
+              <!-- Typed Message Card -->
+              <div style="background-color: #0f172a; padding: 20px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 25px;">
+                <h2 style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin: 0 0 8px 0;">Typed Message</h2>
+                <p style="margin: 0; color: #e2e8f0; font-size: 14px; font-style: italic; line-height: 1.6;">"${draft.message}"</p>
+              </div>
+            ` : ''}
+
             <!-- Follow-up Center Link -->
             <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #334155;">
-              <p style="font-size: 13px; color: #94a3b8; margin: 0 0 8px 0;">This draft is visible in your Follow-Up Center dashboard.</p>
-              <a href="https://primeautodetail.com/follow-up-center" style="color: #ea580c; font-weight: 700; font-size: 13px; text-decoration: none;">
+              <p style="font-size: 13px; color: #94a3b8; margin: 0 0 8px 0;">This inquiry is visible in your Follow-Up Center dashboard.</p>
+              <a href="https://primeautodetail.com/follow-up-center" style="color: ${isContact ? '#818cf8' : '#ea580c'}; font-weight: 700; font-size: 13px; text-decoration: none;">
                 Open Follow-Up Center →
               </a>
             </div>
@@ -275,7 +297,7 @@ serve(async (req) => {
           from: SENDER_EMAIL,
           to: [ADMIN_EMAIL],
           reply_to: draft.email || undefined,
-          subject: `🚨 Abandoned Booking: ${customerName} - ${draft.service_package || 'Form Incomplete'}`,
+          subject: subject,
           html: emailHtml,
         }),
       })

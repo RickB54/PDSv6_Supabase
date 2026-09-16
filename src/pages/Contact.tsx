@@ -19,6 +19,7 @@ import jsPDF from "jspdf";
 import api from "@/lib/api";
 import { isSupabaseEnabled, getCurrentUser } from "@/lib/auth";
 import { useDemoMode } from "@/contexts/DemoContext";
+import { useDraftSaver } from "@/hooks/useDraftSaver";
 import * as contactSvc from "@/services/supabase/contact";
 import { checkClientRateLimit } from "@/lib/rateLimit";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
@@ -81,6 +82,30 @@ const Contact = () => {
   // Destination fee informational state
   const [contactDistance, setContactDistance] = useState(0);
   const [contactDestFee, setContactDestFee] = useState(0);
+
+  // Abandoned contact draft capture hook
+  const { onContactBlur, markConverted } = useDraftSaver(
+    {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      address: formData.address,
+      city: formData.city,
+      make: formData.vehicleMake,
+      model: formData.vehicleModel,
+      year: formData.vehicleYear,
+      color: formData.vehicleColor,
+      package: formData.serviceInterested,
+      message: formData.message,
+      preferredTiming: formData.preferredTiming,
+    },
+    [],
+    formData.vehicleType,
+    undefined,
+    submitting,
+    false,
+    { source: "contact" }
+  );
 
   // Automatically classify the vehicle class based on selected Make & Model
   useEffect(() => {
@@ -451,6 +476,9 @@ const Contact = () => {
     setSubmitted(true);
     setSubmitting(false);
 
+    // Mark any existing abandoned draft session as converted (prevents abandonment alert)
+    markConverted().catch(() => {});
+
     toast({
       title: "Inquiry Saved!",
       description: "We've received your info and saved it to our system.",
@@ -655,6 +683,7 @@ const Contact = () => {
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onBlur={onContactBlur}
                       placeholder="Enter your full name"
                       required
                       className={errors.name ? "border-destructive h-12" : "h-12"}
@@ -669,6 +698,7 @@ const Contact = () => {
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onBlur={onContactBlur}
                       placeholder="your@email.com"
                       required
                       className={errors.email ? "border-destructive h-12" : "h-12"}
@@ -685,6 +715,7 @@ const Contact = () => {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onBlur={onContactBlur}
                       placeholder="(555) 123-4567"
                       required
                       className={errors.phone ? "border-destructive h-12" : "h-12"}
@@ -726,6 +757,7 @@ const Contact = () => {
                       id="address"
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onBlur={onContactBlur}
                       placeholder="123 Detail Lane"
                       disabled={formData.placeOfService === 'Shop in Methuen'}
                       className="h-12"
@@ -740,6 +772,7 @@ const Contact = () => {
                       id="city"
                       value={formData.city}
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      onBlur={onContactBlur}
                       placeholder="Methuen"
                       required={formData.placeOfService !== 'Shop in Methuen'}
                       disabled={formData.placeOfService === 'Shop in Methuen'}
@@ -961,6 +994,7 @@ const Contact = () => {
                   id="message"
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  onBlur={onContactBlur}
                   placeholder="Any specific questions or detailing needs?"
                   rows={4}
                   className="bg-background"

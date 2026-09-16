@@ -1,16 +1,16 @@
 /**
- * useDraftSaver — Abandoned booking draft capture hook
+ * useDraftSaver — Abandoned draft capture hook for Booking & Contact forms
  *
  * Saves a lightweight draft to Supabase via the upsert-booking-draft edge function
  * once the visitor has entered enough contact info (name + phone OR email).
  *
  * Fire conditions:
- *   - Blur on name, email, or phone fields (immediate, cancels pending debounce)
- *   - 2.5 s debounce after any formData/addOns/vehicleType/date change
+ *   - Blur on name, email, phone, message, etc. (immediate, cancels pending debounce)
+ *   - 2.5 s debounce after form data changes
  *   - Never per-keystroke; never before threshold is met; never during real submission
  *
- * Conversion: call markConverted(bookingId) from handleSubmit on success.
- * The edge function patches status → 'converted' and booking_id → real booking id.
+ * Conversion: call markConverted(id) from handleSubmit on success.
+ * The edge function patches status → 'converted'.
  * Session key is then cleared from sessionStorage.
  */
 
@@ -18,36 +18,37 @@ import { useRef, useCallback, useEffect } from "react";
 import supabase from "@/lib/supabase";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const SESSION_STORAGE_KEY = "_pds_draft_sid";
+const BASE_SESSION_KEY = "_pds_draft_sid";
 const DEBOUNCE_MS = 2500;
 const MIN_NAME_LEN = 2;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function isValidPhone(p: string): boolean {
+function isValidPhone(p?: string): boolean {
+  if (!p) return false;
   return p.replace(/\D/g, "").length >= 10;
 }
 
-function isValidEmail(e: string): boolean {
+function isValidEmail(e?: string): boolean {
+  if (!e) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
-function hasSufficientContact(name: string, phone: string, email: string): boolean {
+function hasSufficientContact(name?: string, phone?: string, email?: string): boolean {
   return (
-    name.trim().length >= MIN_NAME_LEN &&
+    Boolean(name && name.trim().length >= MIN_NAME_LEN) &&
     (isValidPhone(phone) || isValidEmail(email))
   );
 }
 
-function getOrCreateSessionId(): string {
+function getOrCreateSessionId(storageKey: string): string {
   try {
-    let sid = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    let sid = sessionStorage.getItem(storageKey);
     if (!sid) {
       sid = `draft_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-      sessionStorage.setItem(SESSION_STORAGE_KEY, sid);
+      sessionStorage.setItem(storageKey, sid);
     }
     return sid;
   } catch {
-    // sessionStorage unavailable (e.g. private mode with cookie blocking)
     return `draft_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   }
 }
@@ -57,30 +58,41 @@ export interface DraftFormData {
   name: string;
   email: string;
   phone: string;
-  address: string;
-  make: string;
-  model: string;
-  year: string;
-  color: string;
-  package: string;
+  address?: string;
+  city?: string;
+  make?: string;
+  model?: string;
+  year?: string;
+  color?: string;
+  package?: string;
+  message?: string;
+  preferredTiming?: string;
+}
+
+export interface UseDraftSaverOptions {
+  source?: "booking" | "contact";
 }
 
 export interface UseDraftSaverReturn {
-  /** Attach to onBlur of name, email, and phone inputs */
+  /** Attach to onBlur of contact/form inputs */
   onContactBlur: () => void;
-  /** Call with the real booking ID after successful form submission */
-  markConverted: (bookingId: string) => Promise<void>;
+  /** Call with the real booking/prospect ID after successful form submission */
+  markConverted: (recordId?: string) => Promise<void>;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function useDraftSaver(
   formData: DraftFormData,
-  addOns: string[],
-  vehicleType: string,
-  date: Date | undefined,
-  isSubmitting: boolean,
-  isTestMode: boolean
+  addOns: string[] = [],
+  vehicleType: string = "",
+  date: Date | undefined = undefined,
+  isSubmitting: boolean = false,
+  isTestMode: boolean = false,
+  options: UseDraftSaverOptions = { source: "booking" }
 ): UseDraftSaverReturn {
+  const source = options.source || "booking";
+  const storageKey = `${BASE_SESSION_KEY}_${source}`;
+
   // Refs for stable callbacks (avoid stale closures in debounce timer)
   const formDataRef = useRef(formData);
   const addOnsRef = useRef(addOns);
@@ -88,6 +100,8 @@ export function useDraftSaver(
   const dateRef = useRef(date);
   const isSubmittingRef = useRef(isSubmitting);
   const isTestModeRef = useRef(isTestMode);
+  const sourceRef = useRef(source);
+  const storageKeyRef = useRef(storageKey);
 
   // Keep refs in sync on every render
   useEffect(() => { formDataRef.current = formData; });
@@ -96,6 +110,8 @@ export function useDraftSaver(
   useEffect(() => { dateRef.current = date; });
   useEffect(() => { isSubmittingRef.current = isSubmitting; });
   useEffect(() => { isTestModeRef.current = isTestMode; });
+  useEffect(() => { sourceRef.current = source; });
+  useEffect(() => { storageKeyRef.current = storageKey; });
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -108,16 +124,17 @@ export function useDraftSaver(
     const fd = formDataRef.current;
     if (!hasSufficientContact(fd.name, fd.phone, fd.email)) return;
 
-    const sid = getOrCreateSessionId();
+    const sid = getOrCreateSessionId(storageKeyRef.current);
 
     try {
       const { error } = await supabase.functions.invoke("upsert-booking-draft", {
         body: {
           session_id: sid,
-          name: fd.name.trim() || null,
-          email: fd.email.trim() || null,
-          phone: fd.phone.trim() || null,
-          address: fd.address.trim() || null,
+          name: fd.name?.trim() || null,
+          email: fd.email?.trim() || null,
+          phone: fd.phone?.trim() || null,
+          address: fd.address?.trim() || null,
+          city: fd.city?.trim() || null,
           vehicle_make: fd.make || null,
           vehicle_model: fd.model || null,
           vehicle_year: fd.year || null,
@@ -126,22 +143,22 @@ export function useDraftSaver(
           service_package: fd.package || null,
           add_ons: addOnsRef.current.length > 0 ? addOnsRef.current : null,
           preferred_date: dateRef.current ? dateRef.current.toISOString() : null,
+          source: sourceRef.current,
+          message: fd.message?.trim() || null,
+          preferred_timing: fd.preferredTiming?.trim() || null,
         },
       });
 
       if (error) {
-        // Rate limited or network failure — silent, never block the user
         console.debug("[DraftSaver] save suppressed:", error.message);
       }
     } catch (err) {
-      // Best-effort: network errors are expected and should never surface to the user
       console.debug("[DraftSaver] network error (silent):", err);
     }
   }, []); // Stable — only reads refs
 
-  // ── Debounced save (triggered by formData/addOns/vehicleType/date changes) ──
+  // ── Debounced save (triggered by form data changes) ────────────────────────
   useEffect(() => {
-    // Don't schedule if threshold not met (no unnecessary timer allocation)
     if (!hasSufficientContact(formData.name, formData.phone, formData.email)) return;
     if (isSubmitting || isTestMode) return;
 
@@ -153,8 +170,8 @@ export function useDraftSaver(
     };
   }, [
     formData.name, formData.email, formData.phone,
-    formData.address, formData.make, formData.model,
-    formData.year, formData.color, formData.package,
+    formData.address, formData.city, formData.make, formData.model,
+    formData.year, formData.color, formData.package, formData.message, formData.preferredTiming,
     addOns, vehicleType, date,
     isSubmitting, isTestMode,
     fireSave,
@@ -169,32 +186,31 @@ export function useDraftSaver(
     fireSave();
   }, [fireSave]);
 
-  // ── Conversion — call after a successful real booking submission ────────────
-  const markConverted = useCallback(async (bookingId: string) => {
+  // ── Conversion — call after a successful form submission ───────────────────
+  const markConverted = useCallback(async (recordId?: string) => {
     let sid: string | null = null;
+    const currentKey = storageKeyRef.current;
     try {
-      sid = sessionStorage.getItem(SESSION_STORAGE_KEY);
+      sid = sessionStorage.getItem(currentKey);
     } catch {
-      return; // sessionStorage unavailable — nothing to convert
+      return;
     }
 
-    if (!sid) return; // No draft was ever saved this session
+    if (!sid) return;
 
     try {
       await supabase.functions.invoke("upsert-booking-draft", {
         body: {
           session_id: sid,
           status: "converted",
-          booking_id: bookingId,
+          booking_id: recordId || null,
         },
       });
-      console.log("[DraftSaver] Draft marked converted → booking", bookingId);
+      console.log(`[DraftSaver] Draft marked converted (${sourceRef.current}) →`, recordId);
     } catch (err) {
-      // Non-critical — the booking already succeeded; this is audit-only
       console.debug("[DraftSaver] convert error (non-critical):", err);
     } finally {
-      // Always clear the session key so a fresh form visit creates a new draft
-      try { sessionStorage.removeItem(SESSION_STORAGE_KEY); } catch {}
+      try { sessionStorage.removeItem(currentKey); } catch {}
     }
   }, []);
 

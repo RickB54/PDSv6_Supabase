@@ -121,6 +121,7 @@ serve(async (req) => {
       email: input.email || null,
       phone: input.phone || null,
       address: input.address || null,
+      city: input.city || null,
       vehicle_make: input.vehicle_make || null,
       vehicle_model: input.vehicle_model || null,
       vehicle_year: input.vehicle_year || null,
@@ -129,6 +130,9 @@ serve(async (req) => {
       service_package: input.service_package || null,
       add_ons: input.add_ons || null,
       preferred_date: input.preferred_date || null,
+      source: input.source || "booking",
+      message: input.message || null,
+      preferred_timing: input.preferred_timing || null,
       status: "draft",
       client_ip: clientIp,
       // expires_at uses table default (now + 48h)
@@ -148,7 +152,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`✅ Draft created: ${data.id} for session ${session_id} from IP ${clientIp}`);
+    console.log(`✅ Draft created (${insertPayload.source}): ${data.id} for session ${session_id} from IP ${clientIp}`);
     return new Response(
       JSON.stringify({ id: data.id, created: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -170,6 +174,7 @@ serve(async (req) => {
     if (input.email !== undefined) patchPayload.email = input.email || null;
     if (input.phone !== undefined) patchPayload.phone = input.phone || null;
     if (input.address !== undefined) patchPayload.address = input.address || null;
+    if (input.city !== undefined) patchPayload.city = input.city || null;
     if (input.vehicle_make !== undefined) patchPayload.vehicle_make = input.vehicle_make || null;
     if (input.vehicle_model !== undefined) patchPayload.vehicle_model = input.vehicle_model || null;
     if (input.vehicle_year !== undefined) patchPayload.vehicle_year = input.vehicle_year || null;
@@ -178,6 +183,9 @@ serve(async (req) => {
     if (input.service_package !== undefined) patchPayload.service_package = input.service_package || null;
     if (input.add_ons !== undefined) patchPayload.add_ons = input.add_ons || null;
     if (input.preferred_date !== undefined) patchPayload.preferred_date = input.preferred_date || null;
+    if (input.source !== undefined) patchPayload.source = input.source;
+    if (input.message !== undefined) patchPayload.message = input.message || null;
+    if (input.preferred_timing !== undefined) patchPayload.preferred_timing = input.preferred_timing || null;
     if (input.status !== undefined) patchPayload.status = input.status;
     if (input.booking_id !== undefined) patchPayload.booking_id = input.booking_id || null;
 
