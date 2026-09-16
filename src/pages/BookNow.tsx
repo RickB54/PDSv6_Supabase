@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
+import { useDraftSaver } from "@/hooks/useDraftSaver";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,6 +101,16 @@ const BookNow = () => {
   const user = getCurrentUser();
   const isAdmin = user?.role === 'admin' || user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
   const isRickAdmin = user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
+
+  // Abandoned draft capture — fires on blur / 2.5 s debounce, never per-keystroke
+  const { onContactBlur, markConverted } = useDraftSaver(
+    { name: formData.name, email: formData.email, phone: formData.phone, address: formData.address, make: formData.make, model: formData.model, year: formData.year, color: formData.color, package: formData.package },
+    addOns,
+    vehicleType,
+    date,
+    isSubmitting,
+    testModeActive
+  );
 
   // Coupon states
   const [couponCode, setCouponCode] = useState('');
@@ -778,6 +789,11 @@ const BookNow = () => {
           if (!createdBooking) {
             throw new Error("The booking could not be saved to our database. Please check your internet connection or contact us directly.");
           }
+
+          // Convert any open draft for this session → real booking (best-effort, non-blocking)
+          if (createdBooking?.id) {
+            markConverted(String(createdBooking.id)).catch(() => {});
+          }
         }
       } catch (createError: any) {
         console.error("Booking Creation Failed in Supabase:", createError);
@@ -1206,6 +1222,7 @@ const BookNow = () => {
                       placeholder="John Doe"
                       value={formData.name}
                       onChange={handleNameChange}
+                      onBlur={onContactBlur}
                       required
                       className={errors.name ? "border-destructive h-12" : "h-12"}
                     />
@@ -1223,6 +1240,7 @@ const BookNow = () => {
                         setFormData({ ...formData, email: e.target.value });
                         if (errors.email) setErrors(prev => { const n = { ...prev }; delete n.email; return n; });
                       }}
+                      onBlur={onContactBlur}
                       required
                       className={errors.email ? "border-destructive h-12" : "h-12"}
                     />
@@ -1240,6 +1258,7 @@ const BookNow = () => {
                         setFormData({ ...formData, phone: e.target.value });
                         if (errors.phone) setErrors(prev => { const n = { ...prev }; delete n.phone; return n; });
                       }}
+                      onBlur={onContactBlur}
                       required
                       className={errors.phone ? "border-destructive h-12" : "h-12"}
                     />

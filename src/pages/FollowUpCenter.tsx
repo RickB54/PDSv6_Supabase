@@ -5,7 +5,7 @@ import { useBookingsStore } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { getSupabaseCustomers, Customer, supabase, upsertSupabaseCustomer } from "@/lib/supa-data";
 import { RetentionHub } from "@/components/customers/RetentionHub";
-import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff, HelpCircle, PenTool, CheckCircle2 } from "lucide-react";
+import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff, HelpCircle, PenTool, CheckCircle2, Ghost } from "lucide-react";
 import { format, isSameMonth } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,7 @@ export default function FollowUpCenter() {
   const [prospects, setProspects] = useState<Customer[]>([]);
   const [lostProspects, setLostProspects] = useState<Customer[]>([]);
   const [showLost, setShowLost] = useState(false);
+  const [abandonedDrafts, setAbandonedDrafts] = useState<any[]>([]);
   
   const followUpStatus = useFollowUpStatus(allCustomers, allBookings);
   const { settings, saveSettings } = useFollowUpSettings();
@@ -72,6 +73,22 @@ export default function FollowUpCenter() {
       
       setProspects(activeAll.filter(c => c.type === 'prospect' && !c.is_lost));
       setLostProspects(all.filter(c => c.is_lost === true || c.type === 'lost_prospect' || (c.type === 'prospect' && c.is_archived)));
+
+      // Load abandoned/incomplete booking form drafts (admin only, lazy 48h expiry filter)
+      try {
+        const now = new Date().toISOString();
+        const { data: drafts } = await supabase
+          .from('booking_drafts')
+          .select('*')
+          .eq('status', 'draft')
+          .gt('expires_at', now)
+          .order('updated_at', { ascending: false });
+        setAbandonedDrafts(drafts || []);
+      } catch (draftErr) {
+        // Table may not exist yet if migration hasn't run — fail silently
+        console.debug('[FollowUpCenter] booking_drafts fetch skipped:', draftErr);
+        setAbandonedDrafts([]);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -222,6 +239,40 @@ export default function FollowUpCenter() {
   
   let currentProspectsList = showLost ? lostProspects : prospects;
   const filteredProspects = applySort(currentProspectsList.filter(matchSearch).map(p => ({ customer: p, daysSince: 0 })), sortProspects);
+
+  // Filter abandoned drafts by search (name, phone, email)
+  const filteredAbandonedDrafts = abandonedDrafts.filter(d => {
+    if (!searchLower) return true;
+    return (
+      (d.name || '').toLowerCase().includes(searchLower) ||
+      (d.email || '').toLowerCase().includes(searchLower) ||
+      (d.phone || '').toLowerCase().includes(searchLower)
+    );
+  });
+
+  // Dismiss a draft from the CRM (marks it 'dismissed' so it won't re-appear)
+  const handleDismissDraft = async (draftId: string, sessionId: string) => {
+    try {
+      await supabase
+        .from('booking_drafts')
+        .update({ status: 'dismissed', updated_at: new Date().toISOString() })
+        .eq('id', draftId);
+      setAbandonedDrafts(prev => prev.filter(d => d.id !== draftId));
+      toast.success('Draft dismissed.');
+    } catch {
+      toast.error('Failed to dismiss draft.');
+    }
+  };
+
+  // Helper: format a relative time string for abandoned drafts
+  const relativeTime = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
 
   // Stats
   const emailsThisMonth = (followUpStatus.engagements || []).filter((e: any) => 
@@ -566,7 +617,7 @@ export default function FollowUpCenter() {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                 <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
                     <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Total Overdue</span>
                     <span className="text-2xl font-black text-red-400 mt-1">{filteredOverdue.length}</span>
@@ -578,6 +629,10 @@ export default function FollowUpCenter() {
                 <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
                     <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Total Prospects</span>
                     <span className="text-2xl font-black text-purple-400 mt-1">{prospects.length}</span>
+                </div>
+                <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Abandoned Forms</span>
+                    <span className="text-2xl font-black text-orange-400 mt-1">{abandonedDrafts.length}</span>
                 </div>
                 <div className="bg-zinc-900/60 border border-zinc-800 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
                     <span className="text-[10px] font-black uppercase text-zinc-500 tracking-widest">Emails (This Mo)</span>
@@ -604,7 +659,7 @@ export default function FollowUpCenter() {
           )}
         </div>
 
-        <Accordion type="multiple" defaultValue={["overdue", "dueSoon", "prospects"]} className="space-y-6">
+        <Accordion type="multiple" defaultValue={["overdue", "dueSoon", "prospects", "abandoned"]} className="space-y-6">
           {/* Overdue Section */}
           <AccordionItem value="overdue" className="border-none bg-transparent">
             <AccordionTrigger className="hover:no-underline py-0 mb-4">
@@ -807,6 +862,130 @@ export default function FollowUpCenter() {
               ) : (
                 <div className="text-center py-10 bg-zinc-900/20 rounded-2xl border border-zinc-800 border-dashed">
                   <p className="text-zinc-500 font-bold uppercase tracking-widest">No active prospects found.</p>
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Abandoned / Incomplete Bookings Section */}
+          <AccordionItem value="abandoned" className="border-none bg-transparent">
+            <AccordionTrigger className="hover:no-underline py-0 mb-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-black uppercase tracking-tighter text-orange-400 flex items-center">
+                    <Ghost className="h-6 w-6 mr-2 opacity-80" />
+                    Abandoned ({filteredAbandonedDrafts.length})
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="text-zinc-500 hover:text-white transition-colors focus:outline-none ml-3">
+                          <HelpCircle className="h-5 w-5" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 bg-white border-slate-200 p-5 shadow-xl z-[200] font-sans normal-case not-italic tracking-normal font-normal relative">
+                         <PopoverClose className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none text-slate-500 hover:text-slate-900">
+                           <X className="h-4 w-4" />
+                         </PopoverClose>
+                         <h4 className="font-bold text-slate-900 mb-1 pr-6">Abandoned Booking Forms</h4>
+                         <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-3 border-b border-slate-100 pb-2">Cheat Sheet</p>
+                         <p className="text-sm text-slate-600 mb-4">People who started filling out the public booking form and had enough contact info entered (name + phone or email) but never clicked Submit. Auto-expires after 48 hours of inactivity.</p>
+                         <div className="space-y-3">
+                           <h5 className="font-bold text-slate-800 text-sm">Recommended Actions:</h5>
+                           <ul className="text-sm text-slate-600 space-y-2 list-disc pl-4">
+                             <li>Call or text them directly to see if they still need service</li>
+                             <li>Write a custom follow-up letter</li>
+                             <li>Dismiss records that aren't actionable</li>
+                           </ul>
+                         </div>
+                      </PopoverContent>
+                    </Popover>
+                  </h2>
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-2 pb-6">
+              {filteredAbandonedDrafts.length > 0 ? (
+                <div className="grid grid-cols-1 gap-4">
+                  {filteredAbandonedDrafts.map(draft => (
+                    <div key={draft.id} className="bg-zinc-900/40 border border-orange-500/20 rounded-2xl p-6 flex flex-col xl:flex-row justify-between gap-6 hover:bg-zinc-900/60 transition-colors shadow-lg relative group">
+                      <div className="space-y-3 flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h5 className="text-xl font-black uppercase tracking-tight text-zinc-200 truncate">{draft.name || 'Unknown Name'}</h5>
+                          <Badge className="bg-orange-500/20 text-orange-400 text-[9px] uppercase font-black px-2 py-0.5 border-none">Abandoned Form</Badge>
+                          {draft.service_package && (
+                            <Badge className="bg-zinc-800 text-zinc-400 text-[9px] uppercase font-black px-2 py-0.5 border-none">{draft.service_package}</Badge>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-4 text-xs font-bold text-zinc-500">
+                          {draft.email && <span className="truncate text-zinc-300">{draft.email}</span>}
+                          {draft.email && draft.phone && <span>&bull;</span>}
+                          {draft.phone && <span>{draft.phone}</span>}
+                          {!draft.email && !draft.phone && <span className="text-zinc-600 italic">No contact info on file</span>}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-4 mt-4">
+                          <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
+                            <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Abandoned</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Clock className="h-3.5 w-3.5 text-orange-500" />
+                              <span className="text-xs font-bold text-zinc-300">{relativeTime(draft.updated_at)}</span>
+                            </div>
+                          </div>
+
+                          {(draft.vehicle_make || draft.vehicle_model) && (
+                            <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
+                              <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Vehicle</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs font-bold text-zinc-300">{[draft.vehicle_year, draft.vehicle_make, draft.vehicle_model].filter(Boolean).join(' ')}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {draft.preferred_date && (
+                            <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
+                              <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Wanted Date</span>
+                              <div className="flex items-center gap-2 mt-1">
+                                <CalendarDays className="h-3.5 w-3.5 text-blue-500" />
+                                <span className="text-xs font-bold text-zinc-300">{new Date(draft.preferred_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap lg:flex-col gap-2 justify-center shrink-0 w-full xl:w-56">
+                        {draft.email && (
+                          <Button
+                            onClick={() => window.open(`mailto:${draft.email}?subject=Your%20Detailing%20Request&body=Hi%20${encodeURIComponent(draft.name || '')}%2C%0A%0AWe%20noticed%20you%20started%20a%20booking%20request%20and%20wanted%20to%20follow%20up!`, '_blank')}
+                            className="flex-1 xl:flex-none bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-[10px] h-9"
+                          >
+                            <Mail className="h-3.5 w-3.5 mr-1.5" /> Send Email
+                          </Button>
+                        )}
+                        {draft.phone && (
+                          <Button
+                            onClick={() => window.open(`tel:${draft.phone.replace(/\D/g, '')}`, '_blank')}
+                            className="flex-1 xl:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest text-[10px] h-9"
+                          >
+                            Call
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          onClick={() => handleDismissDraft(draft.id, draft.session_id)}
+                          className="w-full bg-zinc-950 border-zinc-800 hover:bg-red-950/30 hover:border-red-900 text-zinc-500 hover:text-red-400 text-[10px] font-black uppercase tracking-widest h-9"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Dismiss
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-zinc-900/20 rounded-2xl border border-zinc-800 border-dashed">
+                  <Ghost className="h-8 w-8 text-zinc-700 mx-auto mb-3" />
+                  <p className="text-zinc-500 font-bold uppercase tracking-widest">No abandoned forms found.</p>
+                  <p className="text-zinc-600 text-xs mt-1">When visitors start but don't finish a booking, they'll appear here.</p>
                 </div>
               )}
             </AccordionContent>
