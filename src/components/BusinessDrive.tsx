@@ -224,7 +224,22 @@ export default function BusinessDrive() {
                     const text = await cloudBlob.text();
                     const { files: cloudFiles, folders: cloudFolders } = JSON.parse(text);
                     
-                    if (cloudFiles) setFiles(cloudFiles);
+                    // Safety guard: never overwrite good local files with an empty cloud array.
+                    // This prevents a race-condition wipe (folders-change saveData firing before files loaded).
+                    const localFiles = await localforage.getItem<DriveFile[]>('business_drive_files_v3');
+                    const hasLocalFiles = localFiles && localFiles.length > 0;
+                    const hasCloudFiles = cloudFiles && cloudFiles.length > 0;
+
+                    if (hasCloudFiles) {
+                        setFiles(cloudFiles);
+                        await localforage.setItem('business_drive_files_v3', cloudFiles);
+                    } else if (hasLocalFiles) {
+                        // Cloud is empty but local has files — keep local, upload to cloud to repair
+                        setFiles(localFiles!);
+                        // Repair the cloud with local data (uploaded below via saveData effect)
+                    }
+                    // If BOTH are empty, leave files as []
+
                     if (cloudFolders) {
                         const updatedFolders = [...cloudFolders];
                         if (!updatedFolders.some((f: any) => f.name === 'System Archives' && f.path.length === 0)) {
@@ -234,7 +249,6 @@ export default function BusinessDrive() {
                         await localforage.setItem('business_drive_folders_v3', updatedFolders);
                     }
                     
-                    await localforage.setItem('business_drive_files_v3', cloudFiles);
                     if (showToast) toast({ title: "Sync Complete", description: "Your drive is up to date." });
                 } else if (showToast) {
                     toast({ title: "Sync Check", description: "No new updates found in the cloud." });
@@ -289,6 +303,63 @@ export default function BusinessDrive() {
                 // 3. Re-read localforage after sync!
                 const postSyncFiles = await localforage.getItem<DriveFile[]>('business_drive_files_v3') || [];
                 const postSyncFolders = await localforage.getItem<DriveFolder[]>('business_drive_folders_v3') || DEFAULT_FOLDERS;
+
+                // 3b. Bucket-scan recovery: if metadata is completely gone, list uploaded files from storage
+                // and rebuild metadata. This recovers from the race-condition that wiped drive_metadata.json.
+                const currentFilesAfterSync = await localforage.getItem<DriveFile[]>('business_drive_files_v3') || [];
+                if (currentFilesAfterSync.length === 0 && !localFiles) {
+                    try {
+                        const { getCurrentUser } = await import('@/lib/auth');
+                        const user = getCurrentUser();
+                        if (user) {
+                            const { data: bucketItems } = await supabase.storage
+                                .from('customer-photos')
+                                .list('business-drive', { limit: 200 });
+                            if (bucketItems && bucketItems.length > 0) {
+                                const recovered: DriveFile[] = bucketItems
+                                    .filter(item => item.name && !item.name.endsWith('/'))
+                                    .map(item => {
+                                        const { data: urlData } = supabase.storage
+                                            .from('customer-photos')
+                                            .getPublicUrl(`business-drive/${item.name}`);
+                                        const ext = item.name.split('.').pop()?.toLowerCase() || '';
+                                        const mimeMap: Record<string,string> = {
+                                            pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+                                            png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+                                            mp4: 'video/mp4', mov: 'video/quicktime', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                            xls: 'application/vnd.ms-excel', csv: 'text/csv',
+                                            doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                            txt: 'text/plain', mp3: 'audio/mpeg', wav: 'audio/wav',
+                                        };
+                                        const rawName = item.name.replace(/^\d+_/, '').replace(/_/g, ' ');
+                                        return {
+                                            id: item.id || item.name,
+                                            name: rawName,
+                                            type: mimeMap[ext] || 'application/octet-stream',
+                                            size: item.metadata?.size
+                                                ? (item.metadata.size > 1048576
+                                                    ? (item.metadata.size / 1048576).toFixed(1) + ' MB'
+                                                    : Math.round(item.metadata.size / 1024) + ' KB')
+                                                : '–',
+                                            modified: item.updated_at || item.created_at || new Date().toISOString(),
+                                            path: [],  // Place in root; user can re-organise
+                                            data: urlData.publicUrl,
+                                        };
+                                    });
+                                if (recovered.length > 0) {
+                                    setFiles(recovered);
+                                    await localforage.setItem('business_drive_files_v3', recovered);
+                                    toast({
+                                        title: `${recovered.length} file${recovered.length === 1 ? '' : 's'} recovered`,
+                                        description: 'Your files were recovered from cloud storage and placed in the root folder. You can move them to the correct folders.',
+                                    });
+                                }
+                            }
+                        }
+                    } catch (recErr) {
+                        console.warn('Bucket scan recovery failed:', recErr);
+                    }
+                }
 
                 // 4. Migration: If both local and cloud are empty, try migrating from legacy localStorage
                 if (!localFiles && postSyncFiles.length === 0) {
@@ -397,6 +468,16 @@ export default function BusinessDrive() {
 
                 const { getCurrentUser } = await import('@/lib/auth');
                 const user = getCurrentUser();
+
+                // Safety guard: never overwrite a non-empty local/cloud store with an empty files list.
+                // This prevents a race condition where folders-change triggers saveData before files are loaded.
+                if (files.length === 0) {
+                    const existingLocal = await localforage.getItem<DriveFile[]>('business_drive_files_v3');
+                    if (existingLocal && existingLocal.length > 0) {
+                        // We have real files locally but React state hasn't loaded them yet — skip this save.
+                        return;
+                    }
+                }
 
                 // Save to local cache (Fast)
                 await localforage.setItem('business_drive_files_v3', files);
@@ -989,12 +1070,9 @@ export default function BusinessDrive() {
                   </HoverCardContent>
                   )}
                 </HoverCard>
-                {isExpanded && (
+                {isExpanded && childFiles.length > 0 && (
                     <div className="flex flex-col animate-fade-in bg-zinc-950/20">
                         {childFiles.map(cf => renderListFile(cf, depth + 1))}
-                        {childFiles.length === 0 && (
-                            <div className="p-4 text-xs text-zinc-500 italic" style={{ paddingLeft: `${1 + (depth + 1) * 1.5}rem` }}>Folder is empty</div>
-                        )}
                     </div>
                 )}
             </div>
@@ -1088,7 +1166,7 @@ export default function BusinessDrive() {
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
                                     <SelectItem value="none" className="hidden">Business Folders</SelectItem>
-                                    <SelectItem value="root" className="font-black text-blue-400">All Folders</SelectItem>
+                                    <SelectItem value="root" className="font-black text-blue-400">Business Folders</SelectItem>
                                     <SelectSeparator className="bg-zinc-800" />
                                     {ALL_CATEGORIES.map(cat => (
                                         <SelectItem key={cat} value={cat} className="pl-6 text-xs">{cat}</SelectItem>
@@ -1682,11 +1760,30 @@ export default function BusinessDrive() {
                 </div>
             ) : (
                 /* Subfolder View or Type Filter View */
-                <div className={cn(
-                    viewMode === 'grid' 
-                        ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
-                        : "space-y-3"
-                )}>
+                <div className="space-y-3">
+                    {/* Context Banner: shows which section you're browsing */}
+                    {!selectedTypeFilter && currentPath.length > 0 && (
+                        <div className={cn(
+                            "flex items-center gap-3 px-4 py-3 rounded-xl border font-bold text-sm",
+                            currentPath[0] === 'System Archives'
+                                ? "bg-purple-950/30 border-purple-700/50 text-purple-200"
+                                : "bg-blue-950/20 border-blue-700/30 text-blue-200"
+                        )}>
+                            {currentPath[0] === 'System Archives'
+                                ? <FolderArchive className="w-4 h-4 text-purple-400 shrink-0" />
+                                : <Folder className="w-4 h-4 text-blue-400 shrink-0" />}
+                            <span>
+                                {currentPath[0] === 'System Archives'
+                                    ? <><span className="text-purple-400">System Archives</span>{currentPath.length > 1 ? ` › ${currentPath.slice(1).join(' › ')}` : ''}</>   
+                                    : <><span className="text-blue-400">Business Folders</span>{` › ${currentPath.join(' › ')}`}</>}
+                            </span>
+                        </div>
+                    )}
+                    <div className={cn(
+                        viewMode === 'grid'
+                            ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
+                            : "space-y-2"
+                    )}>
                     {currentItems.folders.length === 0 && currentItems.files.length === 0 ? (
                         <div className="col-span-full py-24 text-center bg-[#0d1117] rounded-3xl border border-dashed border-zinc-800 shadow-inner">
                             <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -1855,6 +1952,7 @@ export default function BusinessDrive() {
                             ))}
                         </>
                     )}
+                    </div>
                 </div>
             )}
 
