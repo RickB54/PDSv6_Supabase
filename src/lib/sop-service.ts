@@ -1,7 +1,38 @@
 import { supabase } from './supabase';
 import { contentService } from './content';
 
-export type SOPCategory = 'exterior' | 'interior' | 'preparation' | 'final' | 'safety';
+export type SOPCategory = 'exterior' | 'interior' | 'preparation' | 'final' | 'safety' | (string & {});
+
+export const BUILT_IN_SOP_CATEGORIES: { id: string; label: string }[] = [
+  { id: 'exterior', label: 'Exterior' },
+  { id: 'interior', label: 'Interior' },
+  { id: 'preparation', label: 'Preparation' },
+  { id: 'final', label: 'Final Inspection' },
+  { id: 'safety', label: 'Safety & PPE' },
+];
+
+export const formatSOPCategoryLabel = (category: string): string => {
+  if (!category) return '';
+  const map: Record<string, string> = {
+    exterior: 'Exterior Detail Process',
+    interior: 'Interior Detail Process',
+    preparation: 'Preparation',
+    final: 'Final Inspection',
+    safety: 'Safety & PPE',
+  };
+  const key = category.toLowerCase().trim();
+  if (map[key]) return map[key];
+
+  return category
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .map(word => {
+      if (word.toUpperCase() === word && word.length <= 5) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+};
 
 export interface MasterSOPItem {
   id: string;

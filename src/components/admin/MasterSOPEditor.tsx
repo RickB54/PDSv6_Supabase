@@ -22,7 +22,7 @@ import {
   Search,
   RotateCcw
 } from 'lucide-react';
-import { sopService, MasterSOPItem, SOPCategory } from '@/lib/sop-service';
+import { sopService, MasterSOPItem, SOPCategory, BUILT_IN_SOP_CATEGORIES, formatSOPCategoryLabel } from '@/lib/sop-service';
 import { SOPTooltip } from '@/components/SOPTooltip';
 
 export interface SOPEditModalProps {
@@ -44,6 +44,10 @@ export const SOPEditModal: React.FC<SOPEditModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const [formCategory, setFormCategory] = useState<SOPCategory>(defaultCategory);
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState('');
+  const [availableCategories, setAvailableCategories] = useState<{ id: string; label: string }[]>(BUILT_IN_SOP_CATEGORIES);
+
   const [formCode, setFormCode] = useState('');
   const [formTitle, setFormTitle] = useState('');
   const [formStepNumber, setFormStepNumber] = useState<number>(1);
@@ -55,10 +59,42 @@ export const SOPEditModal: React.FC<SOPEditModalProps> = ({
   const [formChemicalIds, setFormChemicalIds] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
 
+  // Helper to determine SOP code prefix
+  const getCategoryPrefix = (cat: string) => {
+    const lower = (cat || '').toLowerCase().trim();
+    if (lower === 'exterior') return 'EXT';
+    if (lower === 'interior') return 'INT';
+    if (lower === 'preparation' || lower === 'prep') return 'PREP';
+    if (lower === 'final') return 'FIN';
+    if (lower === 'safety') return 'SAFE';
+
+    const clean = (cat || '').replace(/[^a-zA-Z0-9\s]/g, '').trim();
+    const words = clean.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return 'SOP';
+    if (words.length > 1 && words[0].length <= 5 && words[0] === words[0].toUpperCase()) {
+      return words[0]; // e.g. "CRM SOP" -> "CRM"
+    }
+    return words[0].toUpperCase().slice(0, 4) || 'SOP';
+  };
+
   useEffect(() => {
     if (open) {
+      // Load all unique categories from existing SOPs to populate options
+      sopService.getMasterSOPs().then(allSOPs => {
+        const existingCatIds = Array.from(new Set(allSOPs.map(s => s.category).filter(Boolean)));
+        const combined = [...BUILT_IN_SOP_CATEGORIES];
+        existingCatIds.forEach(catId => {
+          if (!combined.some(c => c.id.toLowerCase() === catId.toLowerCase())) {
+            combined.push({ id: catId, label: formatSOPCategoryLabel(catId) });
+          }
+        });
+        setAvailableCategories(combined);
+      });
+
       if (item) {
         setFormCategory(item.category);
+        setIsCustomCategory(false);
+        setCustomCategoryName('');
         setFormCode(item.code);
         setFormTitle(item.title);
         setFormStepNumber(item.stepNumber);
@@ -70,7 +106,10 @@ export const SOPEditModal: React.FC<SOPEditModalProps> = ({
         setFormChemicalIds(item.chemicalIds ? item.chemicalIds.join(', ') : '');
         setFormIsActive(item.isActive !== false);
       } else {
-        setFormCategory(defaultCategory);
+        const initialCat = defaultCategory || 'exterior';
+        setFormCategory(initialCat);
+        setIsCustomCategory(false);
+        setCustomCategoryName('');
         setFormCode('');
         setFormTitle('');
         setFormStepNumber(1);
@@ -86,6 +125,11 @@ export const SOPEditModal: React.FC<SOPEditModalProps> = ({
   }, [open, item, defaultCategory]);
 
   const handleSaveForm = async () => {
+    const activeCategory = (isCustomCategory ? customCategoryName.trim() : formCategory).trim();
+    if (!activeCategory) {
+      toast({ title: 'Validation Error', description: 'Please enter or select a category.', variant: 'destructive' });
+      return;
+    }
     if (!formTitle.trim()) {
       toast({ title: 'Validation Error', description: 'Please enter a step title.', variant: 'destructive' });
       return;
@@ -109,7 +153,7 @@ export const SOPEditModal: React.FC<SOPEditModalProps> = ({
           if (s.id === item.id) {
             return {
               ...s,
-              category: formCategory,
+              category: activeCategory as SOPCategory,
               code: formCode.trim().toUpperCase() || s.code,
               title: formTitle.trim(),
               stepNumber: formStepNumber,
@@ -127,15 +171,15 @@ export const SOPEditModal: React.FC<SOPEditModalProps> = ({
         });
       } else {
         // Create new item
-        const categorySOPs = currentSOPs.filter(s => s.category === formCategory);
+        const categorySOPs = currentSOPs.filter(s => s.category.toLowerCase() === activeCategory.toLowerCase());
         const nextStep = formStepNumber || (categorySOPs.length + 1);
-        const prefix = formCategory === 'exterior' ? 'EXT' : formCategory === 'interior' ? 'INT' : formCategory === 'preparation' ? 'PREP' : 'SOP';
+        const prefix = getCategoryPrefix(activeCategory);
         const code = formCode.trim().toUpperCase() || `${prefix}-${nextStep < 10 ? '0' + nextStep : nextStep}`;
-        const newId = `${formCategory.substring(0, 3)}-${Date.now()}`;
+        const newId = `${prefix.toLowerCase()}-${Date.now()}`;
 
         const newItem: MasterSOPItem = {
           id: newId,
-          category: formCategory,
+          category: activeCategory as SOPCategory,
           code: code,
           title: formTitle.trim(),
           stepNumber: nextStep,
@@ -185,18 +229,71 @@ export const SOPEditModal: React.FC<SOPEditModalProps> = ({
         <div className="space-y-4 py-2">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <Label className="text-xs text-zinc-400">Category</Label>
-              <select
-                value={formCategory}
-                onChange={(e) => setFormCategory(e.target.value as SOPCategory)}
-                className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 text-white px-3 py-1 text-xs focus:ring-1 focus:ring-purple-500 mt-1"
-              >
-                <option value="exterior">Exterior</option>
-                <option value="interior">Interior</option>
-                <option value="preparation">Preparation</option>
-                <option value="final">Final Inspection</option>
-                <option value="safety">Safety</option>
-              </select>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-zinc-400">Category *</Label>
+                {!isCustomCategory ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomCategory(true);
+                      setCustomCategoryName('');
+                    }}
+                    className="text-[11px] text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-0.5 hover:underline"
+                  >
+                    <Plus className="h-3 w-3" /> New Category
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomCategory(false);
+                      setFormCategory(defaultCategory || 'exterior');
+                    }}
+                    className="text-[11px] text-zinc-400 hover:text-zinc-200 font-semibold hover:underline"
+                  >
+                    Choose Existing
+                  </button>
+                )}
+              </div>
+
+              {!isCustomCategory ? (
+                <select
+                  value={formCategory}
+                  onChange={(e) => {
+                    if (e.target.value === '__add_new__') {
+                      setIsCustomCategory(true);
+                      setCustomCategoryName('');
+                    } else {
+                      setFormCategory(e.target.value as SOPCategory);
+                    }
+                  }}
+                  className="flex h-9 w-full rounded-md border border-zinc-800 bg-zinc-900 text-white px-3 py-1 text-xs focus:ring-1 focus:ring-purple-500 mt-1"
+                >
+                  {availableCategories.map(cat => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.label}
+                    </option>
+                  ))}
+                  <option value="__add_new__" className="text-purple-400 font-bold">
+                    + Add New Category...
+                  </option>
+                </select>
+              ) : (
+                <div className="relative mt-1">
+                  <Input 
+                    value={customCategoryName}
+                    onChange={(e) => {
+                      setCustomCategoryName(e.target.value);
+                    }}
+                    placeholder="e.g. CRM SOP"
+                    className="h-9 bg-zinc-900 border-purple-500/50 focus:border-purple-400 text-white text-xs font-semibold placeholder:text-zinc-500"
+                    autoFocus
+                  />
+                  <span className="text-[10px] text-purple-400/80 block mt-1">
+                    Creates a new section for this SOP category.
+                  </span>
+                </div>
+              )}
             </div>
 
             <div>
@@ -204,7 +301,7 @@ export const SOPEditModal: React.FC<SOPEditModalProps> = ({
               <Input 
                 value={formCode}
                 onChange={(e) => setFormCode(e.target.value)}
-                placeholder="e.g. EXT-01"
+                placeholder={`e.g. ${getCategoryPrefix(isCustomCategory ? customCategoryName : formCategory)}-01`}
                 className="h-9 bg-zinc-900 border-zinc-800 text-white text-xs mt-1 font-mono uppercase"
               />
             </div>
@@ -354,8 +451,11 @@ export const MasterSOPEditor: React.FC = () => {
     return () => window.removeEventListener('master-sops-updated', handleUpdate);
   }, []);
 
+  const [createCategory, setCreateCategory] = useState<SOPCategory>('exterior');
+
   const openCreateDialog = (category: SOPCategory = 'exterior') => {
     setEditingItem(null);
+    setCreateCategory(category);
     setEditDialogOpen(true);
   };
 
@@ -428,13 +528,31 @@ export const MasterSOPEditor: React.FC = () => {
       return a.stepNumber - b.stepNumber;
     });
 
-  const categoriesCount = {
+  const defaultTabs = [
+    { id: 'all', label: 'All SOPs' },
+    { id: 'exterior', label: 'Exterior' },
+    { id: 'interior', label: 'Interior' },
+    { id: 'preparation', label: 'Prep' },
+    { id: 'final', label: 'Final' },
+    { id: 'safety', label: 'Safety' },
+  ];
+
+  const customTabs = Array.from(
+    new Set(sops.map(s => s.category).filter(c => c && !defaultTabs.some(t => t.id.toLowerCase() === c.toLowerCase())))
+  ).map(c => ({
+    id: c,
+    label: formatSOPCategoryLabel(c)
+  }));
+
+  const allTabs = [...defaultTabs, ...customTabs];
+
+  const categoriesCount: Record<string, number> = {
     all: sops.length,
-    exterior: sops.filter(s => s.category === 'exterior').length,
-    interior: sops.filter(s => s.category === 'interior').length,
-    preparation: sops.filter(s => s.category === 'preparation').length,
-    final: sops.filter(s => s.category === 'final').length,
   };
+  sops.forEach(s => {
+    const key = s.category || 'other';
+    categoriesCount[key] = (categoriesCount[key] || 0) + 1;
+  });
 
   return (
     <Card className="bg-zinc-950 border-zinc-800 p-4 md:p-6 space-y-6 shadow-2xl rounded-2xl overflow-hidden">
@@ -478,13 +596,7 @@ export const MasterSOPEditor: React.FC = () => {
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1.5 bg-black/50 p-1.5 rounded-xl border border-zinc-800">
-          {[
-            { id: 'all', label: 'All SOPs' },
-            { id: 'exterior', label: 'Exterior' },
-            { id: 'interior', label: 'Interior' },
-            { id: 'preparation', label: 'Prep' },
-            { id: 'final', label: 'Final' },
-          ].map(tab => (
+          {allTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -496,7 +608,7 @@ export const MasterSOPEditor: React.FC = () => {
             >
               <span>{tab.label}</span>
               <Badge variant="secondary" className="bg-black/40 text-[9px] px-1.5 py-0 h-4 border-0 font-extrabold">
-                {(categoriesCount as any)[tab.id] || 0}
+                {categoriesCount[tab.id] || 0}
               </Badge>
             </button>
           ))}
@@ -626,7 +738,7 @@ export const MasterSOPEditor: React.FC = () => {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         item={editingItem}
-        defaultCategory={activeTab !== 'all' ? (activeTab as SOPCategory) : 'exterior'}
+        defaultCategory={createCategory}
         onSaveSuccess={loadSOPs}
       />
 

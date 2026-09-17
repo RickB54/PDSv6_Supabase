@@ -7,7 +7,7 @@ import { sopService, MasterSOPItem } from '@/lib/sop-service';
 
 interface SOPTooltipProps {
   sopIdOrCode?: string;
-  category?: 'exterior' | 'interior';
+  category?: string;
   stepNumber?: number;
   title?: string;
   variant?: 'icon' | 'badge' | 'button';
