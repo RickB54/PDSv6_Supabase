@@ -249,6 +249,83 @@ const ServiceChecklist = () => {
 
     return masterSOPs.find(s => s.title.toLowerCase().includes(nameLower) || nameLower.includes(s.title.toLowerCase()));
   }, [masterSOPs]);
+
+  const getStepChemicals = useCallback((step: any, sopItem: any, chemicals: any[]) => {
+    if (!chemicals || chemicals.length === 0) return [];
+    
+    const explicitIds: string[] = step?.stepChemicals || [];
+    const sopChemicalIds: string[] = sopItem?.chemicalIds || [];
+    
+    // 1. If explicit assignments exist, filter directly
+    if (explicitIds.length > 0) {
+      const assigned = chemicals.filter(c => explicitIds.includes(c.id) || explicitIds.includes(c.name));
+      if (assigned.length > 0) return assigned;
+    }
+    
+    const stepNameLower = (step?.name || '').toLowerCase();
+    const stepIdLower = (step?.id || '').toLowerCase();
+    
+    return chemicals.filter(chem => {
+      const cId = String(chem.id || '').toLowerCase();
+      const cName = String(chem.name || '').toLowerCase();
+      
+      // Check if matched in master SOP chemical IDs
+      if (sopChemicalIds.length > 0) {
+        const matchesSop = sopChemicalIds.some(sId => {
+          const sLower = sId.toLowerCase().replace(/[-_]/g, ' ');
+          const cIdNormalized = cId.replace(/[-_]/g, ' ');
+          return cIdNormalized.includes(sLower) || 
+                 sLower.includes(cIdNormalized) || 
+                 cName.includes(sLower) || 
+                 sLower.split(' ').every(w => w.length > 2 && cName.includes(w));
+        });
+        if (matchesSop) return true;
+      }
+      
+      // Semantic step matching
+      if (stepNameLower.includes('wheel') || stepNameLower.includes('rim') || stepNameLower.includes('tire') || stepIdLower.includes('wheel')) {
+        return cName.includes('brake') || cName.includes('wheel') || cName.includes('tire') || (cName.includes('degreaser') && !cName.includes('citrus'));
+      }
+      if (stepNameLower.includes('bug') || (stepNameLower.includes('rinse') && !stepNameLower.includes('final')) || stepIdLower.includes('bug')) {
+        return cName.includes('bug') || cName.includes('citrus') || cName.includes('tar');
+      }
+      if (stepNameLower.includes('foam') || stepIdLower.includes('foam')) {
+        return cName.includes('foam') || cName.includes('snow') || (cName.includes('soap') && !cName.includes('bar'));
+      }
+      if (stepNameLower.includes('contact wash') || stepNameLower.includes('hand wash') || stepNameLower.includes('two-bucket') || stepNameLower.includes('2-bucket') || (stepNameLower.includes('wash') && !stepNameLower.includes('wheel') && !stepNameLower.includes('pressure'))) {
+        return cName.includes('shampoo') || cName.includes('reset') || (cName.includes('wash') && !cName.includes('strip') && !cName.includes('pressure'));
+      }
+      if (stepNameLower.includes('iron') || stepNameLower.includes('decon') || stepNameLower.includes('fallout')) {
+        return cName.includes('iron') || cName.includes('fallout') || cName.includes('trix');
+      }
+      if (stepNameLower.includes('clay')) {
+        return cName.includes('clay') || cName.includes('lube') || cName.includes('lubricant');
+      }
+      if (stepNameLower.includes('dry') || stepNameLower.includes('blow')) {
+        return cName.includes('drying') || cName.includes('bead maker') || cName.includes('speed wipe');
+      }
+      if (stepNameLower.includes('sealant') || stepNameLower.includes('wax') || stepNameLower.includes('protect') || stepNameLower.includes('trim') || stepNameLower.includes('coating')) {
+        return cName.includes('sealant') || cName.includes('ceramic') || cName.includes('wax') || cName.includes('coating') || cName.includes('dressing') || cName.includes('protect');
+      }
+      if (stepNameLower.includes('glass') || stepNameLower.includes('window') || stepNameLower.includes('mirror')) {
+        return cName.includes('glass') || cName.includes('window') || cName.includes('clarity');
+      }
+      if (stepNameLower.includes('leather')) {
+        return cName.includes('leather');
+      }
+      if (stepNameLower.includes('carpet') || stepNameLower.includes('extract') || stepNameLower.includes('shampoo') || stepNameLower.includes('mat')) {
+        return cName.includes('carpet') || cName.includes('extract') || cName.includes('fabric') || cName.includes('enzyme');
+      }
+      if (stepNameLower.includes('dash') || stepNameLower.includes('console') || stepNameLower.includes('interior') || stepNameLower.includes('door panel')) {
+        return cName.includes('interior') || cName.includes('apc') || cName.includes('cockpit') || cName.includes('all-purpose');
+      }
+      if (stepNameLower.includes('odor') || stepNameLower.includes('scent') || stepNameLower.includes('air freshener')) {
+        return cName.includes('odor') || cName.includes('scent') || cName.includes('freshener');
+      }
+      
+      return false;
+    });
+  }, []);
   
   const [destinationFee, setDestinationFee] = useState(0);
   const [customerAddress, setCustomerAddress] = useState("");
@@ -1368,7 +1445,7 @@ const ServiceChecklist = () => {
       return res;
     } catch (e: any) {
       const msg = e?.message || 'Could not save materials to job report.';
-      toast({ title: 'Report save issue', description: msg, variant: 'outline' });
+      toast({ title: 'Report save issue', description: msg, variant: 'default' });
       return null;
     }
   };
@@ -4130,97 +4207,48 @@ const ServiceChecklist = () => {
                                                   )}
                                                 </div>
                                                 <div className="mt-3 pt-3 border-t border-zinc-800/60">
-                                                  <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                                                    <span>🧪</span> Chemicals for this step
-                                                  </p>
-                                                  {fullChemicalsList.length === 0 ? (
-                                                    <p className="text-[11px] text-zinc-600 italic">No chemicals in inventory yet.</p>
-                                                  ) : (
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                      {fullChemicalsList.map((chem: any) => {
-                                                        const isSelected = (step.stepChemicals || []).includes(chem.id);
-                                                        return (
-                                                          <button
-                                                            key={chem.id}
-                                                            type="button"
-                                                            onClick={() => {
-                                                              setChecklistSteps(prev => prev.map(s => {
-                                                                if (s.id !== step.id) return s;
-                                                                const current = s.stepChemicals || [];
-                                                                const next = isSelected
-                                                                  ? current.filter(id => id !== chem.id)
-                                                                  : [...current, chem.id];
-                                                                return { ...s, stepChemicals: next };
-                                                              }));
-                                                            }}
-                                                            title={chem.dilutionRatioStr ? `Dilution: ${chem.dilutionRatioStr}` : chem.name}
-                                                            className={`inline-flex flex-col items-start px-2 py-1 rounded text-[10px] border transition-all cursor-pointer ${
-                                                              isSelected
-                                                                ? 'bg-primary/20 border-primary text-primary'
-                                                                : 'bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200'
-                                                            }`}
-                                                          >
-                                                            <span className="font-semibold leading-tight">{chem.name}</span>
-                                                            {chem.dilutionRatioStr && (
-                                                              <span className="text-[9px] opacity-70 leading-tight">Dilution: {chem.dilutionRatioStr}</span>
-                                                            )}
-                                                          </button>
-                                                        );
-                                                      })}
-                                                    </div>
-                                                  )}
-
                                                   {(() => {
-                                                    const addKey = `adding_chem_${step.id}`;
-                                                    const isAdding = !!(window as any)[addKey];
-                                                    return isAdding ? (
-                                                      <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-in fade-in slide-in-from-top-1">
-                                                        <Input
-                                                          id={`new-chem-name-${step.id}`}
-                                                          placeholder="Chemical name"
-                                                          className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-32 px-2"
-                                                          autoFocus
-                                                        />
-                                                        <Input
-                                                          id={`new-chem-dilution-${step.id}`}
-                                                          placeholder="Dilution (e.g. 4:1)"
-                                                          className="h-6 text-[10px] bg-zinc-900 border-zinc-700 text-white w-28 px-2"
-                                                        />
-                                                        <button
-                                                          type="button"
-                                                          className="h-6 px-2 text-[10px] bg-primary text-primary-foreground rounded hover:bg-primary/80 transition-colors"
-                                                          onClick={async () => {
-                                                            const nameEl = document.getElementById(`new-chem-name-${step.id}`) as HTMLInputElement;
-                                                            const dilEl = document.getElementById(`new-chem-dilution-${step.id}`) as HTMLInputElement;
-                                                            const name = nameEl?.value?.trim();
-                                                            if (!name) return;
-                                                            const newChem: any = { id: `chem-${Date.now()}`, name, dilutionRatioStr: dilEl?.value?.trim() || '' };
-                                                            try {
-                                                              await api('/api/inventory/chemicals', { method: 'POST', body: JSON.stringify(newChem) });
-                                                            } catch { /* save best-effort */ }
-                                                            setFullChemicalsList((prev: any[]) => [...prev, newChem]);
-                                                            setChecklistSteps(prev => prev.map(s => {
-                                                              if (s.id !== step.id) return s;
-                                                              return { ...s, stepChemicals: [...(s.stepChemicals || []), newChem.id] };
-                                                            }));
-                                                            (window as any)[addKey] = false;
-                                                            setExpandedHelp(prev => ({ ...prev }));
-                                                          }}
-                                                        >Save</button>
-                                                        <button
-                                                          type="button"
-                                                          className="h-6 px-2 text-[10px] text-zinc-500 hover:text-white rounded border border-zinc-700 transition-colors"
-                                                          onClick={() => { (window as any)[addKey] = false; setExpandedHelp(prev => ({ ...prev })); }}
-                                                        >Cancel</button>
-                                                      </div>
-                                                    ) : (
-                                                      <button
-                                                        type="button"
-                                                        className="mt-2 inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-primary transition-colors cursor-pointer"
-                                                        onClick={() => { (window as any)[addKey] = true; setExpandedHelp(prev => ({ ...prev })); }}
-                                                      >
-                                                        <Plus className="h-3 w-3" /> Add new chemical
-                                                      </button>
+                                                    const stepChems = getStepChemicals(step, sopItem, fullChemicalsList);
+                                                    return (
+                                                      <>
+                                                        <div className="flex items-center justify-between mb-2">
+                                                          <p className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wide flex items-center gap-1.5">
+                                                            <span>🧪</span> Chemicals for this step
+                                                          </p>
+                                                          <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-5 px-2 text-[10px] text-purple-400 hover:text-purple-300 hover:bg-purple-950/40 gap-1 border border-purple-500/20"
+                                                            onClick={() => handleOpenChemicals(step.id, step.name)}
+                                                          >
+                                                            <FlaskConical className="h-3 w-3" /> Step Chemical Settings
+                                                          </Button>
+                                                        </div>
+                                                        {stepChems.length === 0 ? (
+                                                          <p className="text-[11px] text-zinc-500 italic">No specific chemicals assigned to this step.</p>
+                                                        ) : (
+                                                          <div className="flex flex-wrap gap-1.5">
+                                                            {stepChems.map((chem: any) => {
+                                                              return (
+                                                                <div
+                                                                  key={chem.id}
+                                                                  title={chem.dilutionRatioStr ? `Dilution: ${chem.dilutionRatioStr}` : chem.name}
+                                                                  className="inline-flex flex-col items-start px-2 py-1 rounded text-[10px] border border-purple-500/40 bg-purple-950/40 text-purple-200 shadow-sm"
+                                                                >
+                                                                  <span className="font-semibold leading-tight flex items-center gap-1">
+                                                                    <Beaker className="h-3 w-3 text-purple-400 shrink-0" />
+                                                                    {chem.name}
+                                                                  </span>
+                                                                  {chem.dilutionRatioStr && (
+                                                                    <span className="text-[9px] text-purple-300/80 leading-tight">Dilution: {chem.dilutionRatioStr}</span>
+                                                                  )}
+                                                                </div>
+                                                              );
+                                                            })}
+                                                          </div>
+                                                        )}
+                                                      </>
                                                     );
                                                   })()}
                                                 </div>
@@ -4369,7 +4397,7 @@ const ServiceChecklist = () => {
                         <span>•</span>
                         <span>Deducted: <strong className="text-amber-400">{(r.concentrateDeductedOz || 0).toFixed(2)} oz</strong> conc.</span>
                       </div>
-                      {r.isStockClamped && (
+                      {(r as any).isStockClamped && (
                         <div className="text-[10px] text-amber-400 flex items-center gap-1 font-bold pt-1">
                           <AlertCircle className="h-3 w-3" /> Exceeded stock — clamped to 0.00
                         </div>

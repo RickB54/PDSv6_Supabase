@@ -1122,7 +1122,16 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 setSotOpen(false);
-                                                                navigate('/procedures-manual');
+                                                                if (activeTab !== "process") {
+                                                                    setSearchParams({ tab: "process" });
+                                                                }
+                                                                setTimeout(() => {
+                                                                    if (sopsRef.current) {
+                                                                        const rect = sopsRef.current.getBoundingClientRect();
+                                                                        const targetY = window.pageYOffset + rect.top - 100;
+                                                                        window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+                                                                    }
+                                                                }, 100);
                                                             }}
                                                             className="w-full text-left flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-purple-950/60 border border-transparent hover:border-purple-500/30 transition-all group cursor-pointer"
                                                         >
