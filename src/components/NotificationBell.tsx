@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { useAlertsStore, mapAlert } from "@/store/alerts";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,8 +24,6 @@ export default function NotificationBell() {
   const [empUnreadCount, setEmpUnreadCount] = useState<number>(0);
   const [ring, setRing] = useState(false);
   const prevUnreadRef = useRef(unreadCount);
-  const location = useLocation();
-  const isFileManagerView = location.pathname.startsWith('/file-manager');
 
   const sendDesktopNotification = (title: string, body: string) => {
     try {
@@ -44,11 +41,6 @@ export default function NotificationBell() {
 
   useEffect(() => {
     const count = displayUnreadCount;
-    if (isFileManagerView) {
-      setRing(false);
-      prevUnreadRef.current = count;
-      return;
-    }
     if (count > prevUnreadRef.current) {
       setRing(true);
       
@@ -98,7 +90,7 @@ export default function NotificationBell() {
       setTimeout(() => setRing(false), 600);
     }
     prevUnreadRef.current = count;
-  }, [unreadCount, empUnreadCount, isFileManagerView, isEmployee, alerts]);
+  }, [unreadCount, empUnreadCount, isEmployee, alerts]);
 
   // Keep dropdown in sync when alerts/employee notifications change
   useEffect(() => {
@@ -224,7 +216,6 @@ export default function NotificationBell() {
 
   // Compute displayUnreadCount and importantUnread using non-dismissed unread alerts
   const displayUnreadCount = useMemo(() => {
-    if (isFileManagerView) return 0;
     if (isEmployee) return empUnreadCount;
     
     const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
@@ -236,10 +227,10 @@ export default function NotificationBell() {
       return !isDismissed;
     });
     return activeUnreadAlerts.length;
-  }, [alerts, isEmployee, empUnreadCount, isFileManagerView]);
+  }, [alerts, isEmployee, empUnreadCount]);
 
   const importantUnread = useMemo(() => {
-    if (isEmployee || isFileManagerView) return 0;
+    if (isEmployee) return 0;
     const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
     const importantTypes = ['exam_reminder', 'admin_message', 'booking_created', 'pdf_saved'];
     
@@ -250,11 +241,11 @@ export default function NotificationBell() {
                           (a.payload?.recordId && dismissedIds.includes(String(a.payload.recordId)));
       return !isDismissed;
     }).length;
-  }, [alerts, isEmployee, isFileManagerView]);
+  }, [alerts, isEmployee]);
 
   // Realtime Subscriptions & Smart Sync for Online Bookings and Engagements
   useEffect(() => {
-    if (isEmployee || isFileManagerView) return;
+    if (isEmployee) return;
     const isDemoMode = localStorage.getItem('demo_mode_active') === 'true';
     if (isDemoMode) return; // Prevent live sync and DB mutations during Demo Mode
 
@@ -451,10 +442,10 @@ export default function NotificationBell() {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       supabase.removeChannel(channel);
     };
-  }, [isEmployee, isFileManagerView, refresh]);
+  }, [isEmployee, refresh]);
 
   // Priority: Yellow if ANY unread (easier to see), Red if 0 (matches user's screenshot requirement for 'nothing new')
-  const bellColorClass = (displayUnreadCount > 0 || importantUnread > 0) ? "text-yellow-400" : "text-red-600";
+  const bellColorClass = (displayUnreadCount > 0 || importantUnread > 0) ? "text-yellow-400 fill-yellow-400/20" : "text-red-600";
 
   const [open, setOpen] = useState(false);
 
