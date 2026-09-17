@@ -7,8 +7,13 @@ import {
     ChevronRight, Upload, Search, Filter, Trash2, Download, Eye, Sparkles, Clock, User, File,
     Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft,
     RefreshCw, Camera, ArrowUpDown, Bell, ChevronsUpDown, Video, Image as ImageIcon, Headphones,
-    FolderArchive
+    FolderArchive, BarChart3, ChevronDown, Check, HardDrive, FolderCheck, PieChart, ExternalLink, Layers
 } from "lucide-react";
+import { 
+    Popover, 
+    PopoverContent, 
+    PopoverTrigger 
+} from "@/components/ui/popover";
 import { 
     DropdownMenu, 
     DropdownMenuContent, 
@@ -141,6 +146,26 @@ const DEMO_FILES: DriveFile[] = [
     { id: 'file-6', name: "Garage_Keepers_Insurance_Summary.pdf", type: "application/pdf", size: "850 KB", modified: new Date().toISOString(), path: ["Insurance"] }
 ];
 
+const parseSizeToBytes = (sizeStr: string): number => {
+    if (!sizeStr) return 0;
+    const match = sizeStr.trim().match(/^([\d.]+)\s*([a-zA-Z]+)?$/);
+    if (!match) return 0;
+    const val = parseFloat(match[1]) || 0;
+    const unit = (match[2] || 'B').toUpperCase();
+    if (unit.startsWith('G')) return val * 1024 * 1024 * 1024;
+    if (unit.startsWith('M')) return val * 1024 * 1024;
+    if (unit.startsWith('K')) return val * 1024;
+    return val;
+};
+
+const formatBytes = (bytes: number): string => {
+    if (!bytes || bytes <= 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
 export default function BusinessDrive() {
     const { toast } = useToast();
     const { isDemoMode } = useDemoMode();
@@ -184,6 +209,8 @@ export default function BusinessDrive() {
     // New Folder State
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
+    const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
+    const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
     
     // System Archive Modals State
     const [deleteAllOpen, setDeleteAllOpen] = useState(false);
@@ -571,6 +598,86 @@ export default function BusinessDrive() {
         });
     };
 
+    const totalBusinessFiles = useMemo(() => {
+        return files.filter(f => {
+            if (f.path.length === 0) return false;
+            if (f.path[0] === 'System Archives' && f.path.length > 1 && ALL_CATEGORIES.includes(f.path[1])) return true;
+            if (f.path[0] !== 'System Archives') return true;
+            return false;
+        }).length;
+    }, [files]);
+
+    const analyticsData = useMemo(() => {
+        const totalFiles = files.length;
+        const sysArchiveFiles = getDirectFilesForFolder('System Archives', []).length;
+        const totalBytes = files.reduce((acc, f) => acc + parseSizeToBytes(f.size), 0);
+        const formattedStorage = formatBytes(totalBytes);
+        const avgFileSize = totalFiles > 0 ? formatBytes(totalBytes / totalFiles) : '0 B';
+
+        // File type distribution
+        const types = ['PDFs', 'Pictures', 'Spreadsheets', 'Documents', 'Videos', 'Audio', 'Other'];
+        const typeDistribution = types.map(t => {
+            const matchingFiles = files.filter(f => getFileCategory(f) === t);
+            const count = matchingFiles.length;
+            const bytes = matchingFiles.reduce((acc, f) => acc + parseSizeToBytes(f.size), 0);
+            return {
+                type: t,
+                count,
+                bytes,
+                formattedSize: formatBytes(bytes),
+                pct: totalFiles > 0 ? Math.round((count / totalFiles) * 100) : 0
+            };
+        });
+
+        // Folder statistics
+        const allFolderNames = [...ALL_CATEGORIES, 'System Archives'];
+        const folderStats = allFolderNames.map(name => {
+            const folderFiles = getDirectFilesForFolder(name, []);
+            const count = folderFiles.length;
+            const bytes = folderFiles.reduce((acc, f) => acc + parseSizeToBytes(f.size), 0);
+            return {
+                name,
+                count,
+                bytes,
+                formattedSize: formatBytes(bytes),
+                isSystem: name === 'System Archives'
+            };
+        });
+
+        const activeFoldersCount = folderStats.filter(f => f.count > 0).length;
+        const emptyFoldersCount = folderStats.length - activeFoldersCount;
+
+        // Top 5 largest files
+        const largestFiles = [...files]
+            .sort((a, b) => parseSizeToBytes(b.size) - parseSizeToBytes(a.size))
+            .slice(0, 5);
+
+        // Top 5 recent files
+        const recentFiles = [...files]
+            .sort((a, b) => {
+                const dateA = a.modified ? new Date(a.modified).getTime() : 0;
+                const dateB = b.modified ? new Date(b.modified).getTime() : 0;
+                return dateB - dateA;
+            })
+            .slice(0, 5);
+
+        return {
+            totalFiles,
+            totalBusinessFiles,
+            sysArchiveFiles,
+            totalBytes,
+            formattedStorage,
+            avgFileSize,
+            totalFoldersCount: folderStats.length,
+            activeFoldersCount,
+            emptyFoldersCount,
+            typeDistribution,
+            folderStats,
+            largestFiles,
+            recentFiles
+        };
+    }, [files, totalBusinessFiles]);
+
     const currentItems = useMemo(() => {
         let filteredFiles: DriveFile[] = [];
         let filteredFolders: DriveFolder[] = [];
@@ -756,39 +863,6 @@ export default function BusinessDrive() {
         link.href = file.data;
         link.download = file.name;
         link.click();
-    };
-
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [analysisResult, setAnalysisResult] = useState<string | null>(null);
-
-    const handleAnalyzeFolder = () => {
-        setIsAnalyzing(true);
-        // Simulate Gemini analysis
-        setTimeout(() => {
-            const folderName = currentPath.length > 0 ? currentPath[currentPath.length - 1] : "Root";
-            const fileCount = currentItems.files.length;
-            const folderCount = currentItems.folders.length;
-            const fileTypes = Array.from(new Set(currentItems.files.map(f => f.type.split('/')[1] || 'document')));
-            
-            let summary = `### Gemini Analysis: ${folderName}\n\n`;
-            summary += `I have analyzed the **${fileCount} files** and **${folderCount} sub-folders** within this directory. Here are the key insights:\n\n`;
-            
-            if (fileCount === 0 && folderCount === 0) {
-                summary += `* **Status:** This directory is currently empty. No actionable data found.\n`;
-                summary += `* **Recommendation:** Upload relevant business documents or pricing sheets to begin analysis.`;
-            } else {
-                summary += `* **Composition:** The folder primarily contains ${fileTypes.join(', ')} assets.\n`;
-                summary += `* **Business Value:** Based on the file names, this directory appears to be central to your **${folderName}** operations.\n`;
-                summary += `* **Suggested Action:** Consider categorizing the ${fileCount} files into specific sub-folders to optimize your workflow.\n\n`;
-                summary += `#### Identified Items:\n`;
-                currentItems.files.forEach(f => {
-                    summary += `* **${f.name}**: A ${f.size} ${f.type.split('/')[1]} modified on ${f.modified.split(',')[0]}.\n`;
-                });
-            }
-            
-            setAnalysisResult(summary);
-            setIsAnalyzing(false);
-        }, 2000);
     };
 
     const handleUpOneLevel = () => {
@@ -1138,7 +1212,7 @@ export default function BusinessDrive() {
                                     </div>
                                     <div className="space-y-2 text-xs text-zinc-300 leading-relaxed">
                                         <p>
-                                            <strong className="text-white">Business Folders dropdown:</strong> Select any business folder (Price Sheets, Invoices, Jobs, Checklists, etc.) to jump straight into it, or select <span className="text-blue-400 font-bold">All Folders</span> to return to the top level.
+                                            <strong className="text-white">Business Folders dropdown:</strong> Select any business folder (Price Sheets, Invoices, Jobs, Checklists, etc.) to jump straight into it, or select <span className="text-blue-400 font-bold">Business Folders</span> at the top of the menu to return to all business folders.
                                         </p>
                                         <p>
                                             <strong className="text-purple-300">System Archives toggle:</strong> Hit the purple <span className="text-purple-300 font-bold">System Archives</span> button to toggle directly to system-generated alert & archive files.
@@ -1151,28 +1225,108 @@ export default function BusinessDrive() {
                             </HoverCard>
 
                             {/* Business Folders Dropdown */}
-                            <Select 
-                                value={currentPath.length === 0 ? 'root' : (currentPath[0] !== 'System Archives' ? currentPath[0] : 'none')}
-                                onValueChange={(val) => {
-                                    if (val === 'none') return;
-                                    if (val === 'root') {
-                                        setCurrentPath([]);
-                                    } else {
-                                        setCurrentPath([val]);
-                                    }
-                                }}>
-                                <SelectTrigger className="flex-1 md:w-[170px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-[10px] md:text-xs uppercase tracking-wider truncate">
-                                    <SelectValue placeholder="Business Folders" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
-                                    <SelectItem value="none" className="hidden">Business Folders</SelectItem>
-                                    <SelectItem value="root" className="font-black text-blue-400">Business Folders</SelectItem>
-                                    <SelectSeparator className="bg-zinc-800" />
-                                    {ALL_CATEGORIES.map(cat => (
-                                        <SelectItem key={cat} value={cat} className="pl-6 text-xs">{cat}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <Popover open={isFolderDropdownOpen} onOpenChange={setIsFolderDropdownOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button 
+                                        variant="outline"
+                                        className={cn(
+                                            "flex-1 md:w-auto h-10 bg-[#161b22] border-zinc-800 text-white hover:bg-zinc-800/80 font-bold text-[10px] md:text-xs uppercase tracking-wider shrink-0 transition-all flex items-center justify-between gap-2 px-3",
+                                            (currentPath.length === 0 || currentPath[0] !== 'System Archives') && "border-blue-900/60"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-1.5 truncate">
+                                            <Folder className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                            <span className="truncate">
+                                                {currentPath.length > 0 && currentPath[0] !== 'System Archives' 
+                                                    ? currentPath[0] 
+                                                    : "Business Folders"}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-900/60 border border-blue-700/50 text-blue-200 font-bold font-mono">
+                                                ({totalBusinessFiles} {totalBusinessFiles === 1 ? 'ITEM' : 'ITEMS'})
+                                            </span>
+                                            <ChevronDown className={cn("w-3.5 h-3.5 text-zinc-400 transition-transform duration-200", isFolderDropdownOpen && "rotate-180")} />
+                                        </div>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[94vw] sm:w-[500px] md:w-[540px] bg-[#161b22] border-zinc-800 p-3 shadow-2xl rounded-xl text-white z-[9999]" align="start" sideOffset={8}>
+                                    {/* Top Root Item */}
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all mb-2",
+                                            currentPath.length === 0 
+                                                ? "bg-blue-600 text-white shadow-md shadow-blue-600/30" 
+                                                : "bg-blue-950/30 text-blue-400 hover:bg-blue-900/40 hover:text-white border border-blue-500/20"
+                                        )}
+                                        onClick={() => {
+                                            setCurrentPath([]);
+                                            setIsFolderDropdownOpen(false);
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            {currentPath.length === 0 ? <Check className="w-4 h-4 shrink-0 text-white" /> : <Folder className="w-4 h-4 shrink-0 text-blue-400" />}
+                                            <span className="font-extrabold uppercase tracking-wide">Business Folders</span>
+                                            <span className="text-[10px] font-normal opacity-80">(All Folders)</span>
+                                        </div>
+                                        <span className={cn(
+                                            "text-[10px] px-2 py-0.5 rounded-full font-bold",
+                                            currentPath.length === 0 ? "bg-blue-800 text-white" : "bg-blue-900/60 text-blue-200 border border-blue-700/50"
+                                        )}>
+                                            ({totalBusinessFiles} {totalBusinessFiles === 1 ? 'item' : 'items'})
+                                        </span>
+                                    </button>
+
+                                    <div className="h-px bg-zinc-800/80 mb-2" />
+
+                                    {/* 2-Column Side-by-Side Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[60vh] sm:max-h-[460px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
+                                        {ALL_CATEGORIES.map(cat => {
+                                            const count = getDirectFilesForFolder(cat, []).length;
+                                            const isSelected = currentPath.length > 0 && currentPath[0] === cat;
+                                            return (
+                                                <button
+                                                    key={cat}
+                                                    type="button"
+                                                    className={cn(
+                                                        "flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-all text-left group",
+                                                        isSelected
+                                                            ? "bg-blue-600/25 text-blue-300 border border-blue-500/60 font-bold"
+                                                            : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
+                                                    )}
+                                                    onClick={() => {
+                                                        setCurrentPath([cat]);
+                                                        setIsFolderDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                                                        {isSelected ? (
+                                                            <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                                        ) : (
+                                                            <Folder className={cn(
+                                                                "w-3.5 h-3.5 shrink-0 transition-colors",
+                                                                count > 0 ? "text-emerald-400" : "text-blue-400 group-hover:text-blue-300"
+                                                            )} />
+                                                        )}
+                                                        <span className="truncate">{cat}</span>
+                                                    </div>
+                                                    <span className={cn(
+                                                        "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors",
+                                                        isSelected 
+                                                            ? "bg-blue-600 text-white font-bold"
+                                                            : count > 0 
+                                                                ? "bg-emerald-950/70 border border-emerald-700/50 text-emerald-300 font-bold"
+                                                                : "bg-zinc-800/70 border border-zinc-700/50 text-zinc-500"
+                                                    )}>
+                                                        ({count} {count === 1 ? 'item' : 'items'})
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
 
                             {/* System Archives Quick Select */}
                             <Button 
@@ -1274,12 +1428,13 @@ export default function BusinessDrive() {
                         <div className="flex items-center gap-3">
                             <Button 
                                 variant="outline" 
-                                className="border-blue-500/30 text-blue-400 bg-transparent hover:bg-blue-600 hover:text-white transition-all font-bold h-10"
-                                onClick={handleAnalyzeFolder}
-                                disabled={isAnalyzing}
+                                className="border-blue-500/40 text-blue-400 bg-[#161b22] hover:bg-blue-600 hover:text-white transition-all font-bold h-10 px-3 flex items-center gap-2 shrink-0"
+                                onClick={() => setIsAnalyticsOpen(true)}
+                                title="View Business Drive System Analytics"
                             >
-                                <Sparkles className={cn("w-4 h-4 md:mr-2", isAnalyzing && "animate-spin")} />
-                                <span className="hidden md:inline">{isAnalyzing ? "Processing..." : "Ask Gemini"}</span>
+                                <BarChart3 className="w-4 h-4 text-blue-400 group-hover:text-white shrink-0" />
+                                <span className="hidden sm:inline">Business Drive Analytics</span>
+                                <span className="sm:hidden">Analytics</span>
                             </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -1307,34 +1462,276 @@ export default function BusinessDrive() {
                 </div>
             </div>
 
-            {/* Gemini Analysis Dialog */}
-            <Dialog open={!!analysisResult} onOpenChange={(open) => !open && setAnalysisResult(null)}>
-                <DialogContent className="sm:max-w-[600px] bg-[#0d1117] border-zinc-800 text-white p-0 overflow-hidden">
-                    <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 p-6 border-b border-zinc-800 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shadow-lg">
-                            <Sparkles className="w-5 h-5 text-white" />
+            {/* Business Drive Analytics Dialog */}
+            <Dialog open={isAnalyticsOpen} onOpenChange={setIsAnalyticsOpen}>
+                <DialogContent className="sm:max-w-[760px] max-h-[85vh] bg-[#0d1117] border-zinc-800 text-white p-0 flex flex-col overflow-hidden shadow-2xl">
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-blue-950/70 via-[#161b22] to-indigo-950/60 p-5 border-b border-zinc-800 flex items-center justify-between shrink-0">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shadow-lg">
+                                <BarChart3 className="w-5 h-5 text-blue-400" />
+                            </div>
+                            <div>
+                                <h2 className="text-base md:text-lg font-black tracking-tight text-white flex items-center gap-2">
+                                    Business Drive Analytics
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-900/60 border border-blue-700/50 text-blue-300 font-semibold font-mono">
+                                        Live System Stats
+                                    </span>
+                                </h2>
+                                <p className="text-xs text-zinc-400">File counts, storage utilization, and folder health overview</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-lg font-black">Gemini Insight</h2>
-                            <p className="text-xs text-zinc-400">Intelligence report for current directory</p>
-                        </div>
-                    </div>
-                    <div className="p-8 max-h-[60vh] overflow-y-auto prose prose-invert prose-sm max-w-none">
-                        {analysisResult?.split('\n').map((line, i) => (
-                            <p key={i} className={cn(
-                                line.startsWith('###') ? "text-xl font-black text-blue-400 mt-6 mb-2" : 
-                                line.startsWith('####') ? "text-lg font-bold text-zinc-200 mt-4 mb-2" :
-                                line.startsWith('*') ? "flex items-start gap-2 text-zinc-300 ml-2" : "text-zinc-400"
-                            )}>
-                                {line.replace(/^### |^#### |^\* /, '')}
-                            </p>
-                        ))}
-                    </div>
-                    <div className="p-6 border-t border-zinc-800 flex justify-end gap-3 bg-[#161b22]/50">
-                        <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setAnalysisResult(null)}>Close</Button>
-                        <Button className="bg-blue-600 hover:bg-blue-700 font-bold" onClick={() => setAnalysisResult(null)}>
-                            Save Insights
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg" onClick={() => setIsAnalyticsOpen(false)}>
+                            <X className="w-4 h-4" />
                         </Button>
+                    </div>
+
+                    {/* Scrollable Analytics Body */}
+                    <div className="p-5 md:p-6 overflow-y-auto space-y-6 text-sm">
+                        {/* Top Stat Cards */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="bg-[#161b22] border border-zinc-800 p-3.5 rounded-xl">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Total Files</span>
+                                    <File className="w-3.5 h-3.5 text-blue-400" />
+                                </div>
+                                <div className="text-xl font-black text-white">{analyticsData.totalFiles}</div>
+                                <div className="text-[10px] text-zinc-400 mt-1 truncate">
+                                    {analyticsData.totalBusinessFiles} Business • {analyticsData.sysArchiveFiles} Archive
+                                </div>
+                            </div>
+
+                            <div className="bg-[#161b22] border border-zinc-800 p-3.5 rounded-xl">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Storage Used</span>
+                                    <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
+                                </div>
+                                <div className="text-xl font-black text-emerald-400">{analyticsData.formattedStorage}</div>
+                                <div className="text-[10px] text-zinc-400 mt-1 truncate">
+                                    Avg {analyticsData.avgFileSize} / file
+                                </div>
+                            </div>
+
+                            <div className="bg-[#161b22] border border-zinc-800 p-3.5 rounded-xl">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Active Folders</span>
+                                    <FolderCheck className="w-3.5 h-3.5 text-indigo-400" />
+                                </div>
+                                <div className="text-xl font-black text-white">
+                                    {analyticsData.activeFoldersCount} <span className="text-xs text-zinc-500 font-normal">/ {analyticsData.totalFoldersCount}</span>
+                                </div>
+                                <div className="text-[10px] text-zinc-400 mt-1 truncate">
+                                    {analyticsData.emptyFoldersCount} empty folder{analyticsData.emptyFoldersCount !== 1 ? 's' : ''}
+                                </div>
+                            </div>
+
+                            <div className="bg-[#161b22] border border-zinc-800 p-3.5 rounded-xl">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400">Current View</span>
+                                    <Folder className="w-3.5 h-3.5 text-purple-400" />
+                                </div>
+                                <div className="text-xs font-bold text-purple-300 truncate">
+                                    {currentPath.length > 0 ? currentPath[currentPath.length - 1] : "Business Root"}
+                                </div>
+                                <div className="text-[10px] text-zinc-400 mt-1">
+                                    {currentItems.files.length} item{currentItems.files.length !== 1 ? 's' : ''} in view
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* File Type Distribution Bar & Breakdown */}
+                        <div className="bg-[#161b22] border border-zinc-800 p-4 rounded-xl space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <PieChart className="w-4 h-4 text-blue-400" />
+                                    <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-200">File Type Distribution</h3>
+                                </div>
+                                <span className="text-[11px] text-zinc-400">{analyticsData.totalFiles} items total</span>
+                            </div>
+
+                            {/* Proportional distribution bar */}
+                            <div className="w-full h-3 bg-zinc-900 rounded-full overflow-hidden flex shadow-inner">
+                                {analyticsData.typeDistribution.map((item, idx) => {
+                                    if (item.count === 0) return null;
+                                    const colors = [
+                                        'bg-red-500',     // PDFs
+                                        'bg-blue-500',    // Pictures
+                                        'bg-emerald-500', // Spreadsheets
+                                        'bg-amber-500',   // Documents
+                                        'bg-purple-500',  // Videos
+                                        'bg-pink-500',    // Audio
+                                        'bg-zinc-500'     // Other
+                                    ];
+                                    const color = colors[idx % colors.length];
+                                    return (
+                                        <div 
+                                            key={item.type} 
+                                            style={{ width: `${item.pct}%` }} 
+                                            className={cn(color, "h-full transition-all")} 
+                                            title={`${item.type}: ${item.count} files (${item.pct}%)`}
+                                        />
+                                    );
+                                })}
+                            </div>
+
+                            {/* Grid of File Types */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                                {analyticsData.typeDistribution.map((item, idx) => {
+                                    const dotColors = [
+                                        'bg-red-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500',
+                                        'bg-purple-500', 'bg-pink-500', 'bg-zinc-500'
+                                    ];
+                                    return (
+                                        <div key={item.type} className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60 border border-zinc-800/80">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <div className={cn("w-2 h-2 rounded-full shrink-0", dotColors[idx % dotColors.length])} />
+                                                <span className="text-xs font-semibold text-zinc-300 truncate">{item.type}</span>
+                                            </div>
+                                            <div className="text-right pl-2">
+                                                <span className="text-xs font-bold text-white">{item.count}</span>
+                                                <span className="text-[10px] text-zinc-500 ml-1">({item.formattedSize})</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Folder Storage & File Count Matrix */}
+                        <div className="bg-[#161b22] border border-zinc-800 p-4 rounded-xl space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Folder className="w-4 h-4 text-emerald-400" />
+                                    <h3 className="font-bold text-xs uppercase tracking-wider text-zinc-200">Folder Directory Breakdown</h3>
+                                </div>
+                                <span className="text-[11px] text-zinc-400">{analyticsData.activeFoldersCount} active folders</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
+                                {analyticsData.folderStats.map(folder => (
+                                    <div 
+                                        key={folder.name}
+                                        className={cn(
+                                            "flex items-center justify-between p-2 rounded-lg border transition-all text-xs",
+                                            folder.isSystem 
+                                                ? "bg-purple-950/20 border-purple-900/40 text-purple-200" 
+                                                : folder.count > 0 
+                                                    ? "bg-zinc-900/70 border-zinc-800 hover:border-blue-500/40 text-zinc-200" 
+                                                    : "bg-zinc-900/30 border-zinc-800/50 text-zinc-400"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                                            <Folder className={cn("w-3.5 h-3.5 shrink-0", folder.isSystem ? "text-purple-400" : folder.count > 0 ? "text-emerald-400" : "text-zinc-600")} />
+                                            <span className="font-semibold truncate">{folder.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className={cn(
+                                                "text-[10px] px-1.5 py-0.5 rounded-full font-mono",
+                                                folder.count > 0 ? "bg-emerald-950/80 text-emerald-300 border border-emerald-800/50 font-bold" : "bg-zinc-800 text-zinc-500"
+                                            )}>
+                                                ({folder.count} {folder.count === 1 ? 'item' : 'items'})
+                                            </span>
+                                            {folder.count > 0 && (
+                                                <span className="text-[10px] text-zinc-400 font-mono hidden sm:inline">
+                                                    {folder.formattedSize}
+                                                </span>
+                                            )}
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                                                title={`Open ${folder.name}`}
+                                                onClick={() => {
+                                                    setCurrentPath([folder.name]);
+                                                    setIsAnalyticsOpen(false);
+                                                }}
+                                            >
+                                                <ExternalLink className="w-3 h-3" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Largest Files & Recent Files side by side */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Largest Files */}
+                            <div className="bg-[#161b22] border border-zinc-800 p-4 rounded-xl space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-300">
+                                    <HardDrive className="w-3.5 h-3.5 text-amber-400" />
+                                    <span>Top Largest Files</span>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {analyticsData.largestFiles.length > 0 ? (
+                                        analyticsData.largestFiles.map(f => (
+                                            <div key={f.id} className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60 border border-zinc-800/70 text-xs">
+                                                <div className="min-w-0 pr-2">
+                                                    <p className="font-semibold text-white truncate">{f.name}</p>
+                                                    <p className="text-[10px] text-zinc-400 truncate">{f.path.join('/') || 'Root'}</p>
+                                                </div>
+                                                <span className="font-mono font-bold text-amber-400 text-xs shrink-0">{f.size}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-xs text-zinc-400 py-3 text-center">No files in drive yet</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Recently Modified Files */}
+                            <div className="bg-[#161b22] border border-zinc-800 p-4 rounded-xl space-y-2.5">
+                                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-300">
+                                    <Clock className="w-3.5 h-3.5 text-blue-400" />
+                                    <span>Recently Added / Modified</span>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {analyticsData.recentFiles.length > 0 ? (
+                                        analyticsData.recentFiles.map(f => (
+                                            <div key={f.id} className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60 border border-zinc-800/70 text-xs">
+                                                <div className="min-w-0 pr-2">
+                                                    <p className="font-semibold text-white truncate">{f.name}</p>
+                                                    <p className="text-[10px] text-zinc-400 truncate">{f.path.join('/') || 'Root'}</p>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-[10px] text-zinc-400">{new Date(f.modified).toLocaleDateString()}</p>
+                                                    <p className="font-mono text-[10px] text-zinc-400">{f.size}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-xs text-zinc-400 py-3 text-center">No files in drive yet</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="p-4 border-t border-zinc-800 flex items-center justify-between bg-[#161b22] shrink-0">
+                        <span className="text-xs text-zinc-400">
+                            System Status: <span className="text-emerald-400 font-semibold">Active & Synced</span> • {analyticsData.totalFiles} files indexed
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800"
+                                onClick={() => {
+                                    setCurrentPath([]);
+                                    setIsAnalyticsOpen(false);
+                                }}
+                            >
+                                Return to All Folders
+                            </Button>
+                            <Button 
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                                size="sm"
+                                onClick={() => setIsAnalyticsOpen(false)}
+                            >
+                                Close Analytics
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
