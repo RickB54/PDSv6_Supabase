@@ -1042,6 +1042,36 @@ export default function BusinessDrive() {
                         </Select>
                         
                         <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                            {/* Navigation Guide Tooltip */}
+                            <HoverCard openDelay={100}>
+                                <HoverCardTrigger asChild>
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-10 w-10 text-blue-400 hover:text-white hover:bg-blue-950/40 border border-blue-500/20 rounded-lg shrink-0"
+                                        title="Folder Navigation Help"
+                                    >
+                                        <Info className="w-4 h-4" />
+                                    </Button>
+                                </HoverCardTrigger>
+                                <HoverCardContent className="w-80 bg-[#161b22] border-blue-500/30 shadow-2xl p-4 text-white z-[9999]" align="start" side="bottom" sideOffset={8}>
+                                    <div className="flex items-center gap-2 font-bold text-sm text-blue-400 mb-2">
+                                        <Info className="w-4 h-4" /> Folder Navigation Guide
+                                    </div>
+                                    <div className="space-y-2 text-xs text-zinc-300 leading-relaxed">
+                                        <p>
+                                            <strong className="text-white">Business Folders dropdown:</strong> Select any business folder (Price Sheets, Invoices, Jobs, Checklists, etc.) to jump straight into it, or select <span className="text-blue-400 font-bold">All Folders</span> to return to the top level.
+                                        </p>
+                                        <p>
+                                            <strong className="text-purple-300">System Archives toggle:</strong> Hit the purple <span className="text-purple-300 font-bold">System Archives</span> button to toggle directly to system-generated alert & archive files.
+                                        </p>
+                                        <p className="text-[11px] text-zinc-400 pt-1.5 border-t border-zinc-800">
+                                            💡 You can also click any folder card or list row below to open it.
+                                        </p>
+                                    </div>
+                                </HoverCardContent>
+                            </HoverCard>
+
                             {/* Business Folders Dropdown */}
                             <Select 
                                 value={currentPath.length === 0 ? 'root' : (currentPath[0] !== 'System Archives' ? currentPath[0] : 'none')}
@@ -1070,7 +1100,7 @@ export default function BusinessDrive() {
                             <Button 
                                 variant="outline"
                                 className={cn(
-                                    "flex-1 md:w-auto h-10 bg-[#161b22] border-purple-900/50 text-purple-300 hover:bg-purple-950/40 hover:text-white font-bold text-[10px] md:text-xs uppercase tracking-wider shrink-0",
+                                    "flex-1 md:w-auto h-10 bg-[#161b22] border-purple-900/50 text-purple-300 hover:bg-purple-950/40 hover:text-white font-bold text-[10px] md:text-xs uppercase tracking-wider shrink-0 transition-all",
                                     currentPath.length > 0 && currentPath[0] === 'System Archives' && "bg-purple-950/60 border-purple-500 text-white shadow-md shadow-purple-950/40"
                                 )}
                                 onClick={() => {
@@ -1082,7 +1112,10 @@ export default function BusinessDrive() {
                                 }}
                             >
                                 <FolderArchive className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
-                                System Archives
+                                <span>System Archives</span>
+                                <span className="ml-1.5 px-1.5 py-0.5 text-[10px] rounded-full bg-purple-900/60 border border-purple-700/50 text-purple-200 font-bold">
+                                    ({getDirectFilesForFolder('System Archives', []).length} {getDirectFilesForFolder('System Archives', []).length === 1 ? 'item' : 'items'})
+                                </span>
                             </Button>
                         </div>
                     </div>
@@ -1330,11 +1363,16 @@ export default function BusinessDrive() {
                             <button 
                                 onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
                                 className={cn(
-                                    "hover:text-white transition-colors whitespace-nowrap shrink-0",
+                                    "hover:text-white transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5",
                                     idx === currentPath.length - 1 && "text-white font-black"
                                 )}
                             >
-                                {segment}
+                                <span>{segment}</span>
+                                {idx === currentPath.length - 1 && (
+                                    <span className="text-[11px] text-zinc-400 font-bold">
+                                        ({currentItems.files.length} {currentItems.files.length === 1 ? 'item' : 'items'})
+                                    </span>
+                                )}
                             </button>
                         </React.Fragment>
                     ))}
@@ -1559,7 +1597,7 @@ export default function BusinessDrive() {
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-base font-black text-purple-300">System Archives</h2>
                                         <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-950/80 text-purple-300 font-bold border border-purple-800/60">
-                                            {getDirectFilesForFolder('System Archives', []).length} items
+                                            ({getDirectFilesForFolder('System Archives', []).length} {getDirectFilesForFolder('System Archives', []).length === 1 ? 'item' : 'items'})
                                         </span>
                                     </div>
                                     <p className="text-xs text-zinc-400">Automated system backups & alert logs.</p>
