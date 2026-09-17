@@ -414,11 +414,11 @@ export default function PackagePricing() {
           .filter(a => !getAddOnMeta(a.id)?.deleted)
           .map(a => {
             const meta = getAddOnMeta(a.id);
-            const isVisible = meta?.visible !== undefined ? meta.visible : ((a as any).active !== false);
+            const isVisible = meta?.visible !== undefined ? meta.visible : (a.active !== false);
             return {
               id: a.id,
               name: a.name,
-              description: (a as any).description || "",
+              description: a.description || "",
               compact_price: Number(updated[`addon:${a.id}:compact`] || a.pricing.compact),
               midsize_price: Number(updated[`addon:${a.id}:midsize`] || a.pricing.midsize),
               truck_price: Number(updated[`addon:${a.id}:truck`] || a.pricing.truck),
@@ -488,7 +488,7 @@ export default function PackagePricing() {
   };
 
   const isAddonArchivedHelper = (a: any, addonMeta: Record<string, any>) => {
-    return addonMeta[a.id]?.visible === false || (addonMeta[a.id]?.visible === undefined && (a as any).active === false);
+    return addonMeta[a.id]?.visible === false || (addonMeta[a.id]?.visible === undefined && a.active === false);
   };
 
   const openViewAllAddOns = () => {

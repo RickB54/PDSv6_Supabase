@@ -111,9 +111,12 @@ export interface CustomServicePackageDef {
 export interface CustomAddOnDef {
   id: string;
   name: string;
+  category?: 'exterior' | 'interior' | 'final';
   description?: string;
   basePrice?: number;
   pricing: { compact: number; midsize: number; truck: number; luxury: number };
+  applicableVehicleTypes?: ('compact' | 'midsize' | 'truck' | 'luxury')[];
+  active?: boolean;
 }
 
 export function getCustomPackages(): CustomServicePackageDef[] {
