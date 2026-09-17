@@ -28,9 +28,11 @@ import {
 import { supabase } from "@/lib/supabase";
 import { ADMIN_TRAINING_PHASES, EMPLOYEE_TRAINING_PHASES } from "@/lib/training-data";
 import proceduresData from "@/pages/ProceduresBooklet";
-import { sopService, MasterSOPItem, formatSOPCategoryLabel } from "@/lib/sop-service";
+import { sopService, MasterSOPItem } from "@/lib/sop-service";
 import { SOPTooltip } from "@/components/SOPTooltip";
 import { SOPEditModal } from "@/components/admin/MasterSOPEditor";
+import { CRMSOPModal } from "@/components/training/CRMSOPModal";
+import { PaintProtectionGuideModal } from "@/components/training/PaintProtectionGuideModal";
 
 interface QuizQuestion { question: string; options: string[]; correctIndex: number; }
 
@@ -207,6 +209,8 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
     // Tips State
     const [tipsOpen, setTipsOpen] = useState(false);
     const [sotOpen, setSotOpen] = useState(false);
+    const [crmSopOpen, setCrmSopOpen] = useState(false);
+    const [paintGuideOpen, setPaintGuideOpen] = useState(false);
     const sopsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -458,65 +462,13 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
             currentY += 5;
         });
 
-        // Dynamic Additional SOP Sections for PDF
-        const extraCategoriesForPdf = Array.from(
-            new Set(allMasterSOPs.map(s => s.category).filter(c => c && c.toLowerCase() !== 'exterior' && c.toLowerCase() !== 'interior'))
-        );
-
-        extraCategoriesForPdf.forEach((extraCat, cIdx) => {
-            const extraSteps = allMasterSOPs.filter(s => s.category.toLowerCase() === extraCat.toLowerCase()).map(s => ({
-                title: `Step ${s.stepNumber} — ${s.title}`,
-                content: formatStepForPDF(s)
-            }));
-            if (extraSteps.length === 0) return;
-
-            const secNum = 3 + cIdx;
-            currentY += 5;
-            checkPageBreak(20);
-            doc.setFontSize(13);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(13, 148, 136); // Teal
-            doc.text(`SECTION ${secNum} — ${formatSOPCategoryLabel(extraCat).toUpperCase()} (${extraSteps.length}-STEP STANDARD PROCEDURE)`, 14, currentY);
-            doc.setDrawColor(13, 148, 136);
-            doc.setLineWidth(0.5);
-            doc.line(14, currentY + 2, pageWidth - 14, currentY + 2);
-            currentY += 10;
-
-            extraSteps.forEach((step, idx) => {
-                doc.setFontSize(9);
-                doc.setFont("helvetica", "normal");
-                const splitText = doc.splitTextToSize(step.content, pageWidth - 28);
-                const estimatedHeight = 8 + (splitText.length * 5) + 6;
-                checkPageBreak(estimatedHeight);
-
-                doc.setFontSize(10.5);
-                doc.setFont("helvetica", "bold");
-                doc.setTextColor(15, 23, 42);
-                doc.text(`${idx + 1}. ${step.title}`, 14, currentY);
-                currentY += 6;
-
-                doc.setFontSize(9);
-                doc.setFont("helvetica", "normal");
-                doc.setTextColor(51, 65, 85);
-
-                splitText.forEach((line: string) => {
-                    checkPageBreak(6);
-                    doc.text(line, 14, currentY);
-                    currentY += 5;
-                });
-                currentY += 5;
-            });
-            currentY += 5;
-        });
-
-        // Chemical Dilution & Application Index
-        const chemSectionNum = 3 + extraCategoriesForPdf.length;
+        // Section 3: Chemical Dilution & Application Index
         currentY += 5;
         checkPageBreak(25);
         doc.setFontSize(13);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(16, 185, 129); // Emerald Green
-        doc.text(`SECTION ${chemSectionNum} — CHEMICAL DILUTION & APPLICATION INDEX`, 14, currentY);
+        doc.text("SECTION 3 — CHEMICAL DILUTION & APPLICATION INDEX", 14, currentY);
         doc.setDrawColor(16, 185, 129);
         doc.setLineWidth(0.5);
         doc.line(14, currentY + 2, pageWidth - 14, currentY + 2);
@@ -1261,6 +1213,40 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                     </div>
                                 </div>
 
+                                {/* Reference Operating Manuals & PDF Guides */}
+                                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg border border-indigo-500/30 shrink-0">
+                                            <FileText className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                                                Reference Operating Manuals & PDF Guides
+                                                <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-950/40 text-[9px]">Full Page Popups</Badge>
+                                            </h4>
+                                            <p className="text-xs text-zinc-400">View complete PDF reference documents for CRM intake & paint protection standards.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCrmSopOpen(true)}
+                                            className="bg-indigo-950/50 border-indigo-500/40 text-indigo-300 hover:bg-indigo-900/60 font-semibold text-xs h-9 shadow-sm"
+                                        >
+                                            <FileText className="w-4 h-4 mr-1.5 text-indigo-400" /> CRM SOP (v3 PDF)
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setPaintGuideOpen(true)}
+                                            className="bg-cyan-950/50 border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/60 font-semibold text-xs h-9 shadow-sm"
+                                        >
+                                            <ShieldCheck className="w-4 h-4 mr-1.5 text-cyan-400" /> Paint Protection Guide (PDF)
+                                        </Button>
+                                    </div>
+                                </div>
+
                                 {/* Section 1: Exterior Detail Process */}
                                 <div className="space-y-4">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
@@ -1441,129 +1427,22 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                     </Accordion>
                                 </div>
 
-                                {/* Dynamic Additional SOP Sections (e.g. CRM SOP, Safety, Preparation, etc.) */}
-                                {Array.from(
-                                    new Set(masterSOPs.map(s => s.category).filter(c => c && c.toLowerCase() !== 'exterior' && c.toLowerCase() !== 'interior'))
-                                ).map((extraCat, catIdx) => {
-                                    const categorySOPs = masterSOPs
-                                        .filter(s => s.category.toLowerCase() === extraCat.toLowerCase())
-                                        .sort((a, b) => a.stepNumber - b.stepNumber);
-                                    if (categorySOPs.length === 0) return null;
-
-                                    const sectionNum = 3 + catIdx;
-                                    const sectionTitle = formatSOPCategoryLabel(extraCat);
-
-                                    // Cycle theme colors for sections
-                                    const sectionThemes = [
-                                        { text: 'text-emerald-400', badgeBorder: 'border-emerald-500/30', badgeText: 'text-emerald-300', badgeBg: 'bg-emerald-950/40', numBg: 'bg-emerald-500/20 text-emerald-400' },
-                                        { text: 'text-amber-400', badgeBorder: 'border-amber-500/30', badgeText: 'text-amber-300', badgeBg: 'bg-amber-950/40', numBg: 'bg-amber-500/20 text-amber-400' },
-                                        { text: 'text-cyan-400', badgeBorder: 'border-cyan-500/30', badgeText: 'text-cyan-300', badgeBg: 'bg-cyan-950/40', numBg: 'bg-cyan-500/20 text-cyan-400' },
-                                        { text: 'text-rose-400', badgeBorder: 'border-rose-500/30', badgeText: 'text-rose-300', badgeBg: 'bg-rose-950/40', numBg: 'bg-rose-500/20 text-rose-400' },
-                                        { text: 'text-fuchsia-400', badgeBorder: 'border-fuchsia-500/30', badgeText: 'text-fuchsia-300', badgeBg: 'bg-fuchsia-950/40', numBg: 'bg-fuchsia-500/20 text-fuchsia-400' },
-                                    ];
-                                    const theme = sectionThemes[catIdx % sectionThemes.length];
-
-                                    return (
-                                        <React.Fragment key={extraCat}>
-                                            <div className="my-8 border-t border-zinc-800" />
-                                            <div className="space-y-4">
-                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
-                                                    <h3 className={`text-lg font-bold ${theme.text} flex items-center gap-2`}>
-                                                        Section {sectionNum} — {sectionTitle}
-                                                    </h3>
-                                                    <Badge variant="outline" className={`${theme.badgeBorder} ${theme.badgeText} ${theme.badgeBg} self-start sm:self-auto`}>
-                                                        {categorySOPs.length}-Step Standard Procedure
-                                                    </Badge>
-                                                </div>
-
-                                                <Accordion type="single" collapsible className="w-full space-y-2">
-                                                    {categorySOPs.map((item) => (
-                                                        <AccordionItem key={item.id} value={item.id} className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
-                                                            <AccordionTrigger className="hover:no-underline py-3 text-left">
-                                                                <div className="flex items-center justify-between w-full pr-4">
-                                                                    <span className="font-semibold text-zinc-200 flex items-center gap-2">
-                                                                        <span className={`w-6 h-6 rounded-full ${theme.numBg} text-xs flex items-center justify-center font-bold shrink-0`}>
-                                                                            {item.stepNumber}
-                                                                        </span>
-                                                                        Step {item.stepNumber} — {item.title}
-                                                                    </span>
-                                                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                                                        {isAdmin && (
-                                                                            <Button 
-                                                                                size="sm" 
-                                                                                variant="ghost" 
-                                                                                className="h-7 px-2 text-[11px] font-bold text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 rounded-md"
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    setSopEditingItem(item);
-                                                                                    setSopDefaultCategory(item.category);
-                                                                                    setSopModalOpen(true);
-                                                                                }}
-                                                                            >
-                                                                                <Pencil className="h-3 w-3 mr-1" /> Edit Step
-                                                                            </Button>
-                                                                        )}
-                                                                        <SOPTooltip sopIdOrCode={item.id} variant="icon" />
-                                                                    </div>
-                                                                </div>
-                                                            </AccordionTrigger>
-                                                            <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3 space-y-2">
-                                                                {item.shortSummary && (
-                                                                    <p className="text-xs text-zinc-400 italic">"{item.shortSummary}"</p>
-                                                                )}
-                                                                <p>{item.detailedInstructions}</p>
-                                                                {item.ricksTips && (
-                                                                    <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 mt-2 flex items-start gap-1.5">
-                                                                        <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                                                                        <div>
-                                                                            <strong className="text-amber-400 uppercase text-[10px] block">Rick's Tip:</strong>
-                                                                            {item.ricksTips}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                                {item.dilutionRatio && item.dilutionRatio !== 'N/A' && (
-                                                                    <div className="text-xs text-emerald-400 font-semibold mt-2 flex items-center gap-1">
-                                                                        <Beaker className="h-3.5 w-3.5" />
-                                                                        <span>Ratio: {item.dilutionRatio}</span>
-                                                                    </div>
-                                                                )}
-                                                                {item.tools && item.tools.length > 0 && (
-                                                                    <div className="text-xs text-blue-400 font-semibold flex items-center gap-1">
-                                                                        <Wrench className="h-3.5 w-3.5" />
-                                                                        <span>Tools: {item.tools.join(', ')}</span>
-                                                                    </div>
-                                                                )}
-                                                                {isAdmin && (
-                                                                    <div className="pt-2 flex items-center justify-end border-t border-zinc-900/80 mt-3">
-                                                                        <Button 
-                                                                            size="sm" 
-                                                                            variant="outline" 
-                                                                            className="h-7 px-2.5 text-[11px] font-bold text-purple-400 border-purple-500/30 hover:bg-purple-500/10"
-                                                                            onClick={() => {
-                                                                                setSopEditingItem(item);
-                                                                                setSopDefaultCategory(item.category);
-                                                                                setSopModalOpen(true);
-                                                                            }}
-                                                                        >
-                                                                            <Pencil className="h-3 w-3 mr-1" /> Edit Step Details
-                                                                        </Button>
-                                                                    </div>
-                                                                )}
-                                                            </AccordionContent>
-                                                        </AccordionItem>
-                                                    ))}
-                                                </Accordion>
-                                            </div>
-                                        </React.Fragment>
-                                    );
-                                })}
-
                                 <SOPEditModal
                                     open={sopModalOpen}
                                     onOpenChange={setSopModalOpen}
                                     item={sopEditingItem}
                                     defaultCategory={sopDefaultCategory}
                                     onSaveSuccess={refreshMasterSOPs}
+                                />
+
+                                <CRMSOPModal
+                                    open={crmSopOpen}
+                                    onOpenChange={setCrmSopOpen}
+                                />
+
+                                <PaintProtectionGuideModal
+                                    open={paintGuideOpen}
+                                    onOpenChange={setPaintGuideOpen}
                                 />
 
                             </div>
