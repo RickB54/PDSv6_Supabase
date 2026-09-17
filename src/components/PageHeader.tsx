@@ -189,7 +189,7 @@ export function PageHeader({ title, subtitle, children }: PageHeaderProps) {
             </div>
 
             {user?.role === 'admin' && (
-              <div className="h-8 w-8 flex items-center justify-center">
+              <div className="flex items-center justify-center">
                 <NotificationBell />
               </div>
             )}

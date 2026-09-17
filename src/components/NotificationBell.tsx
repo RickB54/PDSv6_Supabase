@@ -10,6 +10,7 @@ import supabase from "@/lib/supabase";
 import { notify } from "@/store/alerts";
 import { toast } from "@/hooks/use-toast";
 import { performGlobalSync } from "@/lib/adminAlerts";
+import { cn } from "@/lib/utils";
 
 export default function NotificationBell() {
   const { alerts, latest, unreadCount, markAllRead, markRead, dismissAll, refresh } = useAlertsStore();
@@ -156,14 +157,7 @@ export default function NotificationBell() {
       return sorted.slice(0, 10).map(i => ({ ...i, group: null, shortTitle: i.title }));
     }
 
-    const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
     const sortedAlerts = [...(alerts || [])]
-      .filter(a => {
-        const isDismissed = dismissedIds.includes(a.id) || 
-                            (a.payload?.bookingId && dismissedIds.includes(String(a.payload.bookingId))) ||
-                            (a.payload?.recordId && dismissedIds.includes(String(a.payload.recordId)));
-        return !isDismissed;
-      })
       .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
 
     const groups: Record<string, any[]> = {};
@@ -196,13 +190,13 @@ export default function NotificationBell() {
 
     // Convert groups to a list
     const result: any[] = [];
-    Object.entries(groups).forEach(([name, alerts]) => {
+    Object.entries(groups).forEach(([name, groupAlerts]) => {
       result.push({
         id: `group-${name}`,
         isGroup: true,
         customerName: name,
-        alerts: alerts.slice(0, 5), // Don't overflow a single group
-        timestamp: alerts[0].timestamp // Latest timestamp
+        alerts: groupAlerts.slice(0, 5), // Don't overflow a single group
+        timestamp: groupAlerts[0].timestamp // Latest timestamp
       });
     });
 
@@ -214,33 +208,16 @@ export default function NotificationBell() {
 
   const items = groupedItems;
 
-  // Compute displayUnreadCount and importantUnread using non-dismissed unread alerts
+  // Compute displayUnreadCount and importantUnread directly from active alerts
   const displayUnreadCount = useMemo(() => {
     if (isEmployee) return empUnreadCount;
-    
-    const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
-    const activeUnreadAlerts = (alerts || []).filter(a => {
-      if (a.read || a.type === 'payroll_due') return false;
-      const isDismissed = dismissedIds.includes(a.id) || 
-                          (a.payload?.bookingId && dismissedIds.includes(String(a.payload.bookingId))) ||
-                          (a.payload?.recordId && dismissedIds.includes(String(a.payload.recordId)));
-      return !isDismissed;
-    });
-    return activeUnreadAlerts.length;
+    return (alerts || []).filter(a => !a.read && a.type !== 'payroll_due').length;
   }, [alerts, isEmployee, empUnreadCount]);
 
   const importantUnread = useMemo(() => {
     if (isEmployee) return 0;
-    const dismissedIds = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
     const importantTypes = ['exam_reminder', 'admin_message', 'booking_created', 'pdf_saved'];
-    
-    return (alerts || []).filter(a => {
-      if (a.read || !importantTypes.includes(a.type)) return false;
-      const isDismissed = dismissedIds.includes(a.id) || 
-                          (a.payload?.bookingId && dismissedIds.includes(String(a.payload.bookingId))) ||
-                          (a.payload?.recordId && dismissedIds.includes(String(a.payload.recordId)));
-      return !isDismissed;
-    }).length;
+    return (alerts || []).filter(a => !a.read && importantTypes.includes(a.type)).length;
   }, [alerts, isEmployee]);
 
   // Realtime Subscriptions & Smart Sync for Online Bookings and Engagements
@@ -444,19 +421,22 @@ export default function NotificationBell() {
     };
   }, [isEmployee, refresh]);
 
-  // Priority: Yellow if ANY unread (easier to see), Red if 0 (matches user's screenshot requirement for 'nothing new')
-  const bellColorClass = (displayUnreadCount > 0 || importantUnread > 0) ? "text-yellow-400 fill-yellow-400/20" : "text-red-600";
+  // Priority: Yellow if ANY unread (easier to see), Red if 0 (matches user's requirement for 'nothing new')
+  const hasUnread = displayUnreadCount > 0 || importantUnread > 0;
+  const bellColorClass = hasUnread 
+    ? "text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" 
+    : "text-red-600 hover:text-red-500";
 
   const [open, setOpen] = useState(false);
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative group">
-          <Bell className={`h-6 w-6 transition-all duration-300 ${bellColorClass} ${ring ? 'animate-bounce scale-110' : 'group-hover:scale-110'}`} />
+        <Button variant="ghost" size="icon" className="relative group h-9 w-9 p-0 text-zinc-400 hover:text-white" title={hasUnread ? `${displayUnreadCount} unread alert${displayUnreadCount === 1 ? '' : 's'}` : "No unread alerts"}>
+          <Bell className={cn("h-5 w-5 transition-all duration-300", bellColorClass, ring ? 'animate-bounce scale-110' : 'group-hover:scale-110')} />
           {/* Show badge for ANY unread count with high-contrast red for urgency */}
-          {(displayUnreadCount > 0 || importantUnread > 0) && (
-            <Badge className="absolute -top-1 -right-1 bg-red-600 text-white font-bold border-2 border-black animate-in zoom-in duration-300">
+          {hasUnread && (
+            <Badge className="absolute -top-1 -right-1 bg-red-600 text-white font-bold text-[10px] h-4 min-w-[16px] px-1 flex items-center justify-center border-2 border-black animate-in zoom-in duration-300">
               {displayUnreadCount}
             </Badge>
           )}
@@ -503,11 +483,6 @@ export default function NotificationBell() {
                             onClick={(e) => {
                               e.preventDefault(); e.stopPropagation();
                               try { 
-                                const dismissed = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
-                                dismissed.push(alert.id);
-                                if (alert.payload?.bookingId) dismissed.push(String(alert.payload.bookingId));
-                                if (alert.payload?.recordId) dismissed.push(String(alert.payload.recordId));
-                                localStorage.setItem('dismissed_alert_ids', JSON.stringify(dismissed));
                                 useAlertsStore.getState().dismiss(alert.id); 
                               } catch { }
                             }}
@@ -546,11 +521,6 @@ export default function NotificationBell() {
                       onClick={(e) => {
                         e.preventDefault(); e.stopPropagation();
                         try { 
-                          const dismissed = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
-                          dismissed.push(a.id);
-                          if (a.payload?.bookingId) dismissed.push(String(a.payload.bookingId));
-                          if (a.payload?.recordId) dismissed.push(String(a.payload.recordId));
-                          localStorage.setItem('dismissed_alert_ids', JSON.stringify(dismissed));
                           useAlertsStore.getState().dismiss(a.id); 
                         } catch { }
                       }}
@@ -576,15 +546,6 @@ export default function NotificationBell() {
             }} className="w-full">Mark all read</Button>
           ) : (
             <Button variant="outline" size="sm" onClick={() => { 
-              try {
-                const dismissed = JSON.parse(localStorage.getItem('dismissed_alert_ids') || '[]');
-                alerts.forEach(a => {
-                  dismissed.push(a.id);
-                  if (a.payload?.bookingId) dismissed.push(String(a.payload.bookingId));
-                  if (a.payload?.recordId) dismissed.push(String(a.payload.recordId));
-                });
-                localStorage.setItem('dismissed_alert_ids', JSON.stringify(dismissed));
-              } catch { }
               dismissAll(); 
               setOpen(false); 
             }} className="w-full">Dismiss all</Button>
