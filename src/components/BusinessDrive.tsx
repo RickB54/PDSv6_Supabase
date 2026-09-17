@@ -6,7 +6,8 @@ import {
     Folder, FileText, Plus, Grid, List, MoreVertical, 
     ChevronRight, Upload, Search, Filter, Trash2, Download, Eye, Sparkles, Clock, User, File,
     Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft,
-    RefreshCw, Camera, ArrowUpDown, Bell, ChevronsUpDown, Video, Image as ImageIcon, Headphones
+    RefreshCw, Camera, ArrowUpDown, Bell, ChevronsUpDown, Video, Image as ImageIcon, Headphones,
+    FolderArchive
 } from "lucide-react";
 import { 
     DropdownMenu, 
@@ -72,17 +73,23 @@ interface DriveFolder {
     path: string[]; // Parent path
 }
 
+export const ALL_CATEGORIES = [
+    "Checklists", "Jobs", "Bookings", "Admin Updates", "Invoices", 
+    "Estimates", "Customer Records", "Employee Training", "Payroll", 
+    "Employee Contact", "Addons", "Vehicle History", "Inventory Report", 
+    "Prospects", "Price Sheets", "QR Codes", "Pricing", 
+    "Operating Procedures", "My Logos", "Inventory", "Client Engagement", 
+    "Chemicals", "Analytics"
+];
+
+export const ROOT_FOLDERS = ALL_CATEGORIES;
+
 const DEFAULT_FOLDERS: DriveFolder[] = [
-    { id: '1', name: "Analytics", path: [] },
-    { id: '2', name: "QR Codes", path: [] },
-    { id: '3', name: "Inventory", path: [] },
-    { id: '4', name: "Pricing", path: [] },
-    { id: '5', name: "Operating Procedures", path: [] },
-    { id: '6', name: "Addons", path: [] },
-    { id: '7', name: "Chemicals", path: [] },
-    { id: '8', name: "My Logos", path: [] },
+    ...ALL_CATEGORIES.map((name, idx) => ({ id: `folder-root-${idx}`, name, path: [] })),
     { id: 'system-archives-main', name: "System Archives", path: [] }
 ];
+
+const DEFAULT_BUSINESS_NAMES = new Set(ALL_CATEGORIES);
 
 const getFileCategory = (file: DriveFile): string => {
     const name = file.name.toLowerCase();
@@ -118,17 +125,6 @@ const getFileCategory = (file: DriveFile): string => {
     }
     return 'Other';
 };
-
-export const ALL_CATEGORIES = [
-    "Invoices", "Estimates", "Jobs", "Checklists", "Customer Records", 
-    "Employee Training", "Bookings", "Admin Updates", "Payroll", 
-    "Employee Contact", "Addons", "Vehicle History", "Inventory Report", "Prospects"
-];
-
-export const ROOT_FOLDERS = [
-    "QR Codes", "Pricing", "Operating Procedures", "My Logos", 
-    "Inventory", "Client Engagement", "Chemicals", "Analytics"
-];
 
 const DEMO_FOLDERS: DriveFolder[] = [
     { id: 'demo-1', name: "Business Docs", path: [] },
@@ -454,59 +450,49 @@ export default function BusinessDrive() {
         if (!silent) toast({ title: 'Alert Dismissed', description: 'The alert for this document has been cleared.' });
     };
 
-    // 1. Ensure Root & Subfolders exist cleanly
+    // 1. Ensure Root Business Folders & System Archives exist cleanly
     useEffect(() => {
         if (!isLoaded) return;
         setFolders(prev => {
             const newFolders = [...prev];
-            ALL_CATEGORIES.forEach(cat => {
-                if (!newFolders.some(f => f.name === cat && f.path.length === 1 && f.path[0] === 'System Archives')) {
-                    newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: cat, path: ['System Archives'] });
+            ALL_CATEGORIES.forEach((cat, idx) => {
+                if (!newFolders.some(f => f.name === cat && f.path.length === 0)) {
+                    newFolders.push({ id: `folder-root-${idx}`, name: cat, path: [] });
                 }
             });
-            ROOT_FOLDERS.forEach(root => {
-                if (!newFolders.some(f => f.name === root && f.path.length === 0)) {
-                    newFolders.push({ id: Math.random().toString(36).substring(2, 9), name: root, path: [] });
-                }
-            });
+            if (!newFolders.some(f => f.name === 'System Archives' && f.path.length === 0)) {
+                newFolders.push({ id: 'system-archives-main', name: 'System Archives', path: [] });
+            }
             return newFolders;
         });
     }, [isLoaded]);
 
-    const hasAutoExpanded = React.useRef(false);
-    
-    // 2. Auto-open System Archives in List View if it has files
-    useEffect(() => {
-        if (!isLoaded || hasAutoExpanded.current) return;
-        
-        // Check if System Archives contains files
-        const systemArchivesFiles = files.filter(f => f.path.length > 0 && f.path[0] === 'System Archives');
-        if (systemArchivesFiles.length > 0) {
-            hasAutoExpanded.current = true;
-            // Force list view
-            setViewMode('list');
-            localStorage.setItem('business_drive_view', 'list');
-                
-                // Expand System Archives and relevant subfolders
-                setExpandedFolders(prev => {
-                    const next = { ...prev, 'system-archives-main': true };
-                    const subFoldersWithFiles = new Set(systemArchivesFiles.map(f => f.path[1]));
-                    
-                    folders.forEach(folder => {
-                        if (folder.path.length === 1 && folder.path[0] === 'System Archives' && subFoldersWithFiles.has(folder.name)) {
-                            next[folder.id] = true;
-                        }
-                    });
-                    
-                    localStorage.setItem('business_drive_expanded_folders', JSON.stringify(next));
-                    return next;
-                });
+    const getDirectFilesForFolder = (folderName: string, folderPath: string[] = []): DriveFile[] => {
+        // 1. System Archives root: ONLY files directly inside System Archives (path === ['System Archives'])
+        if (folderName === 'System Archives' && folderPath.length === 0) {
+            return files.filter(f => f.path.length === 1 && f.path[0] === 'System Archives');
         }
-    }, [isLoaded, files, folders]);
+
+        // 2. Business Folder at root: match files directly inside [folderName] or legacy ['System Archives', folderName]
+        if (folderPath.length === 0) {
+            return files.filter(f => {
+                if (f.path.length === 1 && f.path[0] === folderName) return true;
+                if (f.path.length === 2 && f.path[0] === 'System Archives' && f.path[1] === folderName) return true;
+                return false;
+            });
+        }
+
+        // 3. Nested folder: exact path match
+        const targetPath = [...folderPath, folderName];
+        return files.filter(f => {
+            if (f.path.length !== targetPath.length) return false;
+            return targetPath.every((seg, idx) => f.path[idx] === seg);
+        });
+    };
 
     const currentItems = useMemo(() => {
-        let filteredFiles = files;
-        let filteredFolders = folders;
+        let filteredFiles: DriveFile[] = [];
+        let filteredFolders: DriveFolder[] = [];
 
         if (selectedTypeFilter) {
             // Pull out files of matching type from ANY path/folder (top level display)
@@ -516,20 +502,38 @@ export default function BusinessDrive() {
                 const matchesType = getFileCategory(f) === selectedTypeFilter;
                 return matchesSearch && matchesType;
             });
-            // Folders are not shown in the type filter top-level view
             filteredFolders = [];
-        } else {
-            // Normal view restricted to currentPath
-            filteredFiles = files.filter(f => {
+        } else if (currentPath.length > 0) {
+            const currentFolder = currentPath[currentPath.length - 1];
+            const parentPath = currentPath.slice(0, -1);
+            
+            // Get files directly inside this specific folder
+            filteredFiles = getDirectFilesForFolder(currentFolder, parentPath).filter(f => {
                 const searchStr = searchTerm.toLowerCase();
                 const matchesSearch = f.name.toLowerCase().includes(searchStr) || f.metadata?.customerName?.toLowerCase().includes(searchStr);
-                const matchesPath = JSON.stringify(f.path) === JSON.stringify(currentPath);
-                return matchesSearch && matchesPath;
+                return matchesSearch;
             });
 
+            // Get subfolders inside this folder
             filteredFolders = folders.filter(f => {
                 const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
                 const matchesPath = JSON.stringify(f.path) === JSON.stringify(currentPath);
+                return matchesSearch && matchesPath;
+            });
+        } else {
+            // Top level (currentPath.length === 0)
+            // Direct files in root (path: [])
+            filteredFiles = files.filter(f => {
+                const searchStr = searchTerm.toLowerCase();
+                const matchesSearch = f.name.toLowerCase().includes(searchStr) || f.metadata?.customerName?.toLowerCase().includes(searchStr);
+                const matchesPath = f.path.length === 0;
+                return matchesSearch && matchesPath;
+            });
+
+            // Folders at root level (path: [])
+            filteredFolders = folders.filter(f => {
+                const matchesSearch = f.name.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesPath = f.path.length === 0;
                 return matchesSearch && matchesPath;
             });
         }
@@ -556,7 +560,6 @@ export default function BusinessDrive() {
                 valA = a.name.toLowerCase();
                 valB = b.name.toLowerCase();
             } else {
-                // Parse modified/upload date. Fallback to 0 if invalid
                 valA = a.modified ? new Date(a.modified).getTime() : 0;
                 valB = b.modified ? new Date(b.modified).getTime() : 0;
             }
@@ -566,10 +569,8 @@ export default function BusinessDrive() {
             return 0;
         });
 
-        // Apply Sorting to Folders (always sort folders by name in normal view)
+        // Apply Sorting to Folders
         filteredFolders = [...filteredFolders].sort((a, b) => {
-            if (a.name === 'System Archives') return -1;
-            if (b.name === 'System Archives') return 1;
             const nameA = a.name.toLowerCase();
             const nameB = b.name.toLowerCase();
             if (nameA < nameB) return sortDirection === 'asc' ? -1 : 1;
@@ -578,7 +579,7 @@ export default function BusinessDrive() {
         });
 
         return { files: filteredFiles, folders: filteredFolders };
-    }, [files, folders, currentPath, searchTerm, selectedTypeFilter, sortType, sortDirection]);
+    }, [files, folders, currentPath, searchTerm, selectedTypeFilter, sortType, sortDirection, dateFilter]);
 
     const openViewer = (file: DriveFile) => {
         setSelectedFile(file);
@@ -875,20 +876,9 @@ export default function BusinessDrive() {
 
     const renderListFolder = (folder: DriveFolder, depth = 0) => {
         const isExpanded = !!expandedFolders[folder.id];
+        const isSystemArchive = folder.name === 'System Archives';
         
-        // Find direct children (1 level deep from this folder)
-        const targetPathLength = folder.path.length + 1;
-        const targetPath = [...folder.path, folder.name];
-        
-        let childFolders = folders.filter(f => {
-            if (f.path.length !== targetPathLength) return false;
-            return targetPath.every((segment, idx) => f.path[idx] === segment);
-        });
-        
-        let childFiles = files.filter(f => {
-            if (f.path.length !== targetPathLength) return false;
-            return targetPath.every((segment, idx) => f.path[idx] === segment);
-        });
+        let childFiles = getDirectFilesForFolder(folder.name, folder.path);
 
         // Apply filters to child files
         if (searchTerm) {
@@ -930,6 +920,8 @@ export default function BusinessDrive() {
             return 0;
         });
 
+        const directCount = getDirectFilesForFolder(folder.name, folder.path).length;
+
         return (
             <div key={folder.id} className={cn("flex flex-col", depth === 0 ? "mb-2 border border-zinc-800 rounded-xl overflow-hidden shadow-sm" : "")}>
                 <HoverCard openDelay={400}>
@@ -938,27 +930,38 @@ export default function BusinessDrive() {
                         className={cn(
                             "flex items-center justify-between p-4 cursor-pointer transition-colors group",
                             depth === 0 ? "bg-[#0d1117]" : "bg-[#161b22] border-t border-zinc-800",
-                            folder.name === 'System Archives' ? "hover:bg-purple-950/20" :
-                            (childFolders.length > 0 || childFiles.length > 0 ? "hover:bg-emerald-950/15" : "hover:bg-blue-900/10"),
+                            isSystemArchive ? "hover:bg-purple-950/20" :
+                            (directCount > 0 ? "hover:bg-emerald-950/15" : "hover:bg-blue-900/10"),
                             isExpanded && depth === 0 && "border-b border-zinc-800"
                         )}
                         onClick={() => setExpandedFolders(p => ({...p, [folder.id]: !p[folder.id]}))}
                     >
                         <div className="flex items-center gap-4 flex-1 min-w-0" style={{ paddingLeft: `${1 + depth * 1.5}rem` }}>
-                            <Folder className={cn("w-5 h-5", folder.name === 'System Archives' ? 'text-purple-400' : (childFolders.length > 0 || childFiles.length > 0 ? 'text-emerald-400' : 'text-blue-400'))} />
-                            <span className={cn("text-sm font-bold truncate", folder.name === 'System Archives' ? 'text-purple-300' : 'text-white')}>{folder.name}</span>
-                            <span className="text-[10px] text-zinc-500 font-bold ml-2">({childFolders.length + childFiles.length} items)</span>
+                            <Folder className={cn("w-5 h-5", isSystemArchive ? 'text-purple-400' : (directCount > 0 ? 'text-emerald-400' : 'text-blue-400'))} />
+                            <span className={cn("text-sm font-bold truncate", isSystemArchive ? 'text-purple-300' : 'text-white')}>{folder.name}</span>
+                            <span className="text-[10px] text-zinc-400 font-bold ml-2">({directCount} {directCount === 1 ? 'item' : 'items'})</span>
                         </div>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2.5 text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setCurrentPath([...folder.path, folder.name]);
+                            }}
+                        >
+                            Open <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                        </Button>
                     </div>
                   </HoverCardTrigger>
                   {!isExpanded && (
                   <HoverCardContent className="w-80 bg-[#161b22] border-zinc-800 shadow-2xl p-0 overflow-hidden" align="start" side="right" sideOffset={10}>
                       <div className="bg-zinc-900 border-b border-zinc-800 p-3 flex justify-between items-center">
                           <div className="flex items-center gap-2">
-                              <Folder className="w-4 h-4 text-emerald-400" />
+                              <Folder className={cn("w-4 h-4", isSystemArchive ? "text-purple-400" : "text-emerald-400")} />
                               <span className="font-bold text-white text-sm truncate max-w-[150px]">{folder.name}</span>
                           </div>
-                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{childFiles.length} file{childFiles.length !== 1 ? 's' : ''}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{directCount} file{directCount !== 1 ? 's' : ''}</span>
                       </div>
                       <div className="max-h-48 overflow-y-auto p-2 scrollbar-none space-y-1">
                           {childFiles.slice(0, 10).map((file, idx) => (
@@ -988,9 +991,8 @@ export default function BusinessDrive() {
                 </HoverCard>
                 {isExpanded && (
                     <div className="flex flex-col animate-fade-in bg-zinc-950/20">
-                        {childFolders.map(cf => renderListFolder(cf, depth + 1))}
                         {childFiles.map(cf => renderListFile(cf, depth + 1))}
-                        {childFolders.length === 0 && childFiles.length === 0 && (
+                        {childFiles.length === 0 && (
                             <div className="p-4 text-xs text-zinc-500 italic" style={{ paddingLeft: `${1 + (depth + 1) * 1.5}rem` }}>Folder is empty</div>
                         )}
                     </div>
@@ -1040,7 +1042,7 @@ export default function BusinessDrive() {
                         </Select>
                         
                         <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
-                            {/* Root Folders Dropdown (My Folders) */}
+                            {/* Business Folders Dropdown */}
                             <Select 
                                 value={currentPath.length === 0 ? 'root' : (currentPath[0] !== 'System Archives' ? currentPath[0] : 'none')}
                                 onValueChange={(val) => {
@@ -1052,42 +1054,36 @@ export default function BusinessDrive() {
                                     }
                                 }}>
                                 <SelectTrigger className="flex-1 md:w-[170px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-[10px] md:text-xs uppercase tracking-wider truncate">
-                                    <SelectValue placeholder="My Folders" />
+                                    <SelectValue placeholder="Business Folders" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
-                                    <SelectItem value="none" className="hidden">My Folders</SelectItem>
-                                    <SelectItem value="root" className="font-black text-blue-400">My Drive</SelectItem>
+                                    <SelectItem value="none" className="hidden">Business Folders</SelectItem>
+                                    <SelectItem value="root" className="font-black text-blue-400">All Folders</SelectItem>
                                     <SelectSeparator className="bg-zinc-800" />
-                                    {ROOT_FOLDERS.map(root => (
-                                        <SelectItem key={root} value={root} className="pl-6 text-xs">{root}</SelectItem>
+                                    {ALL_CATEGORIES.map(cat => (
+                                        <SelectItem key={cat} value={cat} className="pl-6 text-xs">{cat}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
 
-                            {/* System Folders Dropdown */}
-                            <Select 
-                                value={currentPath.length > 0 && currentPath[0] === 'System Archives' ? (currentPath.length > 1 ? `sys-${currentPath[1]}` : 'system') : 'none'}
-                                onValueChange={(val) => {
-                                    if (val === 'none') return;
-                                    if (val === 'system') {
+                            {/* System Archives Quick Select */}
+                            <Button 
+                                variant="outline"
+                                className={cn(
+                                    "flex-1 md:w-auto h-10 bg-[#161b22] border-purple-900/50 text-purple-300 hover:bg-purple-950/40 hover:text-white font-bold text-[10px] md:text-xs uppercase tracking-wider shrink-0",
+                                    currentPath.length > 0 && currentPath[0] === 'System Archives' && "bg-purple-950/60 border-purple-500 text-white shadow-md shadow-purple-950/40"
+                                )}
+                                onClick={() => {
+                                    if (currentPath.length > 0 && currentPath[0] === 'System Archives') {
+                                        setCurrentPath([]);
+                                    } else {
                                         setCurrentPath(['System Archives']);
-                                    } else if (val.startsWith('sys-')) {
-                                        const catName = val.replace('sys-', '');
-                                        setCurrentPath(['System Archives', catName]);
                                     }
-                                }}>
-                                <SelectTrigger className="flex-1 md:w-[170px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-[10px] md:text-xs uppercase tracking-wider truncate">
-                                    <SelectValue placeholder="System Folders" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-[#161b22] border-zinc-800 text-white max-h-[400px]">
-                                    <SelectItem value="none" className="hidden">System Folders</SelectItem>
-                                    <SelectItem value="system" className="font-black text-purple-400">System Archives</SelectItem>
-                                    <SelectSeparator className="bg-zinc-800" />
-                                    {ALL_CATEGORIES.map(cat => (
-                                        <SelectItem key={`sys-${cat}`} value={`sys-${cat}`} className="pl-6 text-xs">{cat}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                }}
+                            >
+                                <FolderArchive className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
+                                System Archives
+                            </Button>
                         </div>
                     </div>
 
@@ -1383,191 +1379,446 @@ export default function BusinessDrive() {
             </div>
 
             {/* Content Section */}
-            <div className={cn(
-                viewMode === 'grid' 
-                    ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
-                    : "space-y-3"
-            )}>
-                {!isLoaded ? (
-                    <div className="col-span-full py-24 text-center">
-                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                        <p className="text-zinc-400 font-medium">Syncing with Secure Storage...</p>
-                    </div>
-                ) : currentItems.folders.length === 0 && currentItems.files.length === 0 ? (
-                    <div className="col-span-full py-24 text-center bg-[#0d1117] rounded-3xl border border-dashed border-zinc-800 shadow-inner">
-                        <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <File className="w-10 h-10 text-zinc-700" />
+            {!isLoaded ? (
+                <div className="py-24 text-center">
+                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-zinc-400 font-medium">Syncing with Secure Storage...</p>
+                </div>
+            ) : currentPath.length === 0 && !selectedTypeFilter ? (
+                /* Top-Level Separated Layout: Business Folders & System Archives */
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Left/Main Panel: Business Folders */}
+                    <div className="lg:col-span-8 flex flex-col gap-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                    <Folder className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-base font-black text-white">Business Folders</h2>
+                                        <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 font-bold border border-zinc-700">
+                                            {currentItems.folders.filter(f => f.name !== 'System Archives').length} Folders
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-zinc-400">Customer records, invoices, bookings, price sheets, and operational documents.</p>
+                                </div>
+                            </div>
                         </div>
-                        <p className="text-zinc-400 font-medium">This folder is empty.</p>
-                        <div className="flex justify-center gap-3 mt-4">
-                            <Button variant="outline" className="border-zinc-700 font-bold text-white hover:bg-zinc-800" onClick={() => setIsNewFolderOpen(true)}>
-                                <FolderPlus className="w-4 h-4 mr-2" /> New Folder
-                            </Button>
-                            <Button variant="link" className="text-blue-500 font-bold" onClick={() => document.getElementById('drive-upload')?.click()}>
-                                Upload File
-                            </Button>
-                        </div>
+
+                        {/* Business Folders Content */}
+                        {currentItems.folders.filter(f => f.name !== 'System Archives').length === 0 ? (
+                            <div className="py-16 text-center bg-[#0d1117] rounded-2xl border border-dashed border-zinc-800">
+                                <File className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
+                                <p className="text-zinc-400 font-medium text-sm">No business folders found.</p>
+                            </div>
+                        ) : viewMode === 'grid' ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                {currentItems.folders.filter(f => f.name !== 'System Archives').map(folder => {
+                                    const directFiles = getDirectFilesForFolder(folder.name, folder.path);
+                                    const hasFiles = directFiles.length > 0;
+
+                                    return (
+                                        <HoverCard key={folder.id} openDelay={350}>
+                                            <HoverCardTrigger asChild>
+                                                <Card 
+                                                    className={cn(
+                                                        "bg-[#0d1117] p-4 transition-all cursor-pointer group relative shadow-md hover:-translate-y-0.5",
+                                                        hasFiles 
+                                                            ? "border-emerald-500/40 bg-emerald-950/10 hover:border-emerald-400 hover:bg-emerald-950/20" 
+                                                            : "border-zinc-800 hover:border-blue-500/50 hover:bg-[#161b22]"
+                                                    )}
+                                                    onClick={() => setCurrentPath([...folder.path, folder.name])}
+                                                >
+                                                    <div className="flex flex-col items-center justify-center text-center space-y-2.5 pt-1">
+                                                        <div className={cn(
+                                                            "p-3 rounded-xl transition-all duration-300 flex items-center justify-center shadow-inner",
+                                                            hasFiles
+                                                                ? "bg-emerald-500/20 text-emerald-400 group-hover:scale-105"
+                                                                : "bg-zinc-800/60 text-zinc-400 group-hover:bg-blue-600/20 group-hover:text-blue-400"
+                                                        )}>
+                                                            <Folder className="w-8 h-8" />
+                                                        </div>
+                                                        <div className="space-y-0.5 w-full">
+                                                            <span className={cn(
+                                                                "font-bold text-xs text-center transition-colors block truncate px-1",
+                                                                hasFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
+                                                            )}>
+                                                                {folder.name}
+                                                            </span>
+                                                            <span className="text-[10px] text-zinc-400 font-bold block">
+                                                                ({directFiles.length} {directFiles.length === 1 ? 'item' : 'items'})
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-white">
+                                                                    <MoreVertical className="w-3.5 h-3.5" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
+                                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...folder.path, folder.name])}>
+                                                                    <Eye className="w-4 h-4 mr-2" /> Open
+                                                                </DropdownMenuItem>
+                                                                {!DEFAULT_BUSINESS_NAMES.has(folder.name) && (
+                                                                    <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
+                                                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </Card>
+                                            </HoverCardTrigger>
+                                            <HoverCardContent className="w-80 bg-[#161b22] border-zinc-800 shadow-2xl p-0 overflow-hidden" align="center" side="bottom" sideOffset={10}>
+                                                <div className="bg-zinc-900 border-b border-zinc-800 p-3 flex justify-between items-center">
+                                                    <div className="flex items-center gap-2">
+                                                        <Folder className="w-4 h-4 text-emerald-400" />
+                                                        <span className="font-bold text-white text-sm truncate max-w-[150px]">{folder.name}</span>
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{directFiles.length} file{directFiles.length !== 1 ? 's' : ''}</span>
+                                                </div>
+                                                <div className="max-h-48 overflow-y-auto p-2 scrollbar-none space-y-1">
+                                                    {directFiles.length === 0 ? (
+                                                        <div className="text-xs text-zinc-500 p-4 text-center italic">Folder is empty</div>
+                                                    ) : (
+                                                        directFiles.slice(0, 10).map(ff => (
+                                                            <div key={ff.id} className="flex justify-between items-center text-xs p-2 hover:bg-zinc-800/50 rounded transition-colors group">
+                                                                <div className="flex items-center gap-2 overflow-hidden">
+                                                                    <FileText className="w-3 h-3 text-zinc-500 group-hover:text-blue-400 shrink-0" />
+                                                                    <span className="text-zinc-300 truncate max-w-[160px] group-hover:text-white transition-colors">{ff.name}</span>
+                                                                </div>
+                                                                <span className="text-[10px] text-zinc-600 shrink-0 pl-2">{new Date(ff.modified).toLocaleDateString()}</span>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                    {directFiles.length > 10 && (
+                                                        <div className="text-[10px] text-blue-400 text-center font-bold uppercase tracking-widest p-2 bg-[#0d1117]/50 rounded border border-zinc-800 mt-1">
+                                                            + {directFiles.length - 10} more
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </HoverCardContent>
+                                        </HoverCard>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {currentItems.folders.filter(f => f.name !== 'System Archives').map(folder => renderListFolder(folder, 0))}
+                            </div>
+                        )}
+
+                        {/* Direct Files at Root (if any) */}
+                        {currentItems.files.length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-zinc-800">
+                                <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Root Files ({currentItems.files.length})</h3>
+                                {viewMode === 'grid' ? (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                        {currentItems.files.map(file => (
+                                            <Card 
+                                                key={file.id} 
+                                                className="bg-[#0d1117] border-zinc-800 p-4 hover:border-blue-500/50 hover:bg-[#161b22] transition-all group relative shadow-md cursor-pointer"
+                                                onClick={() => openViewer(file)}
+                                            >
+                                                <div className="flex flex-col items-center text-center space-y-2">
+                                                    <div className="w-16 h-16 bg-zinc-800/50 rounded-xl flex items-center justify-center group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-all">
+                                                        {file.type.startsWith('image/') ? (
+                                                            <img src={file.data} className="w-full h-full object-cover rounded-xl" alt={file.name} />
+                                                        ) : (
+                                                            <FileText className="w-8 h-8" />
+                                                        )}
+                                                    </div>
+                                                    <div className="space-y-0.5 w-full">
+                                                        <span className="text-xs font-bold text-white truncate block w-full">{file.name}</span>
+                                                        <span className="text-[10px] text-zinc-500 uppercase font-bold">{file.size}</span>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        {currentItems.files.map(file => renderListFile(file, 0))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
-                ) : (
-                    <>
-                        {/* Render Folders First */}
-                        {currentItems.folders.map(folder => {
-                            const containsFiles = folderHasFiles(folder);
-                            const targetPath = [...folder.path, folder.name];
-                            const folderFiles = files.filter(f => {
-                                if (f.path.length < targetPath.length) return false;
-                                return targetPath.every((segment, idx) => f.path[idx] === segment);
-                            }).sort((a, b) => {
-                                const valA = a.modified ? new Date(a.modified).getTime() : 0;
-                                const valB = b.modified ? new Date(b.modified).getTime() : 0;
-                                return valB - valA;
-                            });
 
-                            const isSystemArchive = folder.name === 'System Archives';
+                    {/* Right Panel: System Archives (Dedicated System Bucket) */}
+                    <div className="lg:col-span-4 flex flex-col gap-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-purple-900/40">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/30">
+                                    <FolderArchive className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-base font-black text-purple-300">System Archives</h2>
+                                        <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-purple-950/80 text-purple-300 font-bold border border-purple-800/60">
+                                            {getDirectFilesForFolder('System Archives', []).length} items
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-zinc-400">Automated system backups & alert logs.</p>
+                                </div>
+                            </div>
+                        </div>
 
-                            return viewMode === 'grid' ? (
-                                <HoverCard key={folder.id} openDelay={400}>
-                                  <HoverCardTrigger asChild>
-                                    <Card 
-                                        className={cn(
-                                            "bg-[#0d1117] p-5 transition-all cursor-pointer group relative shadow-md",
-                                            isSystemArchive ? "border-purple-500/50 bg-purple-950/10 hover:border-purple-400 hover:bg-purple-950/20" :
-                                            containsFiles 
-                                                ? "border-emerald-500/50 bg-emerald-950/5 hover:border-emerald-400 hover:bg-emerald-950/15" 
-                                                : "border-zinc-800 hover:border-blue-500/50 hover:bg-[#161b22]"
-                                        )}
-                                        onClick={() => setCurrentPath([...currentPath, folder.name])}
-                                    >
-                                        <div className="flex flex-col items-center justify-center text-center space-y-3 pt-2">
-                                            <div className={cn(
-                                                "p-4 rounded-2xl transition-all duration-300 flex items-center justify-center shadow-inner",
-                                                isSystemArchive ? "bg-purple-500/20 text-purple-400 group-hover:bg-purple-500/30 group-hover:text-purple-300" :
-                                                containsFiles
-                                                    ? "bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/30 group-hover:text-emerald-300"
-                                                    : "bg-zinc-800/50 text-zinc-400 group-hover:bg-blue-600/20 group-hover:text-blue-400"
-                                            )}>
-                                                <Folder className="w-10 h-10" />
+                        {/* System Archives Card Container */}
+                        <Card className="bg-[#0d1117] border-purple-500/30 p-5 rounded-2xl shadow-xl flex flex-col gap-4 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-36 h-36 bg-purple-600/5 rounded-full blur-2xl pointer-events-none" />
+                            
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-inner">
+                                        <FolderArchive className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-purple-200">System Archives</h3>
+                                        <p className="text-[11px] text-zinc-400 font-medium">
+                                            Direct Files: <strong className="text-purple-300 font-bold">{getDirectFilesForFolder('System Archives', []).length} items</strong>
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-2.5 text-purple-300 hover:bg-purple-950/40 hover:text-purple-200 border border-purple-800/40 font-bold text-xs"
+                                    onClick={() => setCurrentPath(['System Archives'])}
+                                >
+                                    Open <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                                </Button>
+                            </div>
+
+                            <p className="text-xs text-zinc-400 leading-relaxed bg-[#161b22]/70 p-3 rounded-xl border border-zinc-800/80">
+                                Holds automated system logs, admin update exports, and operational alert backups. Business folders are managed separately.
+                            </p>
+
+                            {/* Direct Files inside System Archives */}
+                            <div className="space-y-2">
+                                <div className="text-[10px] font-black uppercase tracking-wider text-purple-400/80 flex items-center justify-between">
+                                    <span>Files Directly Inside</span>
+                                    <span className="font-mono text-purple-300">{getDirectFilesForFolder('System Archives', []).length}</span>
+                                </div>
+                                {getDirectFilesForFolder('System Archives', []).length === 0 ? (
+                                    <div className="p-4 rounded-xl bg-[#161b22]/40 border border-dashed border-zinc-800 text-center">
+                                        <p className="text-xs text-zinc-500 font-medium">0 files directly in System Archives</p>
+                                        <p className="text-[10px] text-zinc-600 mt-0.5">Root system bucket is clean</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                        {getDirectFilesForFolder('System Archives', []).map(file => (
+                                            <div key={file.id} className="flex items-center justify-between p-2 bg-[#161b22] border border-purple-900/30 rounded-lg text-xs">
+                                                <span className="text-purple-200 truncate font-bold">{file.name}</span>
+                                                <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={() => openViewer(file)}>View</Button>
                                             </div>
-                                            <span className={cn(
-                                                "font-bold text-xs sm:text-sm text-center transition-colors px-1 w-full line-clamp-2 break-words",
-                                                isSystemArchive ? "text-purple-300 group-hover:text-purple-200" :
-                                                containsFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
-                                            )}>{folder.name}</span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Quick Actions */}
+                            <div className="pt-3 border-t border-zinc-800/80 flex flex-wrap items-center gap-2 justify-between">
+                                <Button 
+                                    className="bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover:text-white font-bold text-xs h-9 px-3 border border-purple-500/30"
+                                    onClick={() => setAdminModalOpen(true)}
+                                >
+                                    <FileText className="w-3.5 h-3.5 mr-1.5" />
+                                    Admin Update PDF
+                                </Button>
+
+                                <Button 
+                                    variant="outline" 
+                                    className="border-red-500/40 text-red-400 hover:bg-red-500/10 font-bold text-xs h-9 px-3"
+                                    onClick={() => setDeleteAllOpen(true)}
+                                >
+                                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                    Delete All
+                                </Button>
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+            ) : (
+                /* Subfolder View or Type Filter View */
+                <div className={cn(
+                    viewMode === 'grid' 
+                        ? "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
+                        : "space-y-3"
+                )}>
+                    {currentItems.folders.length === 0 && currentItems.files.length === 0 ? (
+                        <div className="col-span-full py-24 text-center bg-[#0d1117] rounded-3xl border border-dashed border-zinc-800 shadow-inner">
+                            <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <File className="w-10 h-10 text-zinc-700" />
+                            </div>
+                            <p className="text-zinc-400 font-medium">This folder is empty.</p>
+                            <div className="flex justify-center gap-3 mt-4">
+                                <Button variant="outline" className="border-zinc-700 font-bold text-white hover:bg-zinc-800" onClick={() => setIsNewFolderOpen(true)}>
+                                    <FolderPlus className="w-4 h-4 mr-2" /> New Folder
+                                </Button>
+                                <Button variant="link" className="text-blue-500 font-bold" onClick={() => document.getElementById('drive-upload')?.click()}>
+                                    Upload File
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Render Subfolders */}
+                            {currentItems.folders.map(folder => {
+                                const directFiles = getDirectFilesForFolder(folder.name, folder.path);
+                                const hasFiles = directFiles.length > 0;
+                                const isSystemArchive = folder.name === 'System Archives';
+
+                                return viewMode === 'grid' ? (
+                                    <HoverCard key={folder.id} openDelay={400}>
+                                      <HoverCardTrigger asChild>
+                                        <Card 
+                                            className={cn(
+                                                "bg-[#0d1117] p-5 transition-all cursor-pointer group relative shadow-md",
+                                                isSystemArchive ? "border-purple-500/50 bg-purple-950/10 hover:border-purple-400 hover:bg-purple-950/20" :
+                                                hasFiles 
+                                                    ? "border-emerald-500/50 bg-emerald-950/5 hover:border-emerald-400 hover:bg-emerald-950/15" 
+                                                    : "border-zinc-800 hover:border-blue-500/50 hover:bg-[#161b22]"
+                                            )}
+                                            onClick={() => setCurrentPath([...currentPath, folder.name])}
+                                        >
+                                            <div className="flex flex-col items-center justify-center text-center space-y-3 pt-2">
+                                                <div className={cn(
+                                                    "p-4 rounded-2xl transition-all duration-300 flex items-center justify-center shadow-inner",
+                                                    isSystemArchive ? "bg-purple-500/20 text-purple-400 group-hover:bg-purple-500/30 group-hover:text-purple-300" :
+                                                    hasFiles
+                                                        ? "bg-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/30 group-hover:text-emerald-300"
+                                                        : "bg-zinc-800/50 text-zinc-400 group-hover:bg-blue-600/20 group-hover:text-blue-400"
+                                                )}>
+                                                    <Folder className="w-10 h-10" />
+                                                </div>
+                                                <span className={cn(
+                                                    "font-bold text-xs sm:text-sm text-center transition-colors px-1 w-full line-clamp-2 break-words",
+                                                    isSystemArchive ? "text-purple-300 group-hover:text-purple-200" :
+                                                    hasFiles ? "text-emerald-300 group-hover:text-white" : "text-white"
+                                                )}>{folder.name}</span>
+                                                <span className="text-[10px] text-zinc-400 font-bold block">
+                                                    ({directFiles.length} {directFiles.length === 1 ? 'item' : 'items'})
+                                                </span>
+                                            </div>
+                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-white">
+                                                            <MoreVertical className="w-4 h-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
+                                                        <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
+                                                            <Eye className="w-4 h-4 mr-2" /> Open
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
+                                                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </Card>
+                                      </HoverCardTrigger>
+                                      <HoverCardContent className="w-80 bg-[#161b22] border-zinc-800 shadow-2xl p-0 overflow-hidden" align="center" side="bottom" sideOffset={10}>
+                                          <div className="bg-zinc-900 border-b border-zinc-800 p-3 flex justify-between items-center">
+                                              <div className="flex items-center gap-2">
+                                                  <Folder className="w-4 h-4 text-emerald-400" />
+                                                  <span className="font-bold text-white text-sm truncate max-w-[150px]">{folder.name}</span>
+                                              </div>
+                                              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{directFiles.length} file{directFiles.length !== 1 ? 's' : ''}</span>
+                                          </div>
+                                          <div className="max-h-48 overflow-y-auto p-2 scrollbar-none space-y-1">
+                                              {directFiles.length === 0 ? (
+                                                  <div className="text-xs text-zinc-500 p-4 text-center italic">Folder is empty</div>
+                                              ) : (
+                                                  directFiles.slice(0, 10).map(ff => (
+                                                      <div key={ff.id} className="flex justify-between items-center text-xs p-2 hover:bg-zinc-800/50 rounded transition-colors group">
+                                                          <div className="flex items-center gap-2 overflow-hidden">
+                                                              <FileText className="w-3 h-3 text-zinc-500 group-hover:text-blue-400 shrink-0" />
+                                                              <span className="text-zinc-300 truncate max-w-[160px] group-hover:text-white transition-colors">{ff.name}</span>
+                                                          </div>
+                                                          <span className="text-[10px] text-zinc-600 shrink-0 pl-2">{new Date(ff.modified).toLocaleDateString()}</span>
+                                                      </div>
+                                                  ))
+                                              )}
+                                              {directFiles.length > 10 && (
+                                                  <div className="text-[10px] text-blue-400 text-center font-bold uppercase tracking-widest p-3 bg-[#0d1117]/50 rounded border border-zinc-800 mt-2">
+                                                      + {directFiles.length - 10} more
+                                                  </div>
+                                              )}
+                                          </div>
+                                      </HoverCardContent>
+                                    </HoverCard>
+                                ) : (
+                                    renderListFolder(folder, 0)
+                                );
+                            })}
+
+                            {/* Render Files in Current View */}
+                            {currentItems.files.map(file => (
+                                viewMode === 'grid' ? (
+                                    <Card 
+                                        key={file.id} 
+                                        className="bg-[#0d1117] border-zinc-800 p-5 hover:border-blue-500/50 hover:bg-[#161b22] transition-all group relative shadow-md cursor-pointer"
+                                        onClick={() => openViewer(file)}
+                                    >
+                                        <div className="flex flex-col items-center text-center space-y-3">
+                                            <div className="absolute top-2 left-2 z-10">
+                                                {file.path.includes('System Archives') && (
+                                                    <div title={fileHasAlert(file) ? "Unread Alert (Click to mark viewed)" : "Viewed (Click to mark unread)"} onClick={(e) => toggleAlert(file, e)}>
+                                                        <Bell className={cn("w-4 h-4 cursor-pointer hover:scale-110 transition-transform", fileHasAlert(file) ? "text-yellow-400 drop-shadow-md" : "text-white opacity-50 hover:opacity-100")} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="w-20 h-20 bg-zinc-800/50 rounded-2xl flex items-center justify-center group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-all duration-300">
+                                                {file.type.startsWith('image/') ? (
+                                                    <img src={file.data} className="w-full h-full object-cover rounded-xl" alt={file.name} />
+                                                ) : (
+                                                    <FileText className="w-10 h-10" />
+                                                )}
+                                            </div>
+                                            <div className="space-y-1 w-full">
+                                                <span className="text-xs font-black text-white truncate block w-full">{file.name}</span>
+                                                <span className="text-[10px] text-zinc-500 uppercase font-bold">{file.size}</span>
+                                            </div>
                                         </div>
                                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-white">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800 text-white">
                                                         <MoreVertical className="w-4 h-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
-                                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
-                                                        <Eye className="w-4 h-4 mr-2" /> Open
+                                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => openViewer(file)}>
+                                                        <Eye className="w-4 h-4 mr-2" /> View
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
+                                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => printFile(file)}>
+                                                        <Printer className="w-4 h-4 mr-2" /> Print
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => downloadFile(file)}>
+                                                        <Download className="w-4 h-4 mr-2" /> Download
+                                                    </DropdownMenuItem>
+
+                                                    <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: file.id, type: 'file', name: file.name })}>
                                                         <Trash2 className="w-4 h-4 mr-2" /> Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </div>
                                     </Card>
-                                  </HoverCardTrigger>
-                                  <HoverCardContent className="w-80 bg-[#161b22] border-zinc-800 shadow-2xl p-0 overflow-hidden" align="center" side="bottom" sideOffset={10}>
-                                      <div className="bg-zinc-900 border-b border-zinc-800 p-3 flex justify-between items-center">
-                                          <div className="flex items-center gap-2">
-                                              <Folder className="w-4 h-4 text-emerald-400" />
-                                              <span className="font-bold text-white text-sm truncate max-w-[150px]">{folder.name}</span>
-                                          </div>
-                                          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{folderFiles.length} file{folderFiles.length !== 1 ? 's' : ''}</span>
-                                      </div>
-                                      <div className="max-h-48 overflow-y-auto p-2 scrollbar-none space-y-1">
-                                          {folderFiles.length === 0 ? (
-                                              <div className="text-xs text-zinc-500 p-4 text-center italic">Folder is empty</div>
-                                          ) : (
-                                              folderFiles.slice(0, 10).map(ff => (
-                                                  <div key={ff.id} className="flex justify-between items-center text-xs p-2 hover:bg-zinc-800/50 rounded transition-colors group">
-                                                      <div className="flex items-center gap-2 overflow-hidden">
-                                                          <FileText className="w-3 h-3 text-zinc-500 group-hover:text-blue-400 shrink-0" />
-                                                          <span className="text-zinc-300 truncate max-w-[160px] group-hover:text-white transition-colors">{ff.name}</span>
-                                                      </div>
-                                                      <span className="text-[10px] text-zinc-600 shrink-0 pl-2">{new Date(ff.modified).toLocaleDateString()}</span>
-                                                  </div>
-                                              ))
-                                          )}
-                                          {folderFiles.length > 10 && (
-                                              <div className="text-[10px] text-blue-400 text-center font-bold uppercase tracking-widest p-3 bg-[#0d1117]/50 rounded border border-zinc-800 mt-2">
-                                                  + {folderFiles.length - 10} more
-                                              </div>
-                                          )}
-                                      </div>
-                                  </HoverCardContent>
-                                </HoverCard>
-                            ) : (
-                                renderListFolder(folder, 0)
-                            );
-                        })}
-
-                        {/* Render Files */}
-                        {currentItems.files.map(file => (
-                            viewMode === 'grid' ? (
-                                <Card 
-                                    key={file.id} 
-                                    className="bg-[#0d1117] border-zinc-800 p-5 hover:border-blue-500/50 hover:bg-[#161b22] transition-all group relative shadow-md cursor-pointer"
-                                    onClick={() => openViewer(file)}
-                                >
-                                    <div className="flex flex-col items-center text-center space-y-3">
-                                        <div className="absolute top-2 left-2 z-10">
-                                            {file.path.includes('System Archives') && (
-                                                <div title={fileHasAlert(file) ? "Unread Alert (Click to mark viewed)" : "Viewed (Click to mark unread)"} onClick={(e) => toggleAlert(file, e)}>
-                                                    <Bell className={cn("w-4 h-4 cursor-pointer hover:scale-110 transition-transform", fileHasAlert(file) ? "text-yellow-400 drop-shadow-md" : "text-white opacity-50 hover:opacity-100")} />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="w-20 h-20 bg-zinc-800/50 rounded-2xl flex items-center justify-center group-hover:bg-blue-600/20 group-hover:text-blue-400 transition-all duration-300">
-                                            {file.type.startsWith('image/') ? (
-                                                <img src={file.data} className="w-full h-full object-cover rounded-xl" alt={file.name} />
-                                            ) : (
-                                                <FileText className="w-10 h-10" />
-                                            )}
-                                        </div>
-                                        <div className="space-y-1 w-full">
-                                            <span className="text-xs font-black text-white truncate block w-full">{file.name}</span>
-                                            <span className="text-[10px] text-zinc-500 uppercase font-bold">{file.size}</span>
-                                        </div>
-                                    </div>
-                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-800 text-white">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
-                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => openViewer(file)}>
-                                                    <Eye className="w-4 h-4 mr-2" /> View
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => printFile(file)}>
-                                                    <Printer className="w-4 h-4 mr-2" /> Print
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => downloadFile(file)}>
-                                                    <Download className="w-4 h-4 mr-2" /> Download
-                                                </DropdownMenuItem>
-
-                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: file.id, type: 'file', name: file.name })}>
-                                                    <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                </Card>
-                            ) : (
-                                renderListFile(file, 0)
-                            )
-                        ))}
-                    </>
-                )}
-            </div>
+                                ) : (
+                                    renderListFile(file, 0)
+                                )
+                            ))}
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* New Folder Dialog */}
             <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
