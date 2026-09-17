@@ -87,11 +87,19 @@ export const ALL_CATEGORIES = [
     "Chemicals", "Analytics"
 ];
 
+export const SYSTEM_ARCHIVE_CATEGORIES = [
+    "Admin Updates", "Alert Logs", "Failsafe Backups", "Invoices", 
+    "Estimates", "Jobs", "Checklists", "Customer Records", 
+    "Employee Training", "Payroll", "Employee Contact", "Vehicle History", 
+    "Inventory Report", "Prospects", "Sub-Contractors", "Price Sheets"
+];
+
 export const ROOT_FOLDERS = ALL_CATEGORIES;
 
 const DEFAULT_FOLDERS: DriveFolder[] = [
     ...ALL_CATEGORIES.map((name, idx) => ({ id: `folder-root-${idx}`, name, path: [] })),
-    { id: 'system-archives-main', name: "System Archives", path: [] }
+    { id: 'system-archives-main', name: "System Archives", path: [] },
+    ...SYSTEM_ARCHIVE_CATEGORIES.map((name, idx) => ({ id: `folder-sys-${idx}`, name, path: ['System Archives'] }))
 ];
 
 const DEFAULT_BUSINESS_NAMES = new Set(ALL_CATEGORIES);
@@ -210,6 +218,7 @@ export default function BusinessDrive() {
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
     const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
+    const [isArchiveDropdownOpen, setIsArchiveDropdownOpen] = useState(false);
     const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
     
     // System Archive Modals State
@@ -571,6 +580,11 @@ export default function BusinessDrive() {
             if (!newFolders.some(f => f.name === 'System Archives' && f.path.length === 0)) {
                 newFolders.push({ id: 'system-archives-main', name: 'System Archives', path: [] });
             }
+            SYSTEM_ARCHIVE_CATEGORIES.forEach((cat, idx) => {
+                if (!newFolders.some(f => f.name === cat && f.path.length === 1 && f.path[0] === 'System Archives')) {
+                    newFolders.push({ id: `folder-sys-${idx}`, name: cat, path: ['System Archives'] });
+                }
+            });
             return newFolders;
         });
     }, [isLoaded]);
@@ -605,6 +619,25 @@ export default function BusinessDrive() {
             if (f.path[0] !== 'System Archives') return true;
             return false;
         }).length;
+    }, [files]);
+
+    const allArchiveCategories = useMemo(() => {
+        const set = new Set(SYSTEM_ARCHIVE_CATEGORIES);
+        folders.forEach(f => {
+            if (f.path.length === 1 && f.path[0] === 'System Archives') {
+                set.add(f.name);
+            }
+        });
+        files.forEach(f => {
+            if (f.path.length >= 2 && f.path[0] === 'System Archives') {
+                set.add(f.path[1]);
+            }
+        });
+        return Array.from(set);
+    }, [folders, files]);
+
+    const totalArchiveFiles = useMemo(() => {
+        return files.filter(f => f.path.length >= 1 && f.path[0] === 'System Archives').length;
     }, [files]);
 
     const analyticsData = useMemo(() => {
@@ -1215,7 +1248,7 @@ export default function BusinessDrive() {
                                             <strong className="text-white">Business Folders dropdown:</strong> Select any business folder (Price Sheets, Invoices, Jobs, Checklists, etc.) to jump straight into it, or select <span className="text-blue-400 font-bold">Business Folders</span> at the top of the menu to return to all business folders.
                                         </p>
                                         <p>
-                                            <strong className="text-purple-300">System Archives toggle:</strong> Hit the purple <span className="text-purple-300 font-bold">System Archives</span> button to toggle directly to system-generated alert & archive files.
+                                            <strong className="text-purple-300">System Archives dropdown:</strong> Select any archive folder (Admin Updates, Invoices, Estimates, etc.) to jump straight into it, or select <span className="text-purple-300 font-bold">System Archives</span> at the top of the menu to view all system archives.
                                         </p>
                                         <p className="text-[11px] text-zinc-400 pt-1.5 border-t border-zinc-800">
                                             💡 You can also click any folder card or list row below to open it.
@@ -1281,7 +1314,7 @@ export default function BusinessDrive() {
                                     <div className="h-px bg-zinc-800/80 mb-2" />
 
                                     {/* 2-Column Side-by-Side Grid */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[60vh] sm:max-h-[460px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
                                         {ALL_CATEGORIES.map(cat => {
                                             const count = getDirectFilesForFolder(cat, []).length;
                                             const isSelected = currentPath.length > 0 && currentPath[0] === cat;
@@ -1328,27 +1361,115 @@ export default function BusinessDrive() {
                                 </PopoverContent>
                             </Popover>
 
-                            {/* System Archives Quick Select */}
-                            <Button 
-                                variant="outline"
-                                className={cn(
-                                    "flex-1 md:w-auto h-10 bg-[#161b22] border-purple-900/50 text-purple-300 hover:bg-purple-950/40 hover:text-white font-bold text-[10px] md:text-xs uppercase tracking-wider shrink-0 transition-all",
-                                    currentPath.length > 0 && currentPath[0] === 'System Archives' && "bg-purple-950/60 border-purple-500 text-white shadow-md shadow-purple-950/40"
-                                )}
-                                onClick={() => {
-                                    if (currentPath.length > 0 && currentPath[0] === 'System Archives') {
-                                        setCurrentPath([]);
-                                    } else {
-                                        setCurrentPath(['System Archives']);
-                                    }
-                                }}
-                            >
-                                <FolderArchive className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
-                                <span>System Archives</span>
-                                <span className="ml-1.5 px-1.5 py-0.5 text-[10px] rounded-full bg-purple-900/60 border border-purple-700/50 text-purple-200 font-bold">
-                                    ({getDirectFilesForFolder('System Archives', []).length} {getDirectFilesForFolder('System Archives', []).length === 1 ? 'item' : 'items'})
-                                </span>
-                            </Button>
+                            {/* System Archives Dropdown */}
+                            <Popover open={isArchiveDropdownOpen} onOpenChange={setIsArchiveDropdownOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button 
+                                        variant="outline"
+                                        className={cn(
+                                            "flex-1 md:w-auto h-10 bg-[#161b22] border-purple-900/50 text-purple-300 hover:bg-purple-950/40 hover:text-white font-bold text-[10px] md:text-xs uppercase tracking-wider shrink-0 transition-all flex items-center justify-between gap-2 px-3",
+                                            currentPath.length > 0 && currentPath[0] === 'System Archives' && "bg-purple-950/60 border-purple-500 text-white shadow-md shadow-purple-950/40"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-1.5 truncate">
+                                            <FolderArchive className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                            <span className="truncate">
+                                                {currentPath.length > 1 && currentPath[0] === 'System Archives'
+                                                    ? currentPath[1]
+                                                    : "System Archives"}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-purple-900/60 border border-purple-700/50 text-purple-200 font-bold font-mono">
+                                                ({totalArchiveFiles} {totalArchiveFiles === 1 ? 'ITEM' : 'ITEMS'})
+                                            </span>
+                                            <ChevronDown className={cn("w-3.5 h-3.5 text-purple-400 transition-transform duration-200", isArchiveDropdownOpen && "rotate-180")} />
+                                        </div>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[94vw] sm:w-[500px] md:w-[540px] bg-[#161b22] border-purple-900/50 p-3 shadow-2xl rounded-xl text-white z-[9999]" align="start" sideOffset={8}>
+                                    {/* Top Root Item */}
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            "w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all mb-2",
+                                            currentPath.length === 1 && currentPath[0] === 'System Archives' 
+                                                ? "bg-purple-600 text-white shadow-md shadow-purple-600/30" 
+                                                : "bg-purple-950/30 text-purple-300 hover:bg-purple-900/40 hover:text-white border border-purple-500/20"
+                                        )}
+                                        onClick={() => {
+                                            setCurrentPath(['System Archives']);
+                                            setIsArchiveDropdownOpen(false);
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            {currentPath.length === 1 && currentPath[0] === 'System Archives' ? (
+                                                <Check className="w-4 h-4 shrink-0 text-white" />
+                                            ) : (
+                                                <FolderArchive className="w-4 h-4 shrink-0 text-purple-400" />
+                                            )}
+                                            <span className="font-extrabold uppercase tracking-wide">System Archives</span>
+                                            <span className="text-[10px] font-normal opacity-80">(All System Archives)</span>
+                                        </div>
+                                        <span className={cn(
+                                            "text-[10px] px-2 py-0.5 rounded-full font-bold",
+                                            currentPath.length === 1 && currentPath[0] === 'System Archives' 
+                                                ? "bg-purple-800 text-white" 
+                                                : "bg-purple-900/60 text-purple-200 border border-purple-700/50"
+                                        )}>
+                                            ({totalArchiveFiles} {totalArchiveFiles === 1 ? 'item' : 'items'})
+                                        </span>
+                                    </button>
+
+                                    <div className="h-px bg-purple-900/40 mb-2" />
+
+                                    {/* 2-Column Side-by-Side Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-900">
+                                        {allArchiveCategories.map(cat => {
+                                            const count = getDirectFilesForFolder(cat, ['System Archives']).length;
+                                            const isSelected = currentPath.length > 1 && currentPath[0] === 'System Archives' && currentPath[1] === cat;
+                                            return (
+                                                <button
+                                                    key={cat}
+                                                    type="button"
+                                                    className={cn(
+                                                        "flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-all text-left group",
+                                                        isSelected
+                                                            ? "bg-purple-600/30 text-purple-200 border border-purple-500/60 font-bold"
+                                                            : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
+                                                    )}
+                                                    onClick={() => {
+                                                        setCurrentPath(['System Archives', cat]);
+                                                        setIsArchiveDropdownOpen(false);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                                                        {isSelected ? (
+                                                            <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                                                        ) : (
+                                                            <FolderArchive className={cn(
+                                                                "w-3.5 h-3.5 shrink-0 transition-colors",
+                                                                count > 0 ? "text-purple-400" : "text-purple-400/60 group-hover:text-purple-300"
+                                                            )} />
+                                                        )}
+                                                        <span className="truncate">{cat}</span>
+                                                    </div>
+                                                    <span className={cn(
+                                                        "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors",
+                                                        isSelected 
+                                                            ? "bg-purple-600 text-white font-bold"
+                                                            : count > 0 
+                                                                ? "bg-purple-950/80 border border-purple-700/50 text-purple-200 font-bold"
+                                                                : "bg-zinc-800/70 border border-zinc-700/50 text-zinc-500"
+                                                    )}>
+                                                        ({count} {count === 1 ? 'item' : 'items'})
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     </div>
 
