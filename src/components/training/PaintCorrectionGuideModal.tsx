@@ -52,13 +52,13 @@ export const PaintCorrectionGuideModal: React.FC<PaintCorrectionGuideModalProps>
 
   const sectionsList = [
     '1. What PC Is & Isn\'t (PC-01)',
-    '2. Clear Coat Limits (PC-02, PC-08)',
-    '3. Compounding vs Polishing (PC-03, PC-06)',
-    '4. Tools & Pad System (PC-04, PC-07)',
-    '5. Step-by-Step Process (PC-01 to PC-09)',
-    '6. Scenario Guidance',
+    '2. Clear Coat Limits (PC-01, PC-02)',
+    '3. Compounding vs Polishing (PC-04, PC-06)',
+    '4. Tools & Pad System (PC-03, PC-04)',
+    '5. Step-by-Step Process (PC-01 to PC-10)',
+    '6. Scenario Guidance (PC-05)',
     '7. Common Mistakes',
-    '8. Customer Script & Rules (PC-10)'
+    '8. Customer Script & Handoff (PC-09, PC-10)'
   ];
 
   return (
