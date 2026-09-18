@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Lightbulb, Video, MonitorPlay, Pencil, CheckCircle2, ShieldCheck, XCircle, Lock, PlayCircle, Eye, FileText, ListChecks, AlertTriangle, RefreshCw, HelpCircle, BookOpen, Layers, Settings, Beaker, Download, Database, Info, Wrench, ArrowUpRight, Sparkles } from "lucide-react";
+import { Plus, Trash2, Lightbulb, Video, MonitorPlay, Pencil, CheckCircle2, ShieldCheck, XCircle, Lock, PlayCircle, Eye, FileText, ListChecks, AlertTriangle, RefreshCw, HelpCircle, BookOpen, Layers, Settings, Beaker, Download, Database, Info, Wrench, ArrowUpRight, Sparkles, Droplets } from "lucide-react";
 import jsPDF from 'jspdf';
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,6 +34,8 @@ import { SOPEditModal } from "@/components/admin/MasterSOPEditor";
 import { CRMSOPModal } from "@/components/training/CRMSOPModal";
 import { PaintProtectionGuideModal } from "@/components/training/PaintProtectionGuideModal";
 import { PaintCorrectionGuideModal } from "@/components/training/PaintCorrectionGuideModal";
+import { HeadlightRestorationGuideModal } from "@/components/training/HeadlightRestorationGuideModal";
+import { WaterSpotRemovalGuideModal } from "@/components/training/WaterSpotRemovalGuideModal";
 
 interface QuizQuestion { question: string; options: string[]; correctIndex: number; }
 
@@ -213,6 +215,8 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
     const [crmSopOpen, setCrmSopOpen] = useState(false);
     const [paintGuideOpen, setPaintGuideOpen] = useState(false);
     const [paintCorrectionGuideOpen, setPaintCorrectionGuideOpen] = useState(false);
+    const [headlightGuideOpen, setHeadlightGuideOpen] = useState(false);
+    const [waterSpotGuideOpen, setWaterSpotGuideOpen] = useState(false);
     const sopsRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -1226,7 +1230,7 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                 Reference Operating Manuals & PDF Guides
                                                 <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-950/40 text-[9px]">Full Page Popups</Badge>
                                             </h4>
-                                            <p className="text-xs text-zinc-400">View complete PDF reference documents for CRM intake & paint protection standards.</p>
+                                            <p className="text-xs text-zinc-400">View complete PDF reference documents for CRM intake, paint correction, headlight restoration & water spot removal.</p>
                                         </div>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -1253,6 +1257,22 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                             className="bg-amber-950/50 border-amber-500/40 text-amber-300 hover:bg-amber-900/60 font-semibold text-xs h-9 shadow-sm"
                                         >
                                             <Sparkles className="w-4 h-4 mr-1.5 text-amber-400" /> Paint Correction Guide (PDF)
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setHeadlightGuideOpen(true)}
+                                            className="bg-yellow-950/50 border-yellow-500/40 text-yellow-300 hover:bg-yellow-900/60 font-semibold text-xs h-9 shadow-sm"
+                                        >
+                                            <Wrench className="w-4 h-4 mr-1.5 text-yellow-400" /> Headlight Restoration Guide (PDF)
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setWaterSpotGuideOpen(true)}
+                                            className="bg-blue-950/50 border-blue-500/40 text-blue-300 hover:bg-blue-900/60 font-semibold text-xs h-9 shadow-sm"
+                                        >
+                                            <Droplets className="w-4 h-4 mr-1.5 text-blue-400" /> Water Spot Removal Guide (PDF)
                                         </Button>
                                     </div>
                                 </div>
@@ -1549,6 +1569,16 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                 <PaintCorrectionGuideModal
                                     open={paintCorrectionGuideOpen}
                                     onOpenChange={setPaintCorrectionGuideOpen}
+                                />
+
+                                <HeadlightRestorationGuideModal
+                                    open={headlightGuideOpen}
+                                    onOpenChange={setHeadlightGuideOpen}
+                                />
+
+                                <WaterSpotRemovalGuideModal
+                                    open={waterSpotGuideOpen}
+                                    onOpenChange={setWaterSpotGuideOpen}
                                 />
 
                             </div>
