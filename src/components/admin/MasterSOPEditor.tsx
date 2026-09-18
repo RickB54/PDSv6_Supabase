@@ -193,6 +193,7 @@ export const SOPEditModal: React.FC<SOPEditModalProps> = ({
               >
                 <option value="exterior">Exterior</option>
                 <option value="interior">Interior</option>
+                <option value="paint_correction">Paint Correction</option>
                 <option value="preparation">Preparation</option>
                 <option value="final">Final Inspection</option>
                 <option value="safety">Safety</option>
