@@ -966,83 +966,156 @@ export default function BusinessDrive() {
     const [folderDropdownSearch, setFolderDropdownSearch] = useState("");
     const [archiveDropdownSearch, setArchiveDropdownSearch] = useState("");
 
-    const businessFoldersTree = useMemo(() => {
+    const businessRootFoldersList = useMemo(() => {
         const rootFolderItems = folders.filter(f => f.path.length === 0 && f.name !== 'System Archives');
-        const rootList: DriveFolder[] = [...rootFolderItems];
+        const list: DriveFolder[] = [...rootFolderItems];
         ALL_CATEGORIES.forEach((catName, idx) => {
-            if (!rootList.some(f => f.name === catName)) {
-                rootList.push({ id: `folder-root-${idx}`, name: catName, path: [] });
+            if (!list.some(f => f.name === catName)) {
+                list.push({ id: `folder-root-${idx}`, name: catName, path: [] });
             }
         });
-        rootList.sort((a, b) => a.name.localeCompare(b.name));
+        list.sort((a, b) => a.name.localeCompare(b.name));
 
-        const result: { folder: DriveFolder; depth: number; fullPath: string[] }[] = [];
-
-        const addChildrenRecursive = (parentPath: string[], depth: number) => {
-            const children = folders.filter(f => 
-                f.path.length === parentPath.length &&
-                parentPath.every((seg, i) => f.path[i] === seg)
-            ).sort((a, b) => a.name.localeCompare(b.name));
-
-            for (const child of children) {
-                const fullPath = [...child.path, child.name];
-                result.push({ folder: child, depth, fullPath });
-                addChildrenRecursive(fullPath, depth + 1);
-            }
-        };
-
-        for (const root of rootList) {
-            const fullPath = [root.name];
-            result.push({ folder: root, depth: 0, fullPath });
-            addChildrenRecursive(fullPath, 1);
-        }
-
-        if (!folderDropdownSearch.trim()) return result;
+        if (!folderDropdownSearch.trim()) return list;
         const q = folderDropdownSearch.toLowerCase();
-        return result.filter(item => 
-            item.folder.name.toLowerCase().includes(q) || 
-            item.fullPath.join(' ').toLowerCase().includes(q)
-        );
+        return list.filter(rootFolder => {
+            if (rootFolder.name.toLowerCase().includes(q)) return true;
+            return folders.some(f => f.path.includes(rootFolder.name) && f.name.toLowerCase().includes(q));
+        });
     }, [folders, folderDropdownSearch]);
 
-    const archiveFoldersTree = useMemo(() => {
+    const archiveRootFoldersList = useMemo(() => {
         const archiveFolderItems = folders.filter(f => f.path.length === 1 && f.path[0] === 'System Archives');
-        const rootList: DriveFolder[] = [...archiveFolderItems];
+        const list: DriveFolder[] = [...archiveFolderItems];
         SYSTEM_ARCHIVE_CATEGORIES.forEach((catName, idx) => {
-            if (!rootList.some(f => f.name === catName)) {
-                rootList.push({ id: `folder-sys-${idx}`, name: catName, path: ['System Archives'] });
+            if (!list.some(f => f.name === catName)) {
+                list.push({ id: `folder-sys-${idx}`, name: catName, path: ['System Archives'] });
             }
         });
-        rootList.sort((a, b) => a.name.localeCompare(b.name));
+        list.sort((a, b) => a.name.localeCompare(b.name));
 
-        const result: { folder: DriveFolder; depth: number; fullPath: string[] }[] = [];
-
-        const addChildrenRecursive = (parentPath: string[], depth: number) => {
-            const children = folders.filter(f => 
-                f.path.length === parentPath.length &&
-                parentPath.every((seg, i) => f.path[i] === seg)
-            ).sort((a, b) => a.name.localeCompare(b.name));
-
-            for (const child of children) {
-                const fullPath = [...child.path, child.name];
-                result.push({ folder: child, depth, fullPath });
-                addChildrenRecursive(fullPath, depth + 1);
-            }
-        };
-
-        for (const root of rootList) {
-            const fullPath = ['System Archives', root.name];
-            result.push({ folder: root, depth: 0, fullPath });
-            addChildrenRecursive(fullPath, 1);
-        }
-
-        if (!archiveDropdownSearch.trim()) return result;
+        if (!archiveDropdownSearch.trim()) return list;
         const q = archiveDropdownSearch.toLowerCase();
-        return result.filter(item => 
-            item.folder.name.toLowerCase().includes(q) || 
-            item.fullPath.join(' ').toLowerCase().includes(q)
-        );
+        return list.filter(rootFolder => {
+            if (rootFolder.name.toLowerCase().includes(q)) return true;
+            return folders.some(f => f.path.includes(rootFolder.name) && f.name.toLowerCase().includes(q));
+        });
     }, [folders, archiveDropdownSearch]);
+
+    const renderDropdownFolderCard = (
+        folder: DriveFolder, 
+        parentPath: string[], 
+        depth: number, 
+        isArchive: boolean
+    ) => {
+        const cat = folder.name;
+        const fullPath = [...parentPath, cat];
+        const directCount = getDirectFilesForFolder(cat, folder.path).length;
+        
+        // Find direct child subfolders of this folder
+        const childSubfolders = folders.filter(f => 
+            f.path.length === fullPath.length &&
+            fullPath.every((seg, i) => f.path[i] === seg)
+        ).sort((a, b) => a.name.localeCompare(b.name));
+
+        const isSelected = JSON.stringify(currentPath) === JSON.stringify(fullPath);
+        const closeDropdown = isArchive ? () => setIsArchiveDropdownOpen(false) : () => setIsFolderDropdownOpen(false);
+
+        return (
+            <div 
+                key={folder.id || fullPath.join('/')}
+                className={cn(
+                    "flex flex-col rounded-md transition-all border my-0.5 overflow-hidden",
+                    isSelected
+                        ? isArchive ? "bg-purple-950/40 border-purple-500/80" : "bg-blue-950/40 border-blue-500/80"
+                        : "bg-[#0d1117]/80 border-zinc-800/80 hover:border-zinc-700"
+                )}
+            >
+                {/* Main Folder Header */}
+                <div className={cn(
+                    "flex items-center justify-between px-2.5 py-1.5 text-xs transition-colors group",
+                    isSelected && (isArchive ? "bg-purple-600/30 text-purple-200 font-bold" : "bg-blue-600/30 text-blue-200 font-bold")
+                )}>
+                    <button
+                        type="button"
+                        className="flex items-center gap-2 min-w-0 flex-1 text-left py-0.5"
+                        onClick={() => {
+                            setCurrentPath(fullPath);
+                            closeDropdown();
+                        }}
+                    >
+                        {depth > 0 && <span className={cn("font-mono text-[11px] font-black shrink-0", isArchive ? "text-purple-400" : "text-blue-400")}>↳</span>}
+                        {isSelected ? (
+                            <Check className={cn("w-3.5 h-3.5 shrink-0", isArchive ? "text-purple-300" : "text-blue-400")} />
+                        ) : isArchive ? (
+                            <FolderArchive className={cn("w-3.5 h-3.5 shrink-0 transition-colors", directCount > 0 ? "text-purple-400" : "text-purple-400/60")} />
+                        ) : (
+                            <Folder className={cn("w-3.5 h-3.5 shrink-0 transition-colors", directCount > 0 ? "text-emerald-400" : "text-blue-400 group-hover:text-blue-300")} />
+                        )}
+                        <span className="truncate font-medium text-white">{cat}</span>
+                        <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors ml-auto",
+                            isSelected 
+                                ? isArchive ? "bg-purple-600 text-white font-bold" : "bg-blue-600 text-white font-bold"
+                                : directCount > 0 
+                                    ? "bg-emerald-950/70 border border-emerald-700/50 text-emerald-300 font-bold"
+                                    : "bg-zinc-800/70 border border-zinc-700/50 text-zinc-500"
+                        )}>
+                            ({directCount})
+                        </span>
+                    </button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0 ml-1"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <MoreVertical className="w-3.5 h-3.5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white z-[99999]">
+                            <DropdownMenuItem 
+                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
+                                onClick={() => {
+                                    setCurrentPath(fullPath);
+                                    closeDropdown();
+                                }}
+                            >
+                                <Eye className="w-3.5 h-3.5 mr-2 text-blue-400" /> Open
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
+                                onClick={() => {
+                                    closeDropdown();
+                                    openRenameModal(folder);
+                                }}
+                            >
+                                <Pencil className="w-3.5 h-3.5 mr-2 text-amber-400" /> Rename / Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                                className="hover:bg-zinc-800 text-destructive cursor-pointer text-xs" 
+                                onClick={() => {
+                                    closeDropdown();
+                                    setDeleteTarget({ id: folder.id, type: 'folder', name: cat });
+                                }}
+                            >
+                                <Trash2 className="w-3.5 h-3.5 mr-2 text-red-400" /> Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+
+                {/* Subfolders list nested directly inside parent folder container */}
+                {childSubfolders.length > 0 && (
+                    <div className="pl-3 pr-1 py-1 border-t border-zinc-800/70 bg-zinc-950/60 space-y-1">
+                        {childSubfolders.map(sub => renderDropdownFolderCard(sub, fullPath, depth + 1, isArchive))}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const downloadFile = (file: DriveFile) => {
         if (!file.data) return;
@@ -1496,100 +1569,8 @@ export default function BusinessDrive() {
                                     <div className="h-px bg-zinc-800/80 mb-2" />
 
                                     {/* 2-Column Side-by-Side Grid */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
-                                        {businessFoldersTree.map(item => {
-                                            const folder = item.folder;
-                                            const cat = folder.name;
-                                            const count = getDirectFilesForFolder(cat, folder.path).length;
-                                            const isSelected = JSON.stringify(currentPath) === JSON.stringify(item.fullPath);
-                                            const isSubfolder = item.depth > 0;
-
-                                            return (
-                                                <div
-                                                    key={folder.id || item.fullPath.join('/')}
-                                                    style={isSubfolder ? { paddingLeft: `${Math.min(item.depth * 0.4, 0.8)}rem` } : undefined}
-                                                    className={cn(
-                                                        "flex items-center justify-between px-2 py-1.5 rounded-md text-xs transition-all text-left group",
-                                                        isSelected
-                                                            ? "bg-blue-600/25 text-blue-300 border border-blue-500/60 font-bold"
-                                                            : isSubfolder 
-                                                                ? "hover:bg-zinc-800/90 text-zinc-300 hover:text-white border-l-2 border-l-blue-500/50 bg-zinc-900/50 my-0.5"
-                                                                : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
-                                                    )}
-                                                >
-                                                    <button
-                                                        type="button"
-                                                        className="flex items-center gap-2 min-w-0 flex-1 text-left py-0.5"
-                                                        onClick={() => {
-                                                            setCurrentPath(item.fullPath);
-                                                            setIsFolderDropdownOpen(false);
-                                                        }}
-                                                    >
-                                                        {isSubfolder && <span className="text-blue-400 font-mono text-[11px] font-black shrink-0">↳</span>}
-                                                        {isSelected ? (
-                                                            <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                                                        ) : (
-                                                            <Folder className={cn(
-                                                                "w-3.5 h-3.5 shrink-0 transition-colors",
-                                                                count > 0 ? "text-emerald-400" : isSubfolder ? "text-blue-300" : "text-blue-400 group-hover:text-blue-300"
-                                                            )} />
-                                                        )}
-                                                        <span className="truncate">{cat}</span>
-                                                        <span className={cn(
-                                                            "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors ml-auto",
-                                                            isSelected 
-                                                                ? "bg-blue-600 text-white font-bold"
-                                                                : count > 0 
-                                                                    ? "bg-emerald-950/70 border border-emerald-700/50 text-emerald-300 font-bold"
-                                                                    : "bg-zinc-800/70 border border-zinc-700/50 text-zinc-500"
-                                                        )}>
-                                                            ({count})
-                                                        </span>
-                                                    </button>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="h-6 w-6 text-zinc-500 hover:text-white hover:bg-zinc-700/60 shrink-0 ml-1"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <MoreVertical className="w-3 h-3" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white z-[99999]">
-                                                            <DropdownMenuItem 
-                                                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
-                                                                onClick={() => {
-                                                                    setCurrentPath(item.fullPath);
-                                                                    setIsFolderDropdownOpen(false);
-                                                                }}
-                                                            >
-                                                                <Eye className="w-3.5 h-3.5 mr-2 text-blue-400" /> Open
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem 
-                                                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
-                                                                onClick={() => {
-                                                                    setIsFolderDropdownOpen(false);
-                                                                    openRenameModal(folder);
-                                                                }}
-                                                            >
-                                                                <Pencil className="w-3.5 h-3.5 mr-2 text-amber-400" /> Rename / Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem 
-                                                                className="hover:bg-zinc-800 text-destructive cursor-pointer text-xs" 
-                                                                onClick={() => {
-                                                                    setIsFolderDropdownOpen(false);
-                                                                    setDeleteTarget({ id: folder.id, type: 'folder', name: cat });
-                                                                }}
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5 mr-2 text-red-400" /> Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
+                                        {businessRootFoldersList.map(rootFolder => renderDropdownFolderCard(rootFolder, [], 0, false))}
                                     </div>
                                 </PopoverContent>
                             </Popover>
@@ -1668,100 +1649,8 @@ export default function BusinessDrive() {
                                     <div className="h-px bg-purple-900/40 mb-2" />
 
                                     {/* 2-Column Side-by-Side Grid */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-900">
-                                        {archiveFoldersTree.map(item => {
-                                            const folder = item.folder;
-                                            const cat = folder.name;
-                                            const count = getDirectFilesForFolder(cat, folder.path).length;
-                                            const isSelected = JSON.stringify(currentPath) === JSON.stringify(item.fullPath);
-                                            const isSubfolder = item.depth > 0;
-
-                                            return (
-                                                <div
-                                                    key={folder.id || item.fullPath.join('/')}
-                                                    style={isSubfolder ? { paddingLeft: `${Math.min(item.depth * 0.4, 0.8)}rem` } : undefined}
-                                                    className={cn(
-                                                        "flex items-center justify-between px-2 py-1.5 rounded-md text-xs transition-all text-left group",
-                                                        isSelected
-                                                            ? "bg-purple-600/30 text-purple-200 border border-purple-500/60 font-bold"
-                                                            : isSubfolder
-                                                                ? "hover:bg-zinc-800/90 text-zinc-300 hover:text-white border-l-2 border-l-purple-500/50 bg-zinc-900/50 my-0.5"
-                                                                : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
-                                                    )}
-                                                >
-                                                    <button
-                                                        type="button"
-                                                        className="flex items-center gap-2 min-w-0 flex-1 text-left py-0.5"
-                                                        onClick={() => {
-                                                            setCurrentPath(item.fullPath);
-                                                            setIsArchiveDropdownOpen(false);
-                                                        }}
-                                                    >
-                                                        {isSubfolder && <span className="text-purple-400 font-mono text-[11px] font-black shrink-0">↳</span>}
-                                                        {isSelected ? (
-                                                            <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                                                        ) : (
-                                                            <FolderArchive className={cn(
-                                                                "w-3.5 h-3.5 shrink-0 transition-colors",
-                                                                count > 0 ? "text-purple-400" : "text-purple-400/60 group-hover:text-purple-300"
-                                                            )} />
-                                                        )}
-                                                        <span className="truncate">{cat}</span>
-                                                        <span className={cn(
-                                                            "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors ml-auto",
-                                                            isSelected 
-                                                                ? "bg-purple-600 text-white font-bold"
-                                                                : count > 0 
-                                                                    ? "bg-purple-950/80 border border-purple-700/50 text-purple-200 font-bold"
-                                                                    : "bg-zinc-800/70 border border-zinc-700/50 text-zinc-500"
-                                                        )}>
-                                                            ({count})
-                                                        </span>
-                                                    </button>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="icon" 
-                                                                className="h-6 w-6 text-zinc-500 hover:text-white hover:bg-zinc-700/60 shrink-0 ml-1"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <MoreVertical className="w-3 h-3" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent align="end" className="bg-[#161b22] border-purple-900/50 text-white z-[99999]">
-                                                            <DropdownMenuItem 
-                                                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
-                                                                onClick={() => {
-                                                                    setCurrentPath(item.fullPath);
-                                                                    setIsArchiveDropdownOpen(false);
-                                                                }}
-                                                            >
-                                                                <Eye className="w-3.5 h-3.5 mr-2 text-purple-400" /> Open
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem 
-                                                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
-                                                                onClick={() => {
-                                                                    setIsArchiveDropdownOpen(false);
-                                                                    openRenameModal(folder);
-                                                                }}
-                                                            >
-                                                                <Pencil className="w-3.5 h-3.5 mr-2 text-amber-400" /> Rename / Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem 
-                                                                className="hover:bg-zinc-800 text-destructive cursor-pointer text-xs" 
-                                                                onClick={() => {
-                                                                    setIsArchiveDropdownOpen(false);
-                                                                    setDeleteTarget({ id: folder.id, type: 'folder', name: cat });
-                                                                }}
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5 mr-2 text-red-400" /> Delete
-                                                            </DropdownMenuItem>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-900">
+                                        {archiveRootFoldersList.map(rootFolder => renderDropdownFolderCard(rootFolder, ['System Archives'], 0, true))}
                                     </div>
                                 </PopoverContent>
                             </Popover>
