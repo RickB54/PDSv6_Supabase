@@ -1495,8 +1495,8 @@ export default function BusinessDrive() {
 
                                     <div className="h-px bg-zinc-800/80 mb-2" />
 
-                                    {/* Hierarchical Tree Folder List */}
-                                    <div className="flex flex-col gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
+                                    {/* 2-Column Side-by-Side Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
                                         {businessFoldersTree.map(item => {
                                             const folder = item.folder;
                                             const cat = folder.name;
@@ -1507,13 +1507,13 @@ export default function BusinessDrive() {
                                             return (
                                                 <div
                                                     key={folder.id || item.fullPath.join('/')}
-                                                    style={{ paddingLeft: `${0.25 + item.depth * 0.85}rem` }}
+                                                    style={isSubfolder ? { paddingLeft: `${Math.min(item.depth * 0.4, 0.8)}rem` } : undefined}
                                                     className={cn(
                                                         "flex items-center justify-between px-2 py-1.5 rounded-md text-xs transition-all text-left group",
                                                         isSelected
                                                             ? "bg-blue-600/25 text-blue-300 border border-blue-500/60 font-bold"
                                                             : isSubfolder 
-                                                                ? "hover:bg-zinc-800/90 text-zinc-300 hover:text-white border-l-2 border-l-blue-500/40 bg-zinc-900/40 my-0.5"
+                                                                ? "hover:bg-zinc-800/90 text-zinc-300 hover:text-white border-l-2 border-l-blue-500/50 bg-zinc-900/50 my-0.5"
                                                                 : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
                                                     )}
                                                 >
@@ -1525,7 +1525,7 @@ export default function BusinessDrive() {
                                                             setIsFolderDropdownOpen(false);
                                                         }}
                                                     >
-                                                        {isSubfolder && <span className="text-blue-400/80 font-mono text-[11px] font-black shrink-0">↳</span>}
+                                                        {isSubfolder && <span className="text-blue-400 font-mono text-[11px] font-black shrink-0">↳</span>}
                                                         {isSelected ? (
                                                             <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                                                         ) : (
@@ -1535,7 +1535,6 @@ export default function BusinessDrive() {
                                                             )} />
                                                         )}
                                                         <span className="truncate">{cat}</span>
-                                                        {isSubfolder && <span className="text-[9px] text-zinc-500 font-normal truncate hidden sm:inline">({item.fullPath.slice(0, -1).join(' › ')})</span>}
                                                         <span className={cn(
                                                             "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors ml-auto",
                                                             isSelected 
@@ -1668,8 +1667,8 @@ export default function BusinessDrive() {
 
                                     <div className="h-px bg-purple-900/40 mb-2" />
 
-                                    {/* Hierarchical Tree Folder List */}
-                                    <div className="flex flex-col gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-900">
+                                    {/* 2-Column Side-by-Side Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-900">
                                         {archiveFoldersTree.map(item => {
                                             const folder = item.folder;
                                             const cat = folder.name;
@@ -1680,13 +1679,13 @@ export default function BusinessDrive() {
                                             return (
                                                 <div
                                                     key={folder.id || item.fullPath.join('/')}
-                                                    style={{ paddingLeft: `${0.25 + item.depth * 0.85}rem` }}
+                                                    style={isSubfolder ? { paddingLeft: `${Math.min(item.depth * 0.4, 0.8)}rem` } : undefined}
                                                     className={cn(
                                                         "flex items-center justify-between px-2 py-1.5 rounded-md text-xs transition-all text-left group",
                                                         isSelected
                                                             ? "bg-purple-600/30 text-purple-200 border border-purple-500/60 font-bold"
                                                             : isSubfolder
-                                                                ? "hover:bg-zinc-800/90 text-zinc-300 hover:text-white border-l-2 border-l-purple-500/40 bg-zinc-900/40 my-0.5"
+                                                                ? "hover:bg-zinc-800/90 text-zinc-300 hover:text-white border-l-2 border-l-purple-500/50 bg-zinc-900/50 my-0.5"
                                                                 : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
                                                     )}
                                                 >
@@ -1698,7 +1697,7 @@ export default function BusinessDrive() {
                                                             setIsArchiveDropdownOpen(false);
                                                         }}
                                                     >
-                                                        {isSubfolder && <span className="text-purple-400/80 font-mono text-[11px] font-black shrink-0">↳</span>}
+                                                        {isSubfolder && <span className="text-purple-400 font-mono text-[11px] font-black shrink-0">↳</span>}
                                                         {isSelected ? (
                                                             <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                                                         ) : (
@@ -1708,7 +1707,6 @@ export default function BusinessDrive() {
                                                             )} />
                                                         )}
                                                         <span className="truncate">{cat}</span>
-                                                        {isSubfolder && <span className="text-[9px] text-zinc-500 font-normal truncate hidden sm:inline">({item.fullPath.slice(1, -1).join(' › ')})</span>}
                                                         <span className={cn(
                                                             "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors ml-auto",
                                                             isSelected 
