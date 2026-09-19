@@ -963,27 +963,86 @@ export default function BusinessDrive() {
         toast({ title: "Folder Deleted", description: `"${targetFolder.name}" removed`, variant: "destructive" });
     };
 
-    const businessFoldersList = useMemo(() => {
-        const rootFolderItems = folders.filter(f => f.path.length === 0 && f.name !== 'System Archives');
-        const list: DriveFolder[] = [...rootFolderItems];
-        ALL_CATEGORIES.forEach((catName, idx) => {
-            if (!list.some(f => f.name === catName)) {
-                list.push({ id: `folder-root-${idx}`, name: catName, path: [] });
-            }
-        });
-        return list.sort((a, b) => a.name.localeCompare(b.name));
-    }, [folders]);
+    const [folderDropdownSearch, setFolderDropdownSearch] = useState("");
+    const [archiveDropdownSearch, setArchiveDropdownSearch] = useState("");
 
-    const archiveFoldersList = useMemo(() => {
-        const archiveFolderItems = folders.filter(f => f.path.length === 1 && f.path[0] === 'System Archives');
-        const list: DriveFolder[] = [...archiveFolderItems];
-        SYSTEM_ARCHIVE_CATEGORIES.forEach((catName, idx) => {
-            if (!list.some(f => f.name === catName)) {
-                list.push({ id: `folder-sys-${idx}`, name: catName, path: ['System Archives'] });
+    const businessFoldersTree = useMemo(() => {
+        const rootFolderItems = folders.filter(f => f.path.length === 0 && f.name !== 'System Archives');
+        const rootList: DriveFolder[] = [...rootFolderItems];
+        ALL_CATEGORIES.forEach((catName, idx) => {
+            if (!rootList.some(f => f.name === catName)) {
+                rootList.push({ id: `folder-root-${idx}`, name: catName, path: [] });
             }
         });
-        return list.sort((a, b) => a.name.localeCompare(b.name));
-    }, [folders]);
+        rootList.sort((a, b) => a.name.localeCompare(b.name));
+
+        const result: { folder: DriveFolder; depth: number; fullPath: string[] }[] = [];
+
+        const addChildrenRecursive = (parentPath: string[], depth: number) => {
+            const children = folders.filter(f => 
+                f.path.length === parentPath.length &&
+                parentPath.every((seg, i) => f.path[i] === seg)
+            ).sort((a, b) => a.name.localeCompare(b.name));
+
+            for (const child of children) {
+                const fullPath = [...child.path, child.name];
+                result.push({ folder: child, depth, fullPath });
+                addChildrenRecursive(fullPath, depth + 1);
+            }
+        };
+
+        for (const root of rootList) {
+            const fullPath = [root.name];
+            result.push({ folder: root, depth: 0, fullPath });
+            addChildrenRecursive(fullPath, 1);
+        }
+
+        if (!folderDropdownSearch.trim()) return result;
+        const q = folderDropdownSearch.toLowerCase();
+        return result.filter(item => 
+            item.folder.name.toLowerCase().includes(q) || 
+            item.fullPath.join(' ').toLowerCase().includes(q)
+        );
+    }, [folders, folderDropdownSearch]);
+
+    const archiveFoldersTree = useMemo(() => {
+        const archiveFolderItems = folders.filter(f => f.path.length === 1 && f.path[0] === 'System Archives');
+        const rootList: DriveFolder[] = [...archiveFolderItems];
+        SYSTEM_ARCHIVE_CATEGORIES.forEach((catName, idx) => {
+            if (!rootList.some(f => f.name === catName)) {
+                rootList.push({ id: `folder-sys-${idx}`, name: catName, path: ['System Archives'] });
+            }
+        });
+        rootList.sort((a, b) => a.name.localeCompare(b.name));
+
+        const result: { folder: DriveFolder; depth: number; fullPath: string[] }[] = [];
+
+        const addChildrenRecursive = (parentPath: string[], depth: number) => {
+            const children = folders.filter(f => 
+                f.path.length === parentPath.length &&
+                parentPath.every((seg, i) => f.path[i] === seg)
+            ).sort((a, b) => a.name.localeCompare(b.name));
+
+            for (const child of children) {
+                const fullPath = [...child.path, child.name];
+                result.push({ folder: child, depth, fullPath });
+                addChildrenRecursive(fullPath, depth + 1);
+            }
+        };
+
+        for (const root of rootList) {
+            const fullPath = ['System Archives', root.name];
+            result.push({ folder: root, depth: 0, fullPath });
+            addChildrenRecursive(fullPath, 1);
+        }
+
+        if (!archiveDropdownSearch.trim()) return result;
+        const q = archiveDropdownSearch.toLowerCase();
+        return result.filter(item => 
+            item.folder.name.toLowerCase().includes(q) || 
+            item.fullPath.join(' ').toLowerCase().includes(q)
+        );
+    }, [folders, archiveDropdownSearch]);
 
     const downloadFile = (file: DriveFile) => {
         if (!file.data) return;
@@ -1423,41 +1482,60 @@ export default function BusinessDrive() {
                                         </span>
                                     </button>
 
+                                    {/* Filter Input */}
+                                    <div className="relative mb-2">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                                        <Input 
+                                            placeholder="Filter business folders & subfolders..." 
+                                            value={folderDropdownSearch}
+                                            onChange={(e) => setFolderDropdownSearch(e.target.value)}
+                                            className="pl-8 h-8 text-xs bg-[#0d1117] border-zinc-800 text-white focus:ring-blue-500/20"
+                                        />
+                                    </div>
+
                                     <div className="h-px bg-zinc-800/80 mb-2" />
 
-                                    {/* 2-Column Side-by-Side Grid */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
-                                        {businessFoldersList.map(folder => {
+                                    {/* Hierarchical Tree Folder List */}
+                                    <div className="flex flex-col gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
+                                        {businessFoldersTree.map(item => {
+                                            const folder = item.folder;
                                             const cat = folder.name;
                                             const count = getDirectFilesForFolder(cat, folder.path).length;
-                                            const isSelected = currentPath.length > 0 && currentPath[0] === cat;
+                                            const isSelected = JSON.stringify(currentPath) === JSON.stringify(item.fullPath);
+                                            const isSubfolder = item.depth > 0;
+
                                             return (
                                                 <div
-                                                    key={folder.id || cat}
+                                                    key={folder.id || item.fullPath.join('/')}
+                                                    style={{ paddingLeft: `${0.25 + item.depth * 0.85}rem` }}
                                                     className={cn(
-                                                        "flex items-center justify-between px-2 py-1 rounded-md text-xs transition-all text-left group",
+                                                        "flex items-center justify-between px-2 py-1.5 rounded-md text-xs transition-all text-left group",
                                                         isSelected
                                                             ? "bg-blue-600/25 text-blue-300 border border-blue-500/60 font-bold"
-                                                            : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
+                                                            : isSubfolder 
+                                                                ? "hover:bg-zinc-800/90 text-zinc-300 hover:text-white border-l-2 border-l-blue-500/40 bg-zinc-900/40 my-0.5"
+                                                                : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
                                                     )}
                                                 >
                                                     <button
                                                         type="button"
                                                         className="flex items-center gap-2 min-w-0 flex-1 text-left py-0.5"
                                                         onClick={() => {
-                                                            setCurrentPath(folder.path.length > 0 ? [...folder.path, cat] : [cat]);
+                                                            setCurrentPath(item.fullPath);
                                                             setIsFolderDropdownOpen(false);
                                                         }}
                                                     >
+                                                        {isSubfolder && <span className="text-blue-400/80 font-mono text-[11px] font-black shrink-0">↳</span>}
                                                         {isSelected ? (
                                                             <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                                                         ) : (
                                                             <Folder className={cn(
                                                                 "w-3.5 h-3.5 shrink-0 transition-colors",
-                                                                count > 0 ? "text-emerald-400" : "text-blue-400 group-hover:text-blue-300"
+                                                                count > 0 ? "text-emerald-400" : isSubfolder ? "text-blue-300" : "text-blue-400 group-hover:text-blue-300"
                                                             )} />
                                                         )}
                                                         <span className="truncate">{cat}</span>
+                                                        {isSubfolder && <span className="text-[9px] text-zinc-500 font-normal truncate hidden sm:inline">({item.fullPath.slice(0, -1).join(' › ')})</span>}
                                                         <span className={cn(
                                                             "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors ml-auto",
                                                             isSelected 
@@ -1484,7 +1562,7 @@ export default function BusinessDrive() {
                                                             <DropdownMenuItem 
                                                                 className="hover:bg-zinc-800 cursor-pointer text-xs" 
                                                                 onClick={() => {
-                                                                    setCurrentPath(folder.path.length > 0 ? [...folder.path, cat] : [cat]);
+                                                                    setCurrentPath(item.fullPath);
                                                                     setIsFolderDropdownOpen(false);
                                                                 }}
                                                             >
@@ -1577,32 +1655,50 @@ export default function BusinessDrive() {
                                         </span>
                                     </button>
 
+                                    {/* Filter Input */}
+                                    <div className="relative mb-2">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
+                                        <Input 
+                                            placeholder="Filter system archives & subfolders..." 
+                                            value={archiveDropdownSearch}
+                                            onChange={(e) => setArchiveDropdownSearch(e.target.value)}
+                                            className="pl-8 h-8 text-xs bg-[#0d1117] border-purple-900/40 text-white focus:ring-purple-500/20"
+                                        />
+                                    </div>
+
                                     <div className="h-px bg-purple-900/40 mb-2" />
 
-                                    {/* 2-Column Side-by-Side Grid */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-900">
-                                        {archiveFoldersList.map(folder => {
+                                    {/* Hierarchical Tree Folder List */}
+                                    <div className="flex flex-col gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-900">
+                                        {archiveFoldersTree.map(item => {
+                                            const folder = item.folder;
                                             const cat = folder.name;
-                                            const count = getDirectFilesForFolder(cat, ['System Archives']).length;
-                                            const isSelected = currentPath.length > 1 && currentPath[0] === 'System Archives' && currentPath[1] === cat;
+                                            const count = getDirectFilesForFolder(cat, folder.path).length;
+                                            const isSelected = JSON.stringify(currentPath) === JSON.stringify(item.fullPath);
+                                            const isSubfolder = item.depth > 0;
+
                                             return (
                                                 <div
-                                                    key={folder.id || cat}
+                                                    key={folder.id || item.fullPath.join('/')}
+                                                    style={{ paddingLeft: `${0.25 + item.depth * 0.85}rem` }}
                                                     className={cn(
-                                                        "flex items-center justify-between px-2 py-1 rounded-md text-xs transition-all text-left group",
+                                                        "flex items-center justify-between px-2 py-1.5 rounded-md text-xs transition-all text-left group",
                                                         isSelected
                                                             ? "bg-purple-600/30 text-purple-200 border border-purple-500/60 font-bold"
-                                                            : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
+                                                            : isSubfolder
+                                                                ? "hover:bg-zinc-800/90 text-zinc-300 hover:text-white border-l-2 border-l-purple-500/40 bg-zinc-900/40 my-0.5"
+                                                                : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
                                                     )}
                                                 >
                                                     <button
                                                         type="button"
                                                         className="flex items-center gap-2 min-w-0 flex-1 text-left py-0.5"
                                                         onClick={() => {
-                                                            setCurrentPath(['System Archives', cat]);
+                                                            setCurrentPath(item.fullPath);
                                                             setIsArchiveDropdownOpen(false);
                                                         }}
                                                     >
+                                                        {isSubfolder && <span className="text-purple-400/80 font-mono text-[11px] font-black shrink-0">↳</span>}
                                                         {isSelected ? (
                                                             <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                                                         ) : (
@@ -1612,6 +1708,7 @@ export default function BusinessDrive() {
                                                             )} />
                                                         )}
                                                         <span className="truncate">{cat}</span>
+                                                        {isSubfolder && <span className="text-[9px] text-zinc-500 font-normal truncate hidden sm:inline">({item.fullPath.slice(1, -1).join(' › ')})</span>}
                                                         <span className={cn(
                                                             "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors ml-auto",
                                                             isSelected 
@@ -1638,7 +1735,7 @@ export default function BusinessDrive() {
                                                             <DropdownMenuItem 
                                                                 className="hover:bg-zinc-800 cursor-pointer text-xs" 
                                                                 onClick={() => {
-                                                                    setCurrentPath(['System Archives', cat]);
+                                                                    setCurrentPath(item.fullPath);
                                                                     setIsArchiveDropdownOpen(false);
                                                                 }}
                                                             >
