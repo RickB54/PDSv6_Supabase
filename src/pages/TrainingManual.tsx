@@ -1220,33 +1220,37 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                 </div>
 
                                 {/* Reference Operating Manuals & PDF Guides */}
-                                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg border border-indigo-500/30 shrink-0">
-                                            <FileText className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                                                Reference Operating Manuals & PDF Guides
-                                                <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-950/40 text-[9px]">Full Page Popups</Badge>
-                                            </h4>
-                                            <p className="text-xs text-zinc-400">View complete PDF reference documents for CRM intake, paint correction, headlight restoration & water spot removal.</p>
+                                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 space-y-4 mb-6">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800/80 pb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-indigo-500/20 text-indigo-400 rounded-lg border border-indigo-500/30 shrink-0">
+                                                <FileText className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                                                    Reference Operating Manuals & PDF Guides
+                                                    <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-950/40 text-[9px]">5 Official Guides</Badge>
+                                                </h4>
+                                                <p className="text-xs text-zinc-400">View interactive full-page guides or download exact official PDF documents.</p>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-3 shrink-0">
+
+                                    {/* Responsive Button Grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2.5">
                                         {/* CRM SOP */}
-                                        <div className="flex items-center gap-1 bg-indigo-950/40 p-1 rounded-lg border border-indigo-500/30">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                        <div className="bg-zinc-900/80 border border-indigo-500/30 rounded-lg p-2 flex items-center justify-between gap-2">
+                                            <button
                                                 onClick={() => setCrmSopOpen(true)}
-                                                className="text-indigo-300 hover:bg-indigo-900/50 font-semibold text-xs h-8 px-2.5"
+                                                className="flex items-center gap-1.5 text-xs font-bold text-indigo-300 hover:text-indigo-200 truncate text-left flex-1"
+                                                title="View CRM SOP"
                                             >
-                                                <FileText className="w-4 h-4 mr-1.5 text-indigo-400" /> CRM SOP
-                                            </Button>
+                                                <FileText className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                                <span className="truncate">CRM SOP</span>
+                                            </button>
                                             <Button
-                                                variant="outline"
                                                 size="sm"
+                                                variant="outline"
                                                 onClick={() => {
                                                     const link = document.createElement('a');
                                                     link.href = '/sop-guides/Prime_Auto_Detail_CRM_Standard_Operating_Procedures.pdf';
@@ -1255,38 +1259,41 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                     link.click();
                                                     document.body.removeChild(link);
                                                 }}
-                                                className="bg-indigo-900/60 border-indigo-500/50 text-indigo-200 hover:bg-indigo-800 text-[11px] h-8 px-2 font-bold"
-                                                title="Download PDF directly"
+                                                className="bg-indigo-950/80 border-indigo-500/40 text-indigo-300 hover:bg-indigo-900/80 text-[10px] h-7 px-2 font-bold shrink-0"
+                                                title="Download PDF"
                                             >
-                                                <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
+                                                <Download className="w-3 h-3 mr-1" /> PDF
                                             </Button>
                                         </div>
 
                                         {/* Paint Protection Guide */}
-                                        <div className="flex items-center gap-1 bg-cyan-950/40 p-1 rounded-lg border border-cyan-500/30">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                        <div className="bg-zinc-900/80 border border-cyan-500/30 rounded-lg p-2 flex items-center justify-between gap-2">
+                                            <button
                                                 onClick={() => setPaintGuideOpen(true)}
-                                                className="text-cyan-300 hover:bg-cyan-900/50 font-semibold text-xs h-8 px-2.5"
+                                                className="flex items-center gap-1.5 text-xs font-bold text-cyan-300 hover:text-cyan-200 truncate text-left flex-1"
+                                                title="View Paint Protection Guide"
                                             >
-                                                <ShieldCheck className="w-4 h-4 mr-1.5 text-cyan-400" /> Paint Protection Guide
-                                            </Button>
+                                                <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                                                <span className="truncate">Paint Protection</span>
+                                            </button>
+                                            <Badge variant="outline" className="border-cyan-500/30 text-cyan-400 bg-cyan-950/40 text-[10px] shrink-0">
+                                                Modal
+                                            </Badge>
                                         </div>
 
                                         {/* Paint Correction Guide */}
-                                        <div className="flex items-center gap-1 bg-amber-950/40 p-1 rounded-lg border border-amber-500/30">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                        <div className="bg-zinc-900/80 border border-amber-500/30 rounded-lg p-2 flex items-center justify-between gap-2">
+                                            <button
                                                 onClick={() => setPaintCorrectionGuideOpen(true)}
-                                                className="text-amber-300 hover:bg-amber-900/50 font-semibold text-xs h-8 px-2.5"
+                                                className="flex items-center gap-1.5 text-xs font-bold text-amber-300 hover:text-amber-200 truncate text-left flex-1"
+                                                title="View Paint Correction Guide"
                                             >
-                                                <Sparkles className="w-4 h-4 mr-1.5 text-amber-400" /> Paint Correction Guide
-                                            </Button>
+                                                <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                                <span className="truncate">Paint Correction</span>
+                                            </button>
                                             <Button
-                                                variant="outline"
                                                 size="sm"
+                                                variant="outline"
                                                 onClick={() => {
                                                     const link = document.createElement('a');
                                                     link.href = '/sop-guides/Prime_Auto_Detail_Paint_Correction_Employee_Training_Guide.pdf';
@@ -1295,26 +1302,26 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                     link.click();
                                                     document.body.removeChild(link);
                                                 }}
-                                                className="bg-amber-900/60 border-amber-500/50 text-amber-200 hover:bg-amber-800 text-[11px] h-8 px-2 font-bold"
-                                                title="Download PDF directly"
+                                                className="bg-amber-950/80 border-amber-500/40 text-amber-300 hover:bg-amber-900/80 text-[10px] h-7 px-2 font-bold shrink-0"
+                                                title="Download PDF"
                                             >
-                                                <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
+                                                <Download className="w-3 h-3 mr-1" /> PDF
                                             </Button>
                                         </div>
 
                                         {/* Headlight Restoration Guide */}
-                                        <div className="flex items-center gap-1 bg-yellow-950/40 p-1 rounded-lg border border-yellow-500/30">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                        <div className="bg-zinc-900/80 border border-yellow-500/30 rounded-lg p-2 flex items-center justify-between gap-2">
+                                            <button
                                                 onClick={() => setHeadlightGuideOpen(true)}
-                                                className="text-yellow-300 hover:bg-yellow-900/50 font-semibold text-xs h-8 px-2.5"
+                                                className="flex items-center gap-1.5 text-xs font-bold text-yellow-300 hover:text-yellow-200 truncate text-left flex-1"
+                                                title="View Headlight Restoration Guide"
                                             >
-                                                <Wrench className="w-4 h-4 mr-1.5 text-yellow-400" /> Headlight Restoration Guide
-                                            </Button>
+                                                <Wrench className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+                                                <span className="truncate">Headlight Restoration</span>
+                                            </button>
                                             <Button
-                                                variant="outline"
                                                 size="sm"
+                                                variant="outline"
                                                 onClick={() => {
                                                     const link = document.createElement('a');
                                                     link.href = '/sop-guides/Prime_Auto_Detail_Headlight_Restoration_Employee_Training_Guide.pdf';
@@ -1323,26 +1330,26 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                     link.click();
                                                     document.body.removeChild(link);
                                                 }}
-                                                className="bg-yellow-900/60 border-yellow-500/50 text-yellow-200 hover:bg-yellow-800 text-[11px] h-8 px-2 font-bold"
-                                                title="Download PDF directly"
+                                                className="bg-yellow-950/80 border-yellow-500/40 text-yellow-300 hover:bg-yellow-900/80 text-[10px] h-7 px-2 font-bold shrink-0"
+                                                title="Download PDF"
                                             >
-                                                <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
+                                                <Download className="w-3 h-3 mr-1" /> PDF
                                             </Button>
                                         </div>
 
                                         {/* Water Spot Removal Guide */}
-                                        <div className="flex items-center gap-1 bg-blue-950/40 p-1 rounded-lg border border-blue-500/30">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                        <div className="bg-zinc-900/80 border border-blue-500/30 rounded-lg p-2 flex items-center justify-between gap-2">
+                                            <button
                                                 onClick={() => setWaterSpotGuideOpen(true)}
-                                                className="text-blue-300 hover:bg-blue-900/50 font-semibold text-xs h-8 px-2.5"
+                                                className="flex items-center gap-1.5 text-xs font-bold text-blue-300 hover:text-blue-200 truncate text-left flex-1"
+                                                title="View Water Spot Removal Guide"
                                             >
-                                                <Droplets className="w-4 h-4 mr-1.5 text-blue-400" /> Water Spot Removal Guide
-                                            </Button>
+                                                <Droplets className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                                                <span className="truncate">Water Spot Removal</span>
+                                            </button>
                                             <Button
-                                                variant="outline"
                                                 size="sm"
+                                                variant="outline"
                                                 onClick={() => {
                                                     const link = document.createElement('a');
                                                     link.href = '/sop-guides/Prime_Auto_Detail_Water_Spot_Removal_Employee_Training_Guide.pdf';
@@ -1351,10 +1358,10 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                     link.click();
                                                     document.body.removeChild(link);
                                                 }}
-                                                className="bg-blue-900/60 border-blue-500/50 text-blue-200 hover:bg-blue-800 text-[11px] h-8 px-2 font-bold"
-                                                title="Download PDF directly"
+                                                className="bg-blue-950/80 border-blue-500/40 text-blue-300 hover:bg-blue-900/80 text-[10px] h-7 px-2 font-bold shrink-0"
+                                                title="Download PDF"
                                             >
-                                                <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
+                                                <Download className="w-3 h-3 mr-1" /> PDF
                                             </Button>
                                         </div>
                                     </div>
