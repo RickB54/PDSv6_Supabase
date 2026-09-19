@@ -55,7 +55,7 @@ export const DraggableScrollToTop = () => {
 
         const handleScroll = (e: Event) => {
             const target = e.target as HTMLElement;
-            if (!target || target === document || target === document.documentElement || target === document.body) {
+            if (!target || (target as unknown as Document) === document || target === document.documentElement || target === document.body) {
                 scrollContainerRef.current = window;
             } else if (target.scrollHeight && target.scrollHeight >= window.innerHeight) {
                 scrollContainerRef.current = target;
