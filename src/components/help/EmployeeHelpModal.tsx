@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { HelpCircle, Info } from 'lucide-react';
+import { employeeMenuTopics, employeeDashboardTopics, HelpTopic } from './helpData';
 
 interface EmployeeHelpModalProps {
   open: boolean;
@@ -10,7 +11,7 @@ interface EmployeeHelpModalProps {
   initialTopicId?: string;
 }
 
-const EMPLOYEE_TOPICS = [...employeeDashboardTopics, ...employeeMenuTopics].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+const EMPLOYEE_TOPICS: HelpTopic[] = [...employeeDashboardTopics, ...employeeMenuTopics].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
 
 const ALIAS_MAP: Record<string, string> = {
   // SOPs
