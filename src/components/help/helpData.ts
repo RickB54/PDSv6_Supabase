@@ -4111,6 +4111,16 @@ export const employeeDashboardTopics: HelpTopic[] = [
       'Use this for anything that needs immediate attention — a problem on a job, a customer complaint, an equipment issue, or anything you\'re not sure how to handle on your own.'
     ],
     section: 'dashboard'
+  },
+  {
+    id: 'vehicle-gallery',
+    title: 'VEHICLE GALLERY',
+    summary: 'View and upload customer vehicle photos & videos.',
+    content: [
+      'Browse vehicle media, before/after photos, and job documentation.',
+      'Use this gallery to review vehicle conditions, document completed detailing work, and upload photos for customer records.'
+    ],
+    section: 'dashboard'
   }
 ];
 

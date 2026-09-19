@@ -110,7 +110,7 @@ export default function SectionLanding() {
                                                     window.dispatchEvent(new CustomEvent('open-help', { 
                                                         detail: { 
                                                             topicId: item.helpTopicId,
-                                                            role: isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')
+                                                            role: (isEmployee || localStorage.getItem('view_as_mode') === 'employee') ? 'employee' : (isAdmin ? 'admin' : 'customer')
                                                         } 
                                                     }));
                                                 }}
@@ -140,11 +140,9 @@ export default function SectionLanding() {
                                         }
                                         if (item.url === '#static-caddy') window.dispatchEvent(new Event('open-static-caddy'));
                                         if (item.url === '#call-assistant') window.dispatchEvent(new Event('open-call-assistant'));
-                                        if (item.url === '#help' || item.url === '#help-admin') {
-                                            window.dispatchEvent(new CustomEvent('open-help', { detail: { role: item.url === '#help-admin' ? 'admin' : (isAdmin ? 'admin' : (isEmployee ? 'employee' : 'customer')) } }));
-                                        }
-                                        if (item.url === '#help-employee') {
-                                            window.dispatchEvent(new CustomEvent('open-help', { detail: { role: 'employee' } }));
+                                        if (item.url === '#help' || item.url === '#help-admin' || item.url === '#help-employee') {
+                                            const role = (isEmployee || localStorage.getItem('view_as_mode') === 'employee' || item.url === '#help-employee') ? 'employee' : 'admin';
+                                            window.dispatchEvent(new CustomEvent('open-help', { detail: { role } }));
                                         }
                                     }}
                                     className="block group text-left w-full h-full"

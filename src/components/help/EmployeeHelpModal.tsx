@@ -29,24 +29,34 @@ export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOp
       }
       
       if (topicId) {
-        const found = EMPLOYEE_TOPICS.find(t => t.id === topicId || topicId?.includes(t.id) || t.id.includes(topicId!));
+        const lower = topicId.toLowerCase();
+        const found = EMPLOYEE_TOPICS.find(t => 
+          t.id.toLowerCase() === lower || 
+          lower.includes(t.id.toLowerCase()) || 
+          t.id.toLowerCase().includes(lower) ||
+          t.title.toLowerCase().includes(lower)
+        );
         if (found) {
           setActiveAccordion(found.id);
-          onOpenChange(true);
         }
       }
+      onOpenChange(true);
     };
     window.addEventListener('open-help', handleOpenHelp);
     return () => window.removeEventListener('open-help', handleOpenHelp);
   }, [onOpenChange]);
 
   useEffect(() => {
-    if (open) {
-      if (initialTopicId) {
-        const found = EMPLOYEE_TOPICS.find(t => t.id === initialTopicId || initialTopicId.includes(t.id) || t.id.includes(initialTopicId));
-        if (found) {
-          setActiveAccordion(found.id);
-        }
+    if (open && initialTopicId) {
+      const lower = initialTopicId.toLowerCase();
+      const found = EMPLOYEE_TOPICS.find(t => 
+        t.id.toLowerCase() === lower || 
+        lower.includes(t.id.toLowerCase()) || 
+        t.id.toLowerCase().includes(lower) ||
+        t.title.toLowerCase().includes(lower)
+      );
+      if (found) {
+        setActiveAccordion(found.id);
       }
     }
   }, [open, initialTopicId]);

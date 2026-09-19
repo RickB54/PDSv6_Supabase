@@ -511,7 +511,8 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
       } else if (url === '#static-caddy') {
         window.dispatchEvent(new Event('open-static-caddy'));
       } else if (url.startsWith('#help')) {
-        const role = url === '#help-admin' ? 'admin' : (url === '#help-employee' ? 'employee' : (isAdmin ? 'admin' : 'employee'));
+        const isEmployeeView = isViewingAsEmployee || user?.role === 'employee' || window.location.pathname.startsWith('/dashboard/employee');
+        const role = isEmployeeView ? 'employee' : (url === '#help-admin' ? 'admin' : (url === '#help-employee' ? 'employee' : (isAdmin ? 'admin' : 'employee')));
         window.dispatchEvent(new CustomEvent('open-help', { detail: { role, topicId } }));
       }
     }
@@ -709,7 +710,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                     window.dispatchEvent(new CustomEvent('open-help', { 
                                       detail: { 
                                         topicId: item.helpTopicId,
-                                        role: (isAdmin || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                        role: (isViewingAsEmployee || user?.role === 'employee') ? 'employee' : (isAdmin ? 'admin' : 'customer')
                                       } 
                                     }));
                                   }}
@@ -743,7 +744,7 @@ export function AppSidebar({ user: userProp, businessStatus: businessStatusProp 
                                     window.dispatchEvent(new CustomEvent('open-help', { 
                                       detail: { 
                                         topicId: item.helpTopicId,
-                                        role: (isAdmin || isDemoMode) ? 'admin' : (user?.role === 'employee' ? 'employee' : 'customer')
+                                        role: (isViewingAsEmployee || user?.role === 'employee') ? 'employee' : (isAdmin ? 'admin' : 'customer')
                                       } 
                                     }));
                                   }}

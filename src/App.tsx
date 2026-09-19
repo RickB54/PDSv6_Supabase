@@ -489,7 +489,13 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="*" element={<DefaultRedirect user={effectiveUser} />} />
         </Routes>
-        {(helpRole || effectiveUser?.role || 'admin') === 'employee' ? (
+        {(
+          helpRole === 'employee' ||
+          effectiveUser?.role === 'employee' ||
+          localStorage.getItem('view_as_mode') === 'employee' ||
+          localStorage.getItem('perspective_mode') === 'employee' ||
+          location.pathname.startsWith('/dashboard/employee')
+        ) ? (
           <EmployeeHelpModal open={helpOpen} onOpenChange={setHelpOpen} initialTopicId={helpId} />
         ) : (
           <HelpModal open={helpOpen} onOpenChange={setHelpOpen} role={helpRole || effectiveUser?.role || 'admin'} initialTopicId={helpId} />
@@ -662,15 +668,37 @@ const App = () => {
     };
     const onOpenHelp = (e: any) => {
       const currentUser = getCurrentUser();
-      const isDemoSession = localStorage.getItem("demo_mode_active") === "true";
+      const viewAsMode = localStorage.getItem('view_as_mode');
+      const perspectiveMode = localStorage.getItem('perspective_mode');
+      const isEmployeeView = (
+        viewAsMode === 'employee' || 
+        perspectiveMode === 'employee' || 
+        currentUser?.role === 'employee' ||
+        window.location.pathname.startsWith('/dashboard/employee') ||
+        window.location.pathname.startsWith('/training-manual') ||
+        window.location.pathname.startsWith('/procedures-manual') ||
+        window.location.pathname.startsWith('/learning-library') ||
+        window.location.pathname.startsWith('/chemical-training') ||
+        window.location.pathname.startsWith('/orientation') ||
+        window.location.pathname.startsWith('/staff-schedule')
+      );
+
       let topicId: string | undefined = undefined;
-      let role: any = isDemoSession ? 'admin' : (currentUser?.role || 'customer');
+      let role: any = undefined;
 
       if (typeof e.detail === 'string') {
         topicId = e.detail;
       } else if (e.detail && typeof e.detail === 'object') {
         topicId = e.detail.topicId;
         if (e.detail.role) role = e.detail.role;
+      }
+
+      // Employees & View As Employee mode MUST ONLY access Employee Help Modal, NEVER Main Admin Help!
+      if (isEmployeeView) {
+        role = 'employee';
+      } else if (!role) {
+        const isDemoSession = localStorage.getItem("demo_mode_active") === "true";
+        role = isDemoSession ? 'admin' : (currentUser?.role || 'customer');
       }
       
       setHelpRole(role);

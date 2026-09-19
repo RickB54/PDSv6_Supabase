@@ -50,6 +50,7 @@ import { getUnifiedCalendarEvents, type CalendarEvent, deleteCalendarEvent } fro
 import { createGoogleEvent, isSignedIn, initGoogleCalendar, getCalendarConfig, signInToGoogle } from "@/lib/googleCalendar";
 import { unblockSlot } from "@/lib/availability"; // Import unblockSlot
 import HelpModal from "@/components/help/HelpModal";
+import EmployeeHelpModal from "@/components/help/EmployeeHelpModal";
 import { DestinationFeeInline } from "@/components/distance/DestinationFeeInline";
 
 import { ContactInput } from "@/components/ui/ContactInput";
@@ -5060,11 +5061,18 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         onSelect={handleClassificationSelect}
       />
 
-      <HelpModal 
-        open={isHelpOpen} 
-        onOpenChange={setIsHelpOpen} 
-        role={isAdmin ? 'admin' : 'employee'} 
-      />
+      {(localStorage.getItem('view_as_mode') === 'employee' || localStorage.getItem('perspective_mode') === 'employee' || localStorage.getItem('pds_user_role') === 'employee') ? (
+        <EmployeeHelpModal 
+          open={isHelpOpen} 
+          onOpenChange={setIsHelpOpen} 
+        />
+      ) : (
+        <HelpModal 
+          open={isHelpOpen} 
+          onOpenChange={setIsHelpOpen} 
+          role="admin" 
+        />
+      )}
 
       <EmailPreviewModal 
         open={showEmailPreview} 

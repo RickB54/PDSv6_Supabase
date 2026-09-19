@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
     Search, Image as ImageIcon, Video, X, Car, Loader2,
-    ChevronDown, ChevronUp, User, Maximize2, ChevronLeft, ChevronRight, Trash2, Download, Pencil
+    ChevronDown, ChevronUp, User, Maximize2, ChevronLeft, ChevronRight, Trash2, Download, Pencil, HelpCircle
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -864,11 +864,22 @@ export default function VehicleGallery() {
                             }
                             return null;
                         })()}
-                        <div>
-                            <h1 className="text-xl sm:text-3xl font-black uppercase tracking-tighter">
-                                Media <span className="text-blue-500">Library</span>
-                            </h1>
-                            <p className="text-zinc-500 text-[10px] sm:text-sm">Vehicle photos and videos.</p>
+                        <div className="flex items-center gap-2">
+                            <div>
+                                <h1 className="text-xl sm:text-3xl font-black uppercase tracking-tighter">
+                                    Media <span className="text-blue-500">Library</span>
+                                </h1>
+                                <p className="text-zinc-500 text-[10px] sm:text-sm">Vehicle photos and videos.</p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-zinc-400 hover:text-white rounded-full bg-zinc-900 border border-zinc-800"
+                                onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'vehicle-gallery' } }))}
+                                title="Help"
+                            >
+                                <HelpCircle className="h-4 w-4 text-blue-400" />
+                            </Button>
                         </div>
                     </div>
 
