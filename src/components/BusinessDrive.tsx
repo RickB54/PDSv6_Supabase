@@ -1444,33 +1444,35 @@ export default function BusinessDrive() {
     return (
         <div className="space-y-6 animate-fade-in p-1">
             {/* Header / Actions */}
-            <div className="flex flex-col items-start justify-between gap-4 bg-[#0d1117] p-4 rounded-xl border border-zinc-800 shadow-xl">
+            <div className="flex flex-col items-start justify-between gap-3 bg-[#0d1117] p-3 sm:p-4 rounded-xl border border-zinc-800 shadow-xl w-full overflow-hidden">
                 <div className="flex flex-col gap-3 w-full">
                     {/* Row 1 */}
-                    <div className="flex flex-wrap items-center gap-2 w-full justify-between">
-                        <div className="relative flex-1 md:flex-none">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                            <Input 
-                                placeholder="Search by name or customer..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-9 bg-[#161b22] border-zinc-800 w-full md:w-64 focus:ring-blue-500/20"
-                            />
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full justify-between">
+                        <div className="flex items-center gap-2 w-full sm:w-auto flex-1 min-w-0">
+                            <div className="relative flex-1 min-w-0">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                <Input 
+                                    placeholder="Search by name or customer..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-9 bg-[#161b22] border-zinc-800 w-full sm:w-64 focus:ring-blue-500/20 text-xs sm:text-sm h-10"
+                                />
+                            </div>
+                            <Select value={dateFilter} onValueChange={setDateFilter}>
+                                <SelectTrigger className="w-[100px] sm:w-[130px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-[11px] sm:text-xs uppercase tracking-wider shrink-0 px-2.5">
+                                    <SelectValue placeholder="Time" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#161b22] border-zinc-800 text-white">
+                                    <SelectItem value="all">All Time</SelectItem>
+                                    <SelectItem value="today">Today</SelectItem>
+                                    <SelectItem value="week">Past Week</SelectItem>
+                                    <SelectItem value="month">Past Month</SelectItem>
+                                    <SelectItem value="year">Past Year</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <Select value={dateFilter} onValueChange={setDateFilter}>
-                            <SelectTrigger className="w-[120px] md:w-[130px] h-10 bg-[#161b22] border-zinc-800 text-white font-bold text-xs uppercase tracking-wider shrink-0">
-                                <SelectValue placeholder="Time" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#161b22] border-zinc-800 text-white">
-                                <SelectItem value="all">All Time</SelectItem>
-                                <SelectItem value="today">Today</SelectItem>
-                                <SelectItem value="week">Past Week</SelectItem>
-                                <SelectItem value="month">Past Month</SelectItem>
-                                <SelectItem value="year">Past Year</SelectItem>
-                            </SelectContent>
-                        </Select>
                         
-                        <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto min-w-0">
                             {/* Navigation Guide Tooltip */}
                             <HoverCard openDelay={100}>
                                 <HoverCardTrigger asChild>
@@ -1483,7 +1485,7 @@ export default function BusinessDrive() {
                                         <Info className="w-4 h-4" />
                                     </Button>
                                 </HoverCardTrigger>
-                                <HoverCardContent className="w-80 bg-[#161b22] border-blue-500/30 shadow-2xl p-4 text-white z-[9999]" align="start" side="bottom" sideOffset={8}>
+                                <HoverCardContent className="w-[88vw] sm:w-80 bg-[#161b22] border-blue-500/30 shadow-2xl p-4 text-white z-[9999]" align="start" side="bottom" sideOffset={8}>
                                     <div className="flex items-center gap-2 font-bold text-sm text-blue-400 mb-2">
                                         <Info className="w-4 h-4" /> Folder Navigation Guide
                                     </div>
@@ -1507,11 +1509,11 @@ export default function BusinessDrive() {
                                     <Button 
                                         variant="outline"
                                         className={cn(
-                                            "flex-1 md:w-auto h-10 bg-[#161b22] border-zinc-800 text-white hover:bg-zinc-800/80 font-bold text-[10px] md:text-xs uppercase tracking-wider shrink-0 transition-all flex items-center justify-between gap-2 px-3",
+                                            "flex-1 sm:w-auto h-10 bg-[#161b22] border-zinc-800 text-white hover:bg-zinc-800/80 font-bold text-[10px] sm:text-xs uppercase tracking-wider shrink-0 transition-all flex items-center justify-between gap-1.5 px-2.5 sm:px-3 min-w-0",
                                             (currentPath.length === 0 || currentPath[0] !== 'System Archives') && "border-blue-900/60"
                                         )}
                                     >
-                                        <div className="flex items-center gap-1.5 truncate">
+                                        <div className="flex items-center gap-1.5 min-w-0 truncate">
                                             <Folder className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                                             <span className="truncate">
                                                 {currentPath.length > 0 && currentPath[0] !== 'System Archives' 
@@ -1521,7 +1523,8 @@ export default function BusinessDrive() {
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
                                             <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-900/60 border border-blue-700/50 text-blue-200 font-bold font-mono">
-                                                ({totalBusinessFiles} {totalBusinessFiles === 1 ? 'ITEM' : 'ITEMS'})
+                                                <span className="hidden sm:inline">({totalBusinessFiles} {totalBusinessFiles === 1 ? 'ITEM' : 'ITEMS'})</span>
+                                                <span className="sm:hidden">({totalBusinessFiles})</span>
                                             </span>
                                             <ChevronDown className={cn("w-3.5 h-3.5 text-zinc-400 transition-transform duration-200", isFolderDropdownOpen && "rotate-180")} />
                                         </div>
@@ -1581,11 +1584,11 @@ export default function BusinessDrive() {
                                     <Button 
                                         variant="outline"
                                         className={cn(
-                                            "flex-1 md:w-auto h-10 bg-[#161b22] border-purple-900/50 text-purple-300 hover:bg-purple-950/40 hover:text-white font-bold text-[10px] md:text-xs uppercase tracking-wider shrink-0 transition-all flex items-center justify-between gap-2 px-3",
+                                            "flex-1 sm:w-auto h-10 bg-[#161b22] border-purple-900/50 text-purple-300 hover:bg-purple-950/40 hover:text-white font-bold text-[10px] sm:text-xs uppercase tracking-wider shrink-0 transition-all flex items-center justify-between gap-1.5 px-2.5 sm:px-3 min-w-0",
                                             currentPath.length > 0 && currentPath[0] === 'System Archives' && "bg-purple-950/60 border-purple-500 text-white shadow-md shadow-purple-950/40"
                                         )}
                                     >
-                                        <div className="flex items-center gap-1.5 truncate">
+                                        <div className="flex items-center gap-1.5 min-w-0 truncate">
                                             <FolderArchive className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                                             <span className="truncate">
                                                 {currentPath.length > 1 && currentPath[0] === 'System Archives'
@@ -1595,7 +1598,8 @@ export default function BusinessDrive() {
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
                                             <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-purple-900/60 border border-purple-700/50 text-purple-200 font-bold font-mono">
-                                                ({totalArchiveFiles} {totalArchiveFiles === 1 ? 'ITEM' : 'ITEMS'})
+                                                <span className="hidden sm:inline">({totalArchiveFiles} {totalArchiveFiles === 1 ? 'ITEM' : 'ITEMS'})</span>
+                                                <span className="sm:hidden">({totalArchiveFiles})</span>
                                             </span>
                                             <ChevronDown className={cn("w-3.5 h-3.5 text-purple-400 transition-transform duration-200", isArchiveDropdownOpen && "rotate-180")} />
                                         </div>
@@ -1658,22 +1662,22 @@ export default function BusinessDrive() {
                     </div>
 
                     {/* Row 2 */}
-                    <div className="flex items-center justify-between w-full mt-2">
-                        <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 w-full mt-1.5 sm:mt-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                             <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className={cn("h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800", isSyncing && "text-blue-500")}
+                                className={cn("h-9 sm:h-10 w-9 sm:w-10 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0", isSyncing && "text-blue-500")}
                                 onClick={() => handleSync(true)}
                                 title="Cloud Sync"
                                 disabled={isSyncing}
                             >
-                                <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
+                                <RefreshCw className={cn("w-4 h-4 sm:w-5 sm:h-5", isSyncing && "animate-spin")} />
                             </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 text-zinc-400 hover:text-white hover:bg-zinc-800" title="Sort Items">
-                                        <ArrowUpDown className="w-5 h-5" />
+                                    <Button variant="ghost" size="icon" className="h-9 sm:h-10 w-9 sm:w-10 text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0" title="Sort Items">
+                                        <ArrowUpDown className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="bg-[#161b22] border-zinc-800 text-white w-48 z-[9999]">
@@ -1720,32 +1724,32 @@ export default function BusinessDrive() {
 
                             {folders.some(f => f.name === 'System Archives') && (
                                 <Button 
-                                    className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 hover:text-purple-300 font-bold h-10 px-3 md:px-4 border border-purple-500/20 shrink-0" 
+                                    className="bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 hover:text-purple-300 font-bold h-9 sm:h-10 px-2.5 sm:px-4 border border-purple-500/20 shrink-0 text-xs" 
                                     onClick={() => setAdminModalOpen(true)}
                                 >
-                                    <FileText className="w-4 h-4 md:mr-2" />
+                                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" />
                                     <span className="hidden md:inline">Admin Update PDF</span>
                                     <span className="md:hidden">Update PDF</span>
                                 </Button>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                             <Button 
                                 variant="outline" 
-                                className="border-blue-500/40 text-blue-400 bg-[#161b22] hover:bg-blue-600 hover:text-white transition-all font-bold h-10 px-3 flex items-center gap-2 shrink-0"
+                                className="border-blue-500/40 text-blue-400 bg-[#161b22] hover:bg-blue-600 hover:text-white transition-all font-bold h-9 sm:h-10 px-2.5 sm:px-3 flex items-center gap-1.5 shrink-0 text-xs"
                                 onClick={() => setIsAnalyticsOpen(true)}
                                 title="View Business Drive System Analytics"
                             >
-                                <BarChart3 className="w-4 h-4 text-blue-400 group-hover:text-white shrink-0" />
+                                <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 group-hover:text-white shrink-0" />
                                 <span className="hidden sm:inline">Business Drive Analytics</span>
                                 <span className="sm:hidden">Analytics</span>
                             </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-10 px-3 md:px-4">
-                                        <Plus className="w-4 h-4 md:mr-2" />
-                                        <span className="hidden md:inline">New</span>
+                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold h-9 sm:h-10 px-3 sm:px-4 text-xs shrink-0 flex items-center gap-1">
+                                        <Plus className="w-4 h-4 shrink-0" />
+                                        <span>New</span>
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
@@ -2042,8 +2046,8 @@ export default function BusinessDrive() {
             </Dialog>
 
             {/* Sort options by Type */}
-            <div className="flex flex-col gap-4 bg-[#0d1117]/50 border border-zinc-800/80 p-4 rounded-2xl shadow-md">
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            <div className="flex flex-col gap-3 bg-[#0d1117]/50 border border-zinc-800/80 p-3 sm:p-4 rounded-2xl shadow-md w-full overflow-hidden">
+                <div className="flex items-center justify-between sm:justify-start gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-none w-full">
                     <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 mr-2 shrink-0 hidden md:inline">Sort by Type:</span>
                     {['Documents', 'Spreadsheets', 'Videos', 'Pictures', 'PDFs', 'Audio'].map(type => {
                         const isActive = selectedTypeFilter === type;
@@ -2065,14 +2069,14 @@ export default function BusinessDrive() {
                                     setSelectedTypeFilter(type);
                                 }}
                                 className={cn(
-                                    "h-8 px-3 md:px-4 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 border shrink-0",
+                                    "h-8 sm:h-9 px-2.5 sm:px-4 rounded-full text-[11px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 border shrink-0 flex items-center justify-center min-w-[36px]",
                                     isActive 
                                         ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20" 
                                         : "bg-[#161b22] border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
                                 )}
                             >
-                                <Icon className="w-4 h-4 md:mr-2" />
-                                <span className="hidden md:inline">{type}</span>
+                                <Icon className="w-4 h-4 sm:mr-2 shrink-0" />
+                                <span className="hidden sm:inline">{type}</span>
                             </Button>
                         );
                     })}
@@ -2118,8 +2122,8 @@ export default function BusinessDrive() {
             </div>
 
             {/* Breadcrumbs Navigation - Moved directly above files */}
-            <div className="flex items-center justify-between px-2 mt-4 overflow-x-auto scrollbar-none pb-1 w-full">
-                <div className="flex items-center gap-3 text-sm text-zinc-400 shrink-0">
+            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 px-1 mt-4 pb-1 w-full min-w-0">
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-400 min-w-0 flex-1 overflow-x-auto scrollbar-none py-1">
                     {(currentPath.length > 0 || selectedTypeFilter !== null) && (
                         <Button 
                             variant="ghost" 
@@ -2147,9 +2151,9 @@ export default function BusinessDrive() {
                                     idx === currentPath.length - 1 && "text-white font-black"
                                 )}
                             >
-                                <span>{segment}</span>
+                                <span className="truncate max-w-[120px] sm:max-w-[200px]">{segment}</span>
                                 {idx === currentPath.length - 1 && (
-                                    <span className="text-[11px] text-zinc-400 font-bold">
+                                    <span className="text-[11px] text-zinc-400 font-bold shrink-0">
                                         ({currentItems.files.length} {currentItems.files.length === 1 ? 'item' : 'items'})
                                     </span>
                                 )}
@@ -2158,7 +2162,7 @@ export default function BusinessDrive() {
                     ))}
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
                     {currentPath.length > 0 && currentPath[0] === 'System Archives' && (
                         <Button variant="outline" size="icon" className="h-8 w-8 border-red-500/50 text-red-500 hover:bg-red-500/10 shrink-0" onClick={() => setDeleteAllOpen(true)} title="Delete All">
                             <Trash2 className="w-4 h-4" />
@@ -2175,22 +2179,22 @@ export default function BusinessDrive() {
                         <ChevronsUpDown className="w-4 h-4" />
                     </Button>
 
-                    <div className="flex bg-[#161b22] p-1 rounded-lg border border-zinc-800 shrink-0 ml-2">
+                    <div className="flex bg-[#161b22] p-1 rounded-lg border border-zinc-800 shrink-0 ml-1 sm:ml-2">
                         <Button 
                             variant="ghost" 
                             size="sm" 
-                            className={cn("h-8 px-2", viewMode === 'grid' && "bg-zinc-800 text-white")}
+                            className={cn("h-7 sm:h-8 px-2", viewMode === 'grid' && "bg-zinc-800 text-white")}
                             onClick={() => setViewMode('grid')}
                         >
-                            <Grid className="w-4 h-4" />
+                            <Grid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Button>
                         <Button 
                             variant="ghost" 
                             size="sm" 
-                            className={cn("h-8 px-2", viewMode === 'list' && "bg-zinc-800 text-white")}
+                            className={cn("h-7 sm:h-8 px-2", viewMode === 'list' && "bg-zinc-800 text-white")}
                             onClick={() => setViewMode('list')}
                         >
-                            <List className="w-4 h-4" />
+                            <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Button>
                     </div>
                 </div>
