@@ -1657,6 +1657,234 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                     </AccordionItem>
                                 </Accordion>
 
+                                {/* Section 4: CRM Standard Operating Procedures (Collapsed Accordion) */}
+                                <div className="mt-4">
+                                    <Accordion type="single" collapsible className="w-full">
+                                        <AccordionItem value="section-4-crm-sop" className="border border-indigo-500/30 bg-indigo-950/20 rounded-xl px-4 overflow-hidden">
+                                            <AccordionTrigger className="hover:no-underline py-4 text-left">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full pr-4">
+                                                    <h3 className="text-lg font-bold text-indigo-400 flex items-center gap-2">
+                                                        <FileText className="w-5 h-5 text-indigo-400 shrink-0" />
+                                                        Section 4 — CRM Standard Operating Procedures
+                                                    </h3>
+                                                    <Badge variant="outline" className="border-indigo-500/40 text-indigo-300 bg-indigo-950/60 self-start sm:self-auto font-bold text-xs">
+                                                        5-Page Operating Standard (Collapsed SOP)
+                                                    </Badge>
+                                                </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="pt-3 pb-4 space-y-4 border-t border-indigo-500/20">
+                                                <div className="bg-zinc-950 border border-indigo-500/20 rounded-lg p-4 space-y-3 text-zinc-300 text-sm">
+                                                    <p className="text-xs text-indigo-300 font-semibold uppercase tracking-wider">Official Reference & Universal Rules</p>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                                        <div className="bg-zinc-900/80 p-3 rounded border border-zinc-800">
+                                                            <strong className="text-indigo-400 block mb-1">Rule 1 — Always Search First</strong>
+                                                            Search Customer Profiles by name, phone, or email before creating any booking to prevent duplicate records.
+                                                        </div>
+                                                        <div className="bg-zinc-900/80 p-3 rounded border border-zinc-800">
+                                                            <strong className="text-emerald-400 block mb-1">Rule 2 — Book From Customer Card</strong>
+                                                            Always initiate new estimates, invoices, or bookings directly from an existing customer's profile card.
+                                                        </div>
+                                                        <div className="bg-zinc-900/80 p-3 rounded border border-zinc-800">
+                                                            <strong className="text-purple-400 block mb-1">Rule 3 — Mandatory Activity Logging</strong>
+                                                            Log every customer call, SMS, or in-person touchpoint with timestamps and staff initials in the CRM timeline.
+                                                        </div>
+                                                        <div className="bg-zinc-900/80 p-3 rounded border border-zinc-800">
+                                                            <strong className="text-amber-400 block mb-1">Rule 4 — Duplicate Cleanup Protocol</strong>
+                                                            Merge duplicate records immediately using Customer ID consolidation rules before generating invoices.
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => setCrmSopOpen(true)}
+                                                            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs h-9 px-4"
+                                                        >
+                                                            <FileText className="w-4 h-4 mr-2" /> Launch Full Interactive CRM SOP
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                const link = document.createElement('a');
+                                                                link.href = '/sop-guides/Prime_Auto_Detail_CRM_Standard_Operating_Procedures.pdf';
+                                                                link.download = 'Prime_Auto_Detail_CRM_Standard_Operating_Procedures.pdf';
+                                                                document.body.appendChild(link);
+                                                                link.click();
+                                                                document.body.removeChild(link);
+                                                            }}
+                                                            className="border-indigo-500/40 text-indigo-300 bg-indigo-950/40 hover:bg-indigo-900/50 text-xs h-9 px-3 font-semibold"
+                                                        >
+                                                            <Download className="w-3.5 h-3.5 mr-1.5" /> Download Official PDF
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Accordion>
+                                </div>
+
+                                {/* Section 5: Paint Protection & Hydrophobicity Guide (Collapsed Accordion) */}
+                                <div className="mt-4">
+                                    <Accordion type="single" collapsible className="w-full">
+                                        <AccordionItem value="section-5-paint-protection" className="border border-cyan-500/30 bg-cyan-950/20 rounded-xl px-4 overflow-hidden">
+                                            <AccordionTrigger className="hover:no-underline py-4 text-left">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full pr-4">
+                                                    <h3 className="text-lg font-bold text-cyan-400 flex items-center gap-2">
+                                                        <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
+                                                        Section 5 — Paint Protection & Hydrophobicity Guide
+                                                    </h3>
+                                                    <Badge variant="outline" className="border-cyan-500/40 text-cyan-300 bg-cyan-950/60 self-start sm:self-auto font-bold text-xs">
+                                                        12-Section Technical Standard (Collapsed SOP)
+                                                    </Badge>
+                                                </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="pt-3 pb-4 space-y-4 border-t border-cyan-500/20">
+                                                <div className="bg-zinc-950 border border-cyan-500/20 rounded-lg p-4 space-y-3 text-zinc-300 text-sm">
+                                                    <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-lg">
+                                                        <p className="text-red-400 font-bold text-xs uppercase tracking-wider">Core Principle</p>
+                                                        <p className="text-red-300 font-bold text-sm italic">"Clean the surface before you judge the protection."</p>
+                                                    </div>
+                                                    <p className="text-xs text-zinc-300 leading-relaxed">
+                                                        Covers ceramic vs sealant performance, hydrophobic water sheeting vs beading, garden hose & pressure washer testing methods, cure times, and customer maintenance scripts.
+                                                    </p>
+                                                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => setPaintGuideOpen(true)}
+                                                            className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs h-9 px-4"
+                                                        >
+                                                            <ShieldCheck className="w-4 h-4 mr-2" /> Launch Full Paint Protection Manual
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                const link = document.createElement('a');
+                                                                link.href = '/sop-guides/Prime_Auto_Detail_Paint_Protection_Hydrophobicity_Training_Guide.pdf';
+                                                                link.download = 'Prime_Auto_Detail_Paint_Protection_Hydrophobicity_Training_Guide.pdf';
+                                                                document.body.appendChild(link);
+                                                                link.click();
+                                                                document.body.removeChild(link);
+                                                            }}
+                                                            className="border-cyan-500/40 text-cyan-300 bg-cyan-950/40 hover:bg-cyan-900/50 text-xs h-9 px-3 font-semibold"
+                                                        >
+                                                            <Download className="w-3.5 h-3.5 mr-1.5" /> Download Official PDF
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Accordion>
+                                </div>
+
+                                {/* Section 6: Headlight Restoration Guide (Collapsed Accordion) */}
+                                <div className="mt-4">
+                                    <Accordion type="single" collapsible className="w-full">
+                                        <AccordionItem value="section-6-headlight-restoration" className="border border-yellow-500/30 bg-yellow-950/20 rounded-xl px-4 overflow-hidden">
+                                            <AccordionTrigger className="hover:no-underline py-4 text-left">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full pr-4">
+                                                    <h3 className="text-lg font-bold text-yellow-400 flex items-center gap-2">
+                                                        <Wrench className="w-5 h-5 text-yellow-400 shrink-0" />
+                                                        Section 6 — Headlight Restoration Guide
+                                                    </h3>
+                                                    <Badge variant="outline" className="border-yellow-500/40 text-yellow-300 bg-yellow-950/60 self-start sm:self-auto font-bold text-xs">
+                                                        7-Section Restoration Standard (Collapsed SOP)
+                                                    </Badge>
+                                                </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="pt-3 pb-4 space-y-4 border-t border-yellow-500/20">
+                                                <div className="bg-zinc-950 border border-yellow-500/20 rounded-lg p-4 space-y-3 text-zinc-300 text-sm">
+                                                    <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-lg">
+                                                        <p className="text-amber-400 font-bold text-xs uppercase tracking-wider">Core Principle</p>
+                                                        <p className="text-amber-300 font-bold text-sm italic">"Restoration renews the surface. It doesn't fix what's happening inside the housing."</p>
+                                                    </div>
+                                                    <p className="text-xs text-zinc-300 leading-relaxed">
+                                                        Detailed 7-step guide covering polycarbonate UV breakdown, wet sanding progression (800/1500/2500/3000 grit), compound polishing, and 2K UV ceramic sealers.
+                                                    </p>
+                                                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => setHeadlightGuideOpen(true)}
+                                                            className="bg-yellow-600 hover:bg-yellow-500 text-white font-bold text-xs h-9 px-4"
+                                                        >
+                                                            <Wrench className="w-4 h-4 mr-2" /> Launch Full Headlight Restoration Guide
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                const link = document.createElement('a');
+                                                                link.href = '/sop-guides/Prime_Auto_Detail_Headlight_Restoration_Employee_Training_Guide.pdf';
+                                                                link.download = 'Prime_Auto_Detail_Headlight_Restoration_Employee_Training_Guide.pdf';
+                                                                document.body.appendChild(link);
+                                                                link.click();
+                                                                document.body.removeChild(link);
+                                                            }}
+                                                            className="border-yellow-500/40 text-yellow-300 bg-yellow-950/40 hover:bg-yellow-900/50 text-xs h-9 px-3 font-semibold"
+                                                        >
+                                                            <Download className="w-3.5 h-3.5 mr-1.5" /> Download Official PDF
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Accordion>
+                                </div>
+
+                                {/* Section 7: Water Spot Removal Guide (Collapsed Accordion) */}
+                                <div className="mt-4">
+                                    <Accordion type="single" collapsible className="w-full">
+                                        <AccordionItem value="section-7-water-spot-removal" className="border border-blue-500/30 bg-blue-950/20 rounded-xl px-4 overflow-hidden">
+                                            <AccordionTrigger className="hover:no-underline py-4 text-left">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full pr-4">
+                                                    <h3 className="text-lg font-bold text-blue-400 flex items-center gap-2">
+                                                        <Droplets className="w-5 h-5 text-blue-400 shrink-0" />
+                                                        Section 7 — Water Spot Removal Guide
+                                                    </h3>
+                                                    <Badge variant="outline" className="border-blue-500/40 text-blue-300 bg-blue-950/60 self-start sm:self-auto font-bold text-xs">
+                                                        7-Section Chemical Standard (Collapsed SOP)
+                                                    </Badge>
+                                                </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="pt-3 pb-4 space-y-4 border-t border-blue-500/20">
+                                                <div className="bg-zinc-950 border border-blue-500/20 rounded-lg p-4 space-y-3 text-zinc-300 text-sm">
+                                                    <div className="bg-blue-500/10 border border-blue-500/30 p-3 rounded-lg">
+                                                        <p className="text-blue-400 font-bold text-xs uppercase tracking-wider">Core Principle</p>
+                                                        <p className="text-blue-300 font-bold text-sm italic">"Know what you're looking at before you reach for the descaler — not every water spot needs it."</p>
+                                                    </div>
+                                                    <p className="text-xs text-zinc-300 leading-relaxed">
+                                                        Covers Type 1 (Surface Mineral Deposits), Type 2 (Etched Clear Coat), acidic descaler safety protocol, neutralizers, and glass vs paint procedures.
+                                                    </p>
+                                                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => setWaterSpotGuideOpen(true)}
+                                                            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs h-9 px-4"
+                                                        >
+                                                            <Droplets className="w-4 h-4 mr-2" /> Launch Full Water Spot Removal Guide
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                const link = document.createElement('a');
+                                                                link.href = '/sop-guides/Prime_Auto_Detail_Water_Spot_Removal_Employee_Training_Guide.pdf';
+                                                                link.download = 'Prime_Auto_Detail_Water_Spot_Removal_Employee_Training_Guide.pdf';
+                                                                document.body.appendChild(link);
+                                                                link.click();
+                                                                document.body.removeChild(link);
+                                                            }}
+                                                            className="border-blue-500/40 text-blue-300 bg-blue-950/40 hover:bg-blue-900/50 text-xs h-9 px-3 font-semibold"
+                                                        >
+                                                            <Download className="w-3.5 h-3.5 mr-1.5" /> Download Official PDF
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Accordion>
+                                </div>
+
                                 <SOPEditModal
                                     open={sopModalOpen}
                                     onOpenChange={setSopModalOpen}

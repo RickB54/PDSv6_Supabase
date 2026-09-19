@@ -474,7 +474,7 @@ export function StaticCaddyWorksheetModal({
 
     const handleGeneratePdf = (overrideSelection?: string[]) => {
         const targetSelection = overrideSelection || pdfSelection;
-        const caddiesToPrint: Array<{ id: string; title: string; color: number[]; data: CaddySlot[] }> = [];
+        const caddiesToPrint: Array<{ id: string; title: string; color: [number, number, number]; data: CaddySlot[] }> = [];
 
         if (targetSelection.includes('interior')) {
             caddiesToPrint.push({ id: 'interior', title: 'Interior Caddy', color: [147, 51, 234], data: data.interior });
