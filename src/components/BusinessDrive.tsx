@@ -7,7 +7,8 @@ import {
     ChevronRight, Upload, Search, Filter, Trash2, Download, Eye, Sparkles, Clock, User, File,
     Maximize2, Minimize2, ZoomIn, ZoomOut, ChevronLeft, X, Printer, Info, FolderPlus, ArrowLeft,
     RefreshCw, Camera, ArrowUpDown, Bell, ChevronsUpDown, Video, Image as ImageIcon, Headphones,
-    FolderArchive, BarChart3, ChevronDown, Check, HardDrive, FolderCheck, PieChart, ExternalLink, Layers
+    FolderArchive, BarChart3, ChevronDown, Check, HardDrive, FolderCheck, PieChart, ExternalLink, Layers,
+    Pencil
 } from "lucide-react";
 import { 
     Popover, 
@@ -217,6 +218,14 @@ export default function BusinessDrive() {
     // New Folder State
     const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
     const [newFolderName, setNewFolderName] = useState("");
+    const [renameFolderTarget, setRenameFolderTarget] = useState<DriveFolder | null>(null);
+    const [renameFolderName, setRenameFolderName] = useState("");
+
+    const openRenameModal = (folder: DriveFolder) => {
+        setRenameFolderTarget(folder);
+        setRenameFolderName(folder.name);
+    };
+
     const [isFolderDropdownOpen, setIsFolderDropdownOpen] = useState(false);
     const [isArchiveDropdownOpen, setIsArchiveDropdownOpen] = useState(false);
     const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
@@ -878,17 +887,103 @@ export default function BusinessDrive() {
         toast({ title: "Folder Created", description: `"${newFolder.name}" is ready.` });
     };
 
+    const handleRenameFolder = (folderToRename: DriveFolder, newName: string) => {
+        const trimmed = newName.trim();
+        if (!trimmed || trimmed === folderToRename.name) return;
+
+        const oldPathPrefix = [...folderToRename.path, folderToRename.name];
+        const newPathPrefix = [...folderToRename.path, trimmed];
+
+        setFolders(prev => prev.map(f => {
+            if (f.id === folderToRename.id) {
+                return { ...f, name: trimmed };
+            }
+            if (f.path.length >= oldPathPrefix.length && oldPathPrefix.every((seg, i) => f.path[i] === seg)) {
+                const updatedPath = [...newPathPrefix, ...f.path.slice(oldPathPrefix.length)];
+                return { ...f, path: updatedPath };
+            }
+            return f;
+        }));
+
+        setFiles(prev => prev.map(file => {
+            if (file.path.length >= oldPathPrefix.length && oldPathPrefix.every((seg, i) => file.path[i] === seg)) {
+                const updatedPath = [...newPathPrefix, ...file.path.slice(oldPathPrefix.length)];
+                return { ...file, path: updatedPath };
+            }
+            return file;
+        }));
+
+        setCurrentPath(prev => {
+            if (prev.length >= oldPathPrefix.length && oldPathPrefix.every((seg, i) => prev[i] === seg)) {
+                return [...newPathPrefix, ...prev.slice(oldPathPrefix.length)];
+            }
+            return prev;
+        });
+
+        toast({ title: "Folder Renamed", description: `Renamed to "${trimmed}"` });
+    };
+
     const confirmDeleteFile = (id: string) => {
         setFiles(prev => prev.filter(f => f.id !== id));
         setDeleteTarget(null);
         toast({ title: "File Deleted", variant: "destructive" });
     };
 
-    const confirmDeleteFolder = (id: string) => {
-        setFolders(prev => prev.filter(f => f.id !== id));
+    const confirmDeleteFolder = (folderId: string) => {
+        const targetFolder = folders.find(f => f.id === folderId);
+        if (!targetFolder) {
+            setFolders(prev => prev.filter(f => f.id !== folderId));
+            setDeleteTarget(null);
+            toast({ title: "Folder Deleted", variant: "destructive" });
+            return;
+        }
+
+        const folderPathPrefix = [...targetFolder.path, targetFolder.name];
+
+        setFolders(prev => prev.filter(f => {
+            if (f.id === folderId) return false;
+            const isDescendant = f.path.length >= folderPathPrefix.length && folderPathPrefix.every((seg, i) => f.path[i] === seg);
+            return !isDescendant;
+        }));
+
+        setFiles(prev => prev.filter(file => {
+            const isInside = file.path.length >= folderPathPrefix.length && folderPathPrefix.every((seg, i) => file.path[i] === seg);
+            return !isInside;
+        }));
+
+        setCurrentPath(prev => {
+            const isInside = prev.length >= folderPathPrefix.length && folderPathPrefix.every((seg, i) => prev[i] === seg);
+            if (isInside) {
+                return targetFolder.path;
+            }
+            return prev;
+        });
+
         setDeleteTarget(null);
-        toast({ title: "Folder Deleted", variant: "destructive" });
+        toast({ title: "Folder Deleted", description: `"${targetFolder.name}" removed`, variant: "destructive" });
     };
+
+    const businessFoldersList = useMemo(() => {
+        const rootFolderItems = folders.filter(f => f.path.length === 0 && f.name !== 'System Archives');
+        const list: DriveFolder[] = [...rootFolderItems];
+        ALL_CATEGORIES.forEach((catName, idx) => {
+            if (!list.some(f => f.name === catName)) {
+                list.push({ id: `folder-root-${idx}`, name: catName, path: [] });
+            }
+        });
+        return list.sort((a, b) => a.name.localeCompare(b.name));
+    }, [folders]);
+
+    const archiveFoldersList = useMemo(() => {
+        const archiveFolderItems = folders.filter(f => f.path.length === 1 && f.path[0] === 'System Archives');
+        const list: DriveFolder[] = [...archiveFolderItems];
+        SYSTEM_ARCHIVE_CATEGORIES.forEach((catName, idx) => {
+            if (!list.some(f => f.name === catName)) {
+                list.push({ id: `folder-sys-${idx}`, name: catName, path: ['System Archives'] });
+            }
+        });
+        return list.sort((a, b) => a.name.localeCompare(b.name));
+    }, [folders]);
 
     const downloadFile = (file: DriveFile) => {
         if (!file.data) return;
@@ -1129,17 +1224,34 @@ export default function BusinessDrive() {
                             <span className={cn("text-sm font-bold truncate", isSystemArchive ? 'text-purple-300' : 'text-white')}>{folder.name}</span>
                             <span className="text-[10px] text-zinc-400 font-bold ml-2">({directCount} {directCount === 1 ? 'item' : 'items'})</span>
                         </div>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2.5 text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 shrink-0"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setCurrentPath([...folder.path, folder.name]);
-                            }}
-                        >
-                            Open <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                        </Button>
+                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2.5 text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800"
+                                onClick={() => setCurrentPath([...folder.path, folder.name])}
+                            >
+                                Open <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800">
+                                        <MoreVertical className="w-4 h-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white z-[9999]">
+                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...folder.path, folder.name])}>
+                                        <Eye className="w-4 h-4 mr-2 text-blue-400" /> Open
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => openRenameModal(folder)}>
+                                        <Pencil className="w-4 h-4 mr-2 text-amber-400" /> Edit / Rename
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
+                                        <Trash2 className="w-4 h-4 mr-2 text-red-400" /> Delete
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                   </HoverCardTrigger>
                   {!isExpanded && (
@@ -1315,25 +1427,28 @@ export default function BusinessDrive() {
 
                                     {/* 2-Column Side-by-Side Grid */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-zinc-700">
-                                        {ALL_CATEGORIES.map(cat => {
-                                            const count = getDirectFilesForFolder(cat, []).length;
+                                        {businessFoldersList.map(folder => {
+                                            const cat = folder.name;
+                                            const count = getDirectFilesForFolder(cat, folder.path).length;
                                             const isSelected = currentPath.length > 0 && currentPath[0] === cat;
                                             return (
-                                                <button
-                                                    key={cat}
-                                                    type="button"
+                                                <div
+                                                    key={folder.id || cat}
                                                     className={cn(
-                                                        "flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-all text-left group",
+                                                        "flex items-center justify-between px-2 py-1 rounded-md text-xs transition-all text-left group",
                                                         isSelected
                                                             ? "bg-blue-600/25 text-blue-300 border border-blue-500/60 font-bold"
                                                             : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
                                                     )}
-                                                    onClick={() => {
-                                                        setCurrentPath([cat]);
-                                                        setIsFolderDropdownOpen(false);
-                                                    }}
                                                 >
-                                                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                                                    <button
+                                                        type="button"
+                                                        className="flex items-center gap-2 min-w-0 flex-1 text-left py-0.5"
+                                                        onClick={() => {
+                                                            setCurrentPath(folder.path.length > 0 ? [...folder.path, cat] : [cat]);
+                                                            setIsFolderDropdownOpen(false);
+                                                        }}
+                                                    >
                                                         {isSelected ? (
                                                             <Check className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                                                         ) : (
@@ -1343,18 +1458,59 @@ export default function BusinessDrive() {
                                                             )} />
                                                         )}
                                                         <span className="truncate">{cat}</span>
-                                                    </div>
-                                                    <span className={cn(
-                                                        "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors",
-                                                        isSelected 
-                                                            ? "bg-blue-600 text-white font-bold"
-                                                            : count > 0 
-                                                                ? "bg-emerald-950/70 border border-emerald-700/50 text-emerald-300 font-bold"
-                                                                : "bg-zinc-800/70 border border-zinc-700/50 text-zinc-500"
-                                                    )}>
-                                                        ({count} {count === 1 ? 'item' : 'items'})
-                                                    </span>
-                                                </button>
+                                                        <span className={cn(
+                                                            "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors ml-auto",
+                                                            isSelected 
+                                                                ? "bg-blue-600 text-white font-bold"
+                                                                : count > 0 
+                                                                    ? "bg-emerald-950/70 border border-emerald-700/50 text-emerald-300 font-bold"
+                                                                    : "bg-zinc-800/70 border border-zinc-700/50 text-zinc-500"
+                                                        )}>
+                                                            ({count})
+                                                        </span>
+                                                    </button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="h-6 w-6 text-zinc-500 hover:text-white hover:bg-zinc-700/60 shrink-0 ml-1"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <MoreVertical className="w-3 h-3" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white z-[99999]">
+                                                            <DropdownMenuItem 
+                                                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
+                                                                onClick={() => {
+                                                                    setCurrentPath(folder.path.length > 0 ? [...folder.path, cat] : [cat]);
+                                                                    setIsFolderDropdownOpen(false);
+                                                                }}
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5 mr-2 text-blue-400" /> Open
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem 
+                                                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
+                                                                onClick={() => {
+                                                                    setIsFolderDropdownOpen(false);
+                                                                    openRenameModal(folder);
+                                                                }}
+                                                            >
+                                                                <Pencil className="w-3.5 h-3.5 mr-2 text-amber-400" /> Rename / Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem 
+                                                                className="hover:bg-zinc-800 text-destructive cursor-pointer text-xs" 
+                                                                onClick={() => {
+                                                                    setIsFolderDropdownOpen(false);
+                                                                    setDeleteTarget({ id: folder.id, type: 'folder', name: cat });
+                                                                }}
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5 mr-2 text-red-400" /> Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
                                             );
                                         })}
                                     </div>
@@ -1425,25 +1581,28 @@ export default function BusinessDrive() {
 
                                     {/* 2-Column Side-by-Side Grid */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-[70vh] sm:max-h-[520px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-purple-900">
-                                        {allArchiveCategories.map(cat => {
+                                        {archiveFoldersList.map(folder => {
+                                            const cat = folder.name;
                                             const count = getDirectFilesForFolder(cat, ['System Archives']).length;
                                             const isSelected = currentPath.length > 1 && currentPath[0] === 'System Archives' && currentPath[1] === cat;
                                             return (
-                                                <button
-                                                    key={cat}
-                                                    type="button"
+                                                <div
+                                                    key={folder.id || cat}
                                                     className={cn(
-                                                        "flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-all text-left group",
+                                                        "flex items-center justify-between px-2 py-1 rounded-md text-xs transition-all text-left group",
                                                         isSelected
                                                             ? "bg-purple-600/30 text-purple-200 border border-purple-500/60 font-bold"
                                                             : "hover:bg-zinc-800/80 text-zinc-300 hover:text-white border border-transparent"
                                                     )}
-                                                    onClick={() => {
-                                                        setCurrentPath(['System Archives', cat]);
-                                                        setIsArchiveDropdownOpen(false);
-                                                    }}
                                                 >
-                                                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                                                    <button
+                                                        type="button"
+                                                        className="flex items-center gap-2 min-w-0 flex-1 text-left py-0.5"
+                                                        onClick={() => {
+                                                            setCurrentPath(['System Archives', cat]);
+                                                            setIsArchiveDropdownOpen(false);
+                                                        }}
+                                                    >
                                                         {isSelected ? (
                                                             <Check className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                                                         ) : (
@@ -1453,18 +1612,59 @@ export default function BusinessDrive() {
                                                             )} />
                                                         )}
                                                         <span className="truncate">{cat}</span>
-                                                    </div>
-                                                    <span className={cn(
-                                                        "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors",
-                                                        isSelected 
-                                                            ? "bg-purple-600 text-white font-bold"
-                                                            : count > 0 
-                                                                ? "bg-purple-950/80 border border-purple-700/50 text-purple-200 font-bold"
-                                                                : "bg-zinc-800/70 border border-zinc-700/50 text-zinc-500"
-                                                    )}>
-                                                        ({count} {count === 1 ? 'item' : 'items'})
-                                                    </span>
-                                                </button>
+                                                        <span className={cn(
+                                                            "text-[10px] px-1.5 py-0.5 rounded-full font-mono shrink-0 transition-colors ml-auto",
+                                                            isSelected 
+                                                                ? "bg-purple-600 text-white font-bold"
+                                                                : count > 0 
+                                                                    ? "bg-purple-950/80 border border-purple-700/50 text-purple-200 font-bold"
+                                                                    : "bg-zinc-800/70 border border-zinc-700/50 text-zinc-500"
+                                                        )}>
+                                                            ({count})
+                                                        </span>
+                                                    </button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="h-6 w-6 text-zinc-500 hover:text-white hover:bg-zinc-700/60 shrink-0 ml-1"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <MoreVertical className="w-3 h-3" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="bg-[#161b22] border-purple-900/50 text-white z-[99999]">
+                                                            <DropdownMenuItem 
+                                                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
+                                                                onClick={() => {
+                                                                    setCurrentPath(['System Archives', cat]);
+                                                                    setIsArchiveDropdownOpen(false);
+                                                                }}
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5 mr-2 text-purple-400" /> Open
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem 
+                                                                className="hover:bg-zinc-800 cursor-pointer text-xs" 
+                                                                onClick={() => {
+                                                                    setIsArchiveDropdownOpen(false);
+                                                                    openRenameModal(folder);
+                                                                }}
+                                                            >
+                                                                <Pencil className="w-3.5 h-3.5 mr-2 text-amber-400" /> Rename / Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem 
+                                                                className="hover:bg-zinc-800 text-destructive cursor-pointer text-xs" 
+                                                                onClick={() => {
+                                                                    setIsArchiveDropdownOpen(false);
+                                                                    setDeleteTarget({ id: folder.id, type: 'folder', name: cat });
+                                                                }}
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5 mr-2 text-red-400" /> Delete
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
                                             );
                                         })}
                                     </div>
@@ -2085,22 +2285,23 @@ export default function BusinessDrive() {
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-white">
+                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-zinc-800">
                                                                     <MoreVertical className="w-3.5 h-3.5" />
                                                                 </Button>
                                                             </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
+                                                            <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white z-[9999]">
                                                                 <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...folder.path, folder.name])}>
-                                                                    <Eye className="w-4 h-4 mr-2" /> Open
+                                                                    <Eye className="w-4 h-4 mr-2 text-blue-400" /> Open
                                                                 </DropdownMenuItem>
-                                                                {!DEFAULT_BUSINESS_NAMES.has(folder.name) && (
-                                                                    <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
-                                                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                                                    </DropdownMenuItem>
-                                                                )}
+                                                                <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => openRenameModal(folder)}>
+                                                                    <Pencil className="w-4 h-4 mr-2 text-amber-400" /> Edit / Rename
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
+                                                                    <Trash2 className="w-4 h-4 mr-2 text-red-400" /> Delete
+                                                                </DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </div>
@@ -2357,19 +2558,22 @@ export default function BusinessDrive() {
                                                     ({directFiles.length} {directFiles.length === 1 ? 'item' : 'items'})
                                                 </span>
                                             </div>
-                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                            <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 hover:text-white">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800">
                                                             <MoreVertical className="w-4 h-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white">
+                                                    <DropdownMenuContent align="end" className="bg-[#161b22] border-zinc-800 text-white z-[9999]">
                                                         <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => setCurrentPath([...currentPath, folder.name])}>
-                                                            <Eye className="w-4 h-4 mr-2" /> Open
+                                                            <Eye className="w-4 h-4 mr-2 text-blue-400" /> Open
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem className="hover:bg-zinc-800 cursor-pointer" onClick={() => openRenameModal(folder)}>
+                                                            <Pencil className="w-4 h-4 mr-2 text-amber-400" /> Edit / Rename
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem className="hover:bg-zinc-800 text-destructive cursor-pointer" onClick={() => setDeleteTarget({ id: folder.id, type: 'folder', name: folder.name })}>
-                                                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                                            <Trash2 className="w-4 h-4 mr-2 text-red-400" /> Delete
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -2496,6 +2700,42 @@ export default function BusinessDrive() {
                     <DialogFooter>
                         <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setIsNewFolderOpen(false)}>Cancel</Button>
                         <Button className="bg-blue-600 hover:bg-blue-700 font-bold" onClick={handleCreateFolder}>Create Folder</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Rename / Edit Folder Dialog */}
+            <Dialog open={!!renameFolderTarget} onOpenChange={(open) => !open && setRenameFolderTarget(null)}>
+                <DialogContent className="sm:max-w-[425px] bg-[#0d1117] border-zinc-800 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Pencil className="w-5 h-5 text-amber-500" />
+                            Rename / Edit Folder
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <Input 
+                            placeholder="Folder Name" 
+                            value={renameFolderName}
+                            onChange={(e) => setRenameFolderName(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && renameFolderTarget) {
+                                    handleRenameFolder(renameFolderTarget, renameFolderName);
+                                    setRenameFolderTarget(null);
+                                }
+                            }}
+                            autoFocus
+                            className="bg-[#161b22] border-zinc-800 focus:ring-amber-500/20"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setRenameFolderTarget(null)}>Cancel</Button>
+                        <Button className="bg-amber-600 hover:bg-amber-700 font-bold text-white" onClick={() => {
+                            if (renameFolderTarget) {
+                                handleRenameFolder(renameFolderTarget, renameFolderName);
+                                setRenameFolderTarget(null);
+                            }
+                        }}>Save Changes</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
