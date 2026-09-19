@@ -26,6 +26,8 @@ export interface BookingInput {
   created_by?: string;
   booked_by?: string; // Add this
   place_of_service?: string;
+  destination_fee?: number;
+  destination_miles?: number;
 }
 
 export async function create(input: BookingInput) {
@@ -171,7 +173,9 @@ export async function create(input: BookingInput) {
         type: input.vehicle_type || '',
         color: input.color || '',
         condition: input.condition || '',
-        placeOfService: input.place_of_service || ''
+        placeOfService: input.place_of_service || '',
+        destinationFee: (input.place_of_service || '').toLowerCase().includes('shop') ? 0 : (input.destination_fee || 0),
+        destinationMiles: (input.place_of_service || '').toLowerCase().includes('shop') ? 0 : (input.destination_miles || 0)
       }
     };
 

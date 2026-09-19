@@ -543,7 +543,8 @@ const BookNow = () => {
     const price = found ? (found.pricing[vehicleType] ?? found.pricing['compact'] ?? 0) : 0;
     return sum + price;
   }, 0);
-  const total = packagePrice + addOnsTotal + bookingDestFee;
+  const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : bookingDestFee;
+  const total = packagePrice + addOnsTotal + activeDestFee;
   const appliedDiscount = matchedCoupon
     ? calculateDiscount(total, matchedCoupon.percent || matchedCoupon.amount || 0, matchedCoupon.percent ? 'percent' : 'amount')
     : 0;
@@ -759,12 +760,16 @@ const BookNow = () => {
       let createdBooking: any = null;
       try {
         if (isSupabaseEnabled()) {
+          const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : bookingDestFee;
+          const activeDestMiles = formData.placeOfService === 'Shop in Methuen' ? 0 : bookingDistance;
           createdBooking = await bookingsSvc.create({
             customer_name: formData.name,
             phone: formData.phone,
             email: formData.email,
             address: formData.address,
             place_of_service: formData.placeOfService,
+            destination_fee: activeDestFee,
+            destination_miles: activeDestMiles,
             vehicle_type: vehicleType,
             year: formData.year,
             make: formData.make,
@@ -1270,6 +1275,10 @@ const BookNow = () => {
                           placeOfService: val,
                           address: val === 'Shop in Methuen' ? '54 Boston Street, Methuen, MA' : (prev.address === '54 Boston Street, Methuen, MA' ? '' : prev.address)
                         }));
+                        if (val === 'Shop in Methuen') {
+                          setBookingDestFee(0);
+                          setBookingDistance(0);
+                        }
                       }}
                       disabled={!!businessStatus?.shopOnly}
                     >

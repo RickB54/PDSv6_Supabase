@@ -46,6 +46,8 @@ export interface Booking {
   discountCode?: string;
   discountAmount?: number;
   placeOfService?: string;
+  destinationFee?: number;
+  destinationMiles?: number;
   booking_vehicle?: any;
   hoursWorked?: number;
   milesDriven?: number;

@@ -557,10 +557,11 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       });
     }
     
-    subtotal += formData.destinationFee || 0;
+    const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : (formData.destinationFee || 0);
+    subtotal += activeDestFee;
     
     return subtotal;
-  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.destinationFee]);
+  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.destinationFee, formData.placeOfService]);
 
   const liveTotal = useMemo(() => {
     let total = 0;
@@ -593,10 +594,11 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       }
     }
     
-    total += formData.destinationFee || 0;
+    const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : (formData.destinationFee || 0);
+    total += activeDestFee;
     
     return Math.round(total);
-  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon, formData.destinationFee]);
+  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon, formData.destinationFee, formData.placeOfService]);
 
   const activeBlinkSection = useMemo(() => {
     if (!formData.time) return 1; // 1. Time (Start/End)
@@ -1292,8 +1294,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       vehicleColor: booking.vehicleColor || "",
       vehicleCondition: booking.vehicleCondition || "",
       address: booking.address || matchingCust?.address || "",
-      time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
-      endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
+      time: timeString,
+      endTime: endTimeString,
       assignedEmployee: booking.assignedEmployee || "",
       bookedBy: booking.bookedBy || (booking as any).source || (booking as any).source_origin || "",
       howFound: (booking as any).howFound || matchingCust?.howFound || "",
@@ -1310,8 +1312,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       probonoReason: booking.probonoReason || "",
       probonoReasons: booking.probonoReasons || [],
       probonoPrimaryReason: booking.probonoPrimaryReason || "",
-      destinationFee: (booking as any).destinationFee || 0,
-      destinationMiles: (booking as any).destinationMiles || 0
+      destinationFee: isShopLoc ? 0 : ((booking as any).destinationFee || 0),
+      destinationMiles: isShopLoc ? 0 : ((booking as any).destinationMiles || 0)
     });
     
     if (booking.date) {
@@ -1542,7 +1544,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         });
       }
       
-      calculatedPrice += formData.destinationFee || 0;
+      const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : (formData.destinationFee || 0);
+      const activeDestMiles = formData.placeOfService === 'Shop in Methuen' ? 0 : (formData.destinationMiles || 0);
+      calculatedPrice += activeDestFee;
  
       // Apply discount to calculatedPrice if matched or manual
       let discountAmount = 0;
@@ -1596,6 +1600,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
           placeOfService: formData.placeOfService,
+          destinationFee: activeDestFee,
+          destinationMiles: activeDestMiles,
           probonoReason: formData.probonoReason || "",
           probonoReasons: formData.probonoReasons || [],
           probonoPrimaryReason: formData.probonoPrimaryReason || ""
@@ -1692,6 +1698,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
           placeOfService: formData.placeOfService,
+          destinationFee: activeDestFee,
+          destinationMiles: activeDestMiles,
           probonoReason: formData.probonoReason || "",
           probonoReasons: formData.probonoReasons || [],
           probonoPrimaryReason: formData.probonoPrimaryReason || ""
@@ -2780,7 +2788,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         -{matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} ({matchedCoupon.code})
                       </div>
                     ) : null}
-                    {formData.destinationFee > 0 && (
+                    {formData.placeOfService !== 'Shop in Methuen' && (formData.destinationFee || 0) > 0 && (
                       <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
                         +${formData.destinationFee} Dest. Fee ({formData.destinationMiles} mi)
                       </div>
@@ -3065,7 +3073,14 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                       <select
                         className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-white focus:ring-purple-500/20"
                         value={formData.placeOfService}
-                        onChange={(e) => setFormData({ ...formData, placeOfService: e.target.value })}
+                        onChange={(e) => {
+                          const newLoc = e.target.value;
+                          setFormData(prev => ({
+                            ...prev,
+                            placeOfService: newLoc,
+                            ...(newLoc === 'Shop in Methuen' ? { destinationFee: 0, destinationMiles: 0 } : {})
+                          }));
+                        }}
                       >
                         <option value="Customer's address">Mobile Detailing (Customer's address)</option>
                         <option value="Shop in Methuen">Shop in Methuen</option>
