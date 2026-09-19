@@ -1276,9 +1276,22 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                                 <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                                                 <span className="truncate">Paint Protection</span>
                                             </button>
-                                            <Badge variant="outline" className="border-cyan-500/30 text-cyan-400 bg-cyan-950/40 text-[10px] shrink-0">
-                                                Modal
-                                            </Badge>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    const link = document.createElement('a');
+                                                    link.href = '/sop-guides/Prime_Auto_Detail_Paint_Protection_Hydrophobicity_Training_Guide.pdf';
+                                                    link.download = 'Prime_Auto_Detail_Paint_Protection_Hydrophobicity_Training_Guide.pdf';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }}
+                                                className="bg-cyan-950/80 border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/80 text-[10px] h-7 px-2 font-bold shrink-0"
+                                                title="Download PDF"
+                                            >
+                                                <Download className="w-3 h-3 mr-1" /> PDF
+                                            </Button>
                                         </div>
 
                                         {/* Paint Correction Guide */}
