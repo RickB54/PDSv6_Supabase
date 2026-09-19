@@ -470,7 +470,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           <Route path="/reports" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
           <Route path="/demo/reports" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><Reports /></ProtectedRoute>} />
           <Route path="/follow-up-center" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><FollowUpCenter /></ProtectedRoute>} />
-          <Route path="/sticker-maker" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><StickerMaker /></ProtectedRoute>} />
+          <Route path="/sticker-maker" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><StickerMaker /></ProtectedRoute>} />
           <Route path="/demo/sticker-maker" element={<ProtectedRoute user={effectiveUser} allowedRoles={[]}><StickerMaker /></ProtectedRoute>} />
           <Route path="/letter-maker" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin', 'employee']}><LetterMaker /></ProtectedRoute>} />
           <Route path="/elite-master" element={<ProtectedRoute user={effectiveUser} allowedRoles={['admin']}><EliteMaster /></ProtectedRoute>} />
@@ -494,6 +494,7 @@ const LayoutWrapper = ({ user, setCallAssistantOpen, helpOpen, setHelpOpen, help
           effectiveUser?.role === 'employee' ||
           localStorage.getItem('view_as_mode') === 'employee' ||
           localStorage.getItem('perspective_mode') === 'employee' ||
+          localStorage.getItem('pds_user_role') === 'employee' ||
           location.pathname.startsWith('/dashboard/employee')
         ) ? (
           <EmployeeHelpModal open={helpOpen} onOpenChange={setHelpOpen} initialTopicId={helpId} />

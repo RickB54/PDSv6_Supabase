@@ -4,8 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { HelpCircle, Info } from 'lucide-react';
 
-import { employeeMenuTopics, employeeDashboardTopics } from './helpData';
-
 interface EmployeeHelpModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -14,6 +12,135 @@ interface EmployeeHelpModalProps {
 
 const EMPLOYEE_TOPICS = [...employeeDashboardTopics, ...employeeMenuTopics].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
 
+const ALIAS_MAP: Record<string, string> = {
+  // SOPs
+  'sops': 'sops-process',
+  'sops-process': 'sops-process',
+  'standard-operating-procedures': 'sops-process',
+  'sop': 'sops-process',
+  'procedures': 'sops-process',
+  'procedures-manual': 'sops-process',
+  'sops-manual': 'sops-process',
+  'training-manual': 'sops-process',
+
+  // Gallery
+  'gallery': 'vehicle-gallery',
+  'vehicle-gallery': 'vehicle-gallery',
+  'media-library': 'vehicle-gallery',
+  'vehicle-gallery-help': 'vehicle-gallery',
+
+  // Pre-Vehicle Walkaround / Client Evaluation
+  'pre-vehicle-walkaround': 'client-evaluation',
+  'pre-vehicle-checklist': 'client-evaluation',
+  'pre-vehicle': 'client-evaluation',
+  'walkaround': 'client-evaluation',
+  'client-evaluation': 'client-evaluation',
+
+  // Notify Admin
+  'notify-admin': 'dashboard-notify-admin',
+  'dashboard-notify-admin': 'dashboard-notify-admin',
+  'notify': 'dashboard-notify-admin',
+
+  // Sticky Notes
+  'sticky-notes': 'dashboard-sticky-notes',
+  'dashboard-sticky-notes': 'dashboard-sticky-notes',
+  'sticky': 'dashboard-sticky-notes',
+  'notes': 'dashboard-sticky-notes',
+
+  // Dashboard Overview
+  'dashboard-overview': 'dashboard-overview',
+  'employee-dashboard': 'dashboard-overview',
+  'dashboard': 'dashboard-overview',
+  'ee-dashboard': 'dashboard-overview',
+
+  // Training Center & Cert
+  'employee-certification': 'dashboard-prime-training-center',
+  'cert-prog': 'dashboard-prime-training-center',
+  'training-center': 'dashboard-prime-training-center',
+  'prime-training-center': 'dashboard-prime-training-center',
+
+  // Learning Library
+  'learning-library': 'dashboard-learning-library',
+  'learn-lib': 'dashboard-learning-library',
+
+  // Orientation / Exam
+  'orientation': 'dashboard-orientation',
+  'exam': 'dashboard-orientation',
+
+  // Rick's Tips
+  'pro-tips': 'dashboard-pro-tips',
+  'ricks-tips': 'dashboard-pro-tips',
+
+  // Team Chat
+  'team-chat': 'dashboard-team-chat',
+  'app-team-chat': 'dashboard-team-chat',
+
+  // Tasks / Todo List
+  'todo': 'dashboard-todo-list',
+  'todo-list': 'dashboard-todo-list',
+  'tasks': 'dashboard-todo-list',
+
+  // Quick Pay
+  'quick-pay': 'dashboard-quick-pay',
+
+  // Schedule
+  'work-schedule': 'dashboard-work-schedule',
+  'staff-schedule': 'dashboard-work-schedule',
+  'schedule': 'dashboard-work-schedule',
+
+  // Bookings / New Booking
+  'new-booking': 'dashboard-new-booking',
+  'booking-flow': 'dashboard-new-booking',
+  'bookings': 'dashboard-new-booking',
+
+  // Service Checklist
+  'service-checklist': 'dashboard-service-checklist',
+  'checklist': 'dashboard-service-checklist',
+
+  // Chemical Cards
+  'chemical-cards': 'dashboard-chemical-cards',
+  'chemicals': 'dashboard-chemical-cards',
+
+  // View Website
+  'view-website': 'dashboard-view-website',
+  'website': 'dashboard-view-website',
+
+  // Help
+  'show-help': 'dashboard-show-help',
+  'employee-help': 'dashboard-show-help',
+};
+
+function findMatchingTopicId(topicId: string): string | undefined {
+  if (!topicId) return undefined;
+  const lower = topicId.toLowerCase().trim();
+
+  // 1. Direct alias match
+  if (ALIAS_MAP[lower]) {
+    const target = ALIAS_MAP[lower];
+    const foundByAlias = EMPLOYEE_TOPICS.find(t => t.id.toLowerCase() === target.toLowerCase());
+    if (foundByAlias) return foundByAlias.id;
+  }
+
+  // 2. Exact ID match
+  const exact = EMPLOYEE_TOPICS.find(t => t.id.toLowerCase() === lower);
+  if (exact) return exact.id;
+
+  // 3. Substring match on ID
+  const idMatch = EMPLOYEE_TOPICS.find(t => 
+    t.id.toLowerCase().includes(lower) || 
+    lower.includes(t.id.toLowerCase())
+  );
+  if (idMatch) return idMatch.id;
+
+  // 4. Substring match on title
+  const titleMatch = EMPLOYEE_TOPICS.find(t => 
+    t.title.toLowerCase().includes(lower) || 
+    lower.includes(t.title.toLowerCase())
+  );
+  if (titleMatch) return titleMatch.id;
+
+  return undefined;
+}
 
 export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOpenChange, initialTopicId }) => {
   const [activeAccordion, setActiveAccordion] = useState<string>("dashboard-overview");
@@ -29,15 +156,9 @@ export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOp
       }
       
       if (topicId) {
-        const lower = topicId.toLowerCase();
-        const found = EMPLOYEE_TOPICS.find(t => 
-          t.id.toLowerCase() === lower || 
-          lower.includes(t.id.toLowerCase()) || 
-          t.id.toLowerCase().includes(lower) ||
-          t.title.toLowerCase().includes(lower)
-        );
-        if (found) {
-          setActiveAccordion(found.id);
+        const foundId = findMatchingTopicId(topicId);
+        if (foundId) {
+          setActiveAccordion(foundId);
         }
       }
       onOpenChange(true);
@@ -48,15 +169,9 @@ export const EmployeeHelpModal: React.FC<EmployeeHelpModalProps> = ({ open, onOp
 
   useEffect(() => {
     if (open && initialTopicId) {
-      const lower = initialTopicId.toLowerCase();
-      const found = EMPLOYEE_TOPICS.find(t => 
-        t.id.toLowerCase() === lower || 
-        lower.includes(t.id.toLowerCase()) || 
-        t.id.toLowerCase().includes(lower) ||
-        t.title.toLowerCase().includes(lower)
-      );
-      if (found) {
-        setActiveAccordion(found.id);
+      const foundId = findMatchingTopicId(initialTopicId);
+      if (foundId) {
+        setActiveAccordion(foundId);
       }
     }
   }, [open, initialTopicId]);

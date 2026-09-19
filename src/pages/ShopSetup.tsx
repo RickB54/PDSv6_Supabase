@@ -117,7 +117,9 @@ const ShopSetup = () => {
   const navigate = useNavigate();
   const user = getCurrentUser();
   const { isDemoMode } = useDemoMode();
-  const isAdmin = user?.role === 'admin' || isDemoMode;
+  const isEmployeeView = user?.role === 'employee' || localStorage.getItem('view_as_mode') === 'employee';
+  const isAdmin = !isEmployeeView && (user?.role === 'admin' || isDemoMode);
+  const isReadOnly = isEmployeeView;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const CONTEXT_KEY = SHOP_SETUP_KEY;
 
@@ -428,8 +430,8 @@ const ShopSetup = () => {
   };
 
   const removeDoc = async (id: string) => {
-    if (isDemoMode) {
-      toast({ title: "Permission Denied", description: "Read-only mode active.", variant: "destructive" });
+    if (isReadOnly || !isAdmin) {
+      toast({ title: "Permission Denied", description: "Read-only access for employees.", variant: "destructive" });
       return;
     }
     try {

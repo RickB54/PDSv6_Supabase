@@ -436,14 +436,10 @@ const EmployeeDashboard = () => {
               helpTopicId="dashboard-todo-list"
             />
 
-            <div className="col-span-1 md:col-span-2 lg:col-span-3 flex justify-center mt-2">
-              <div className="w-full md:w-1/2 lg:w-1/3">
-                <DashboardTile 
-                  onClick={() => setNotifyAdminOpen(true)} title="NOTIFY ADMIN" desc="Send an urgent message to management." bgColor="bg-red-700"
-                  helpTopicId="dashboard-notify-admin"
-                />
-              </div>
-            </div>
+            <DashboardTile 
+              onClick={() => setNotifyAdminOpen(true)} title="NOTIFY ADMIN" desc="Send an urgent message to management." bgColor="bg-red-700"
+              helpTopicId="dashboard-notify-admin"
+            />
 
           </div>
         </div>

@@ -3950,6 +3950,32 @@ export const employeeMenuTopics: HelpTopic[] = [
 
 export const employeeDashboardTopics: HelpTopic[] = [
   {
+    id: 'dashboard-overview',
+    title: 'EMPLOYEE DASHBOARD OVERVIEW',
+    summary: 'Complete guide to the Employee Dashboard features and navigation.',
+    content: [
+      'The Employee Dashboard provides fast, single-tap access to all detailing tools and shop operations.',
+      '• NEW BOOKING: Schedule a new service appointment.',
+      '• SERVICE CHECKLIST: Start and complete active detailing jobs.',
+      '• WORK SCHEDULE: View your assigned shifts and appointment times.',
+      '• SOPs & TRAINING CENTER: Access step-by-step procedures and track training progress.',
+      '• NOTIFY ADMIN: Send an urgent message or live chat to management.',
+      '• VEHICLE GALLERY: Review vehicle media and photos for customer jobs.'
+    ],
+    section: 'dashboard'
+  },
+  {
+    id: 'sops-process',
+    title: 'STANDARD OPERATING PROCEDURES (SOPs)',
+    summary: 'Master step-by-step detailing procedures and quality standards.',
+    content: [
+      'Master step-by-step detailing procedures and shop quality standards.',
+      'SOPs cover every phase of exterior washing, paint decontamination, interior extraction, paint correction, ceramic protection, and final quality control.',
+      'Always follow approved Prime Auto Detail SOPs on every job to eliminate rework and ensure customer satisfaction.'
+    ],
+    section: 'dashboard'
+  },
+  {
     id: 'dashboard-new-booking',
     title: 'NEW BOOKING',
     summary: 'Schedule a new service appointment.',

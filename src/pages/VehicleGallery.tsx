@@ -55,38 +55,44 @@ interface MediaItem {
     description?: string;
 }
 
-function buildMediaForCustomer(customer: Customer): MediaItem[] {
+function buildMediaForCustomer(customer: Customer, allowedVehicleLabels?: Set<string> | null): MediaItem[] {
     const items: MediaItem[] = [];
     const customerName = customer.name || "Unknown";
     const customerId = customer.id;
 
-    // Customer-level photos (no specific vehicle)
-    (customer.generalPhotos || []).forEach((url, idx) =>
-        items.push({ url, type: "image", category: "general", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'generalPhotos', arrayIndex: idx } })
-    );
-    (customer.beforePhotos || []).forEach((url, idx) =>
-        items.push({ url, type: "image", category: "before", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'beforePhotos', arrayIndex: idx } })
-    );
-    (customer.afterPhotos || []).forEach((url, idx) =>
-        items.push({ url, type: "image", category: "after", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'afterPhotos', arrayIndex: idx } })
-    );
-    if ((customer as any).videoUrl) {
-        const parts = ((customer as any).videoUrl).split(':::');
-        items.push({ 
-            url: parts[0], 
-            type: "video", 
-            category: "video", 
-            customerName, 
-            vehicleLabel: "Profile", 
-            customerId,
-            description: parts[1] || (customer as any).videoNote,
-            source: { type: 'customer', field: 'videoUrl', arrayIndex: 0 }
-        });
+    // Customer-level photos (only if allowedVehicleLabels is not set or allowed)
+    if (!allowedVehicleLabels || allowedVehicleLabels.has("profile")) {
+        (customer.generalPhotos || []).forEach((url, idx) =>
+            items.push({ url, type: "image", category: "general", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'generalPhotos', arrayIndex: idx } })
+        );
+        (customer.beforePhotos || []).forEach((url, idx) =>
+            items.push({ url, type: "image", category: "before", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'beforePhotos', arrayIndex: idx } })
+        );
+        (customer.afterPhotos || []).forEach((url, idx) =>
+            items.push({ url, type: "image", category: "after", customerName, vehicleLabel: "Profile", customerId, source: { type: 'customer', field: 'afterPhotos', arrayIndex: idx } })
+        );
+        if ((customer as any).videoUrl) {
+            const parts = ((customer as any).videoUrl).split(':::');
+            items.push({ 
+                url: parts[0], 
+                type: "video", 
+                category: "video", 
+                customerName, 
+                vehicleLabel: "Profile", 
+                customerId,
+                description: parts[1] || (customer as any).videoNote,
+                source: { type: 'customer', field: 'videoUrl', arrayIndex: 0 }
+            });
+        }
     }
 
     // Per-vehicle photos
     (customer.vehicles || []).forEach((v, vIdx) => {
         const vehicleLabel = [v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle";
+        if (allowedVehicleLabels && !allowedVehicleLabels.has(vehicleLabel.toLowerCase())) {
+            return;
+        }
+
         (v.generalPhotos || []).forEach((url, idx) =>
             items.push({ url, type: "image", category: "general", customerName, vehicleLabel, customerId, source: { type: 'vehicle', field: 'generalPhotos', vehicleIndex: vIdx, arrayIndex: idx } })
         );
@@ -373,7 +379,8 @@ function CustomerCard({
     showBackLink = false,
     returnTarget = "",
     canAddMedia = false,
-    isAdmin = false
+    isAdmin = false,
+    allowedVehicleLabels = null
 }: { 
     customer: Customer; 
     onOpen: (items: MediaItem[], idx: number) => void; 
@@ -383,6 +390,7 @@ function CustomerCard({
     returnTarget?: string;
     canAddMedia?: boolean;
     isAdmin?: boolean;
+    allowedVehicleLabels?: Set<string> | null;
 }) {
     const navigate = useNavigate();
     const [expanded, setExpanded] = useState(false);
@@ -391,7 +399,7 @@ function CustomerCard({
     const [showVideoInput, setShowVideoInput] = useState(false);
     const { toast } = useToast();
 
-    const allMedia = useMemo(() => buildMediaForCustomer(customer), [customer]);
+    const allMedia = useMemo(() => buildMediaForCustomer(customer, allowedVehicleLabels), [customer, allowedVehicleLabels]);
 
     if (allMedia.length === 0) return null;
 
@@ -619,7 +627,72 @@ export default function VehicleGallery() {
     const [photoToDelete, setPhotoToDelete] = useState<{ item: MediaItem } | null>(null);
     const [photoToEdit, setPhotoToEdit] = useState<{ item: MediaItem } | null>(null);
 
-    const isAdmin = user?.role === 'admin' || isDemoMode;
+    const isEmployeeView = user?.role === 'employee' || localStorage.getItem('view_as_mode') === 'employee';
+    const isAdmin = !isEmployeeView && (user?.role === 'admin' || isDemoMode);
+
+    const getEmployeeAllowedVehiclesForCustomer = useMemo(() => {
+        return (customer: Customer): Set<string> | null => {
+            if (!isEmployeeView) return null;
+
+            const u = getCurrentUser();
+            const uId = u?.id;
+            const uEmail = u?.email?.toLowerCase();
+            const uName = u?.name?.toLowerCase();
+
+            const empBookings = allBookings.filter(b => {
+                if (!b) return false;
+                const assigned = String(b.assignedEmployee || '').toLowerCase();
+                const booked = String(b.bookedBy || '').toLowerCase();
+                if (isDemoMode) {
+                    if (assigned.includes('marcus') || booked.includes('marcus') || assigned.includes('emp') || !assigned) return true;
+                }
+                return (
+                    (uId && (assigned === uId || booked === uId)) ||
+                    (uEmail && (assigned === uEmail || booked === uEmail)) ||
+                    (uName && (assigned === uName || booked === uName)) ||
+                    (assigned && uEmail && assigned.includes(uEmail)) ||
+                    (assigned && uName && assigned.includes(uName))
+                );
+            });
+
+            const custBookings = empBookings.filter(b => {
+                const cIdMatch = b.customerId && b.customerId === customer.id;
+                const emailMatch = b.customerEmail && customer.email && b.customerEmail.toLowerCase() === customer.email.toLowerCase();
+                const nameMatch = b.customer && customer.name && b.customer.toLowerCase() === customer.name.toLowerCase();
+                return cIdMatch || emailMatch || nameMatch;
+            });
+
+            if (custBookings.length === 0) {
+                return new Set<string>();
+            }
+
+            const allowed = new Set<string>();
+            (customer.vehicles || []).forEach(v => {
+                const vLabel = [v.year, v.make, v.model].filter(Boolean).join(" ") || "Unknown Vehicle";
+                const vType = (v.type || '').toLowerCase();
+                const vMake = (v.make || '').toLowerCase();
+                const vModel = (v.model || '').toLowerCase();
+
+                const matchesVehicle = custBookings.some(b => {
+                    const bMake = (b.vehicleMake || '').toLowerCase();
+                    const bModel = (b.vehicleModel || '').toLowerCase();
+                    const bVeh = (b.vehicle || '').toLowerCase();
+
+                    if (bMake && vMake && bMake === vMake) return true;
+                    if (bModel && vModel && bModel === vModel) return true;
+                    if (bVeh && (bVeh.includes(vMake) || bVeh.includes(vModel) || (vType && bVeh.includes(vType)))) return true;
+                    if (!bMake && !bModel && !bVeh) return true;
+                    return false;
+                });
+
+                if (matchesVehicle || (customer.vehicles || []).length === 1) {
+                    allowed.add(vLabel.toLowerCase());
+                }
+            });
+
+            return allowed;
+        };
+    }, [isEmployeeView, allBookings, isDemoMode]);
 
     const refreshData = async () => {
         setLoading(true);
@@ -656,7 +729,6 @@ export default function VehicleGallery() {
                     arr.splice(m.arrayIndex, 1);
                     (updatedCustomer as any)[m.field] = arr;
                 } else {
-                    // Singular field (like videoUrl)
                     (updatedCustomer as any)[m.field] = null;
                     if (m.field === 'videoUrl') {
                         (updatedCustomer as any).videoNote = null;
@@ -675,7 +747,6 @@ export default function VehicleGallery() {
                     vehicles[vIdx] = v;
                     updatedCustomer.vehicles = vehicles;
                 } else {
-                    // Singular vehicle field (if any added in future)
                     (v as any)[m.field] = null;
                     vehicles[vIdx] = v;
                     updatedCustomer.vehicles = vehicles;
@@ -787,7 +858,10 @@ export default function VehicleGallery() {
     const customersWithMedia = useMemo(() => {
         const q = searchQuery.toLowerCase();
         return customers.filter(c => {
-            const hasMedia = buildMediaForCustomer(c).length > 0;
+            const allowedVehicles = getEmployeeAllowedVehiclesForCustomer(c);
+            if (allowedVehicles && allowedVehicles.size === 0) return false;
+
+            const hasMedia = buildMediaForCustomer(c, allowedVehicles).length > 0;
             if (!hasMedia) return false;
             if (!q) return true;
             return (
@@ -797,14 +871,17 @@ export default function VehicleGallery() {
                 )
             );
         });
-    }, [customers, searchQuery]);
+    }, [customers, searchQuery, getEmployeeAllowedVehiclesForCustomer]);
 
     // All media across all customers (for General Gallery)
     const allMedia = useMemo(() => {
         const q = searchQuery.toLowerCase();
         const items: MediaItem[] = [];
         for (const c of customers) {
-            const cItems = buildMediaForCustomer(c);
+            const allowedVehicles = getEmployeeAllowedVehiclesForCustomer(c);
+            if (allowedVehicles && allowedVehicles.size === 0) continue;
+
+            const cItems = buildMediaForCustomer(c, allowedVehicles);
             if (!q) items.push(...cItems);
             else if (
                 c.name.toLowerCase().includes(q) ||
@@ -816,7 +893,7 @@ export default function VehicleGallery() {
             }
         }
         return items;
-    }, [customers, searchQuery]);
+    }, [customers, searchQuery, getEmployeeAllowedVehiclesForCustomer]);
 
     if (loading) {
         return (
@@ -951,15 +1028,17 @@ export default function VehicleGallery() {
                                             customer={c}
                                             onOpen={openLightbox}
                                             onAddMedia={(customer) => {
+                                              if (isEmployeeView) return;
                                               setEditingCustomer(customer);
                                               setModalTab("media");
                                               setModalOpen(true);
                                             }}
                                             isAdmin={isAdmin}
-                                            onDelete={(item) => setPhotoToDelete({ item })}
-                                            canAddMedia={isAdmin || allBookings.some(b => (b.customerEmail === c.email || b.customerId === c.id) && b.assignedEmployee === user?.id)}
+                                            onDelete={(item) => !isEmployeeView && setPhotoToDelete({ item })}
+                                            canAddMedia={!isEmployeeView && (isAdmin || allBookings.some(b => (b.customerEmail === c.email || b.customerId === c.id) && b.assignedEmployee === user?.id))}
                                             showBackLink={!!showBack}
                                             returnTarget={showBack ? `${target}?search=${encodeURIComponent(search || '')}` : ""}
+                                            allowedVehicleLabels={getEmployeeAllowedVehiclesForCustomer(c)}
                                         />
                                     );
                                 })}

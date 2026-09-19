@@ -5061,7 +5061,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         onSelect={handleClassificationSelect}
       />
 
-      {(localStorage.getItem('view_as_mode') === 'employee' || localStorage.getItem('perspective_mode') === 'employee' || localStorage.getItem('pds_user_role') === 'employee') ? (
+      {(localStorage.getItem('view_as_mode') === 'employee' || localStorage.getItem('perspective_mode') === 'employee' || localStorage.getItem('pds_user_role') === 'employee' || getCurrentUser()?.role === 'employee') ? (
         <EmployeeHelpModal 
           open={isHelpOpen} 
           onOpenChange={setIsHelpOpen} 

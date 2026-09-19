@@ -53,6 +53,7 @@ export type MenuGroup = {
     title: string;
     icon: any;
     iconColor?: string;
+    role?: string;
     items: MenuItem[];
 };
 
@@ -192,13 +193,13 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Marketing & Retention", icon: TicketPercent, iconColor: "text-pink-400",
+            title: "Marketing & Retention", icon: TicketPercent, iconColor: "text-pink-400", role: "admin",
             items: [
                 { title: "Follow-up Center", url: "/follow-up-center", role: "admin", key: "follow-up-center", icon: Bell, highlight: "green", helpTopicId: "retention-hub" },
 
                 { title: "Discount Coupons", url: "/discount-coupons", role: "admin", key: "discount-coupons", icon: TicketPercent, helpTopicId: 'discount-coupons' },
-                { title: "Business Card Stickers", url: `/sticker-maker`, key: "sticker-maker", icon: Printer, helpTopicId: 'sticker-maker' },
-                { title: "Prime Blog", url: "/blog", key: "blog", icon: Newspaper, helpTopicId: 'blog' },
+                { title: "Business Card Stickers", url: `/sticker-maker`, role: "admin", key: "sticker-maker", icon: Printer, helpTopicId: 'sticker-maker' },
+                { title: "Prime Blog", url: "/blog", role: "admin", key: "blog", icon: Newspaper, helpTopicId: 'blog' },
                 { title: "Elite Story Master", url: "/elite-master", role: "admin", key: "elite-master", icon: ListOrdered, helpTopicId: 'blog-reorder' },
             ]
         },
