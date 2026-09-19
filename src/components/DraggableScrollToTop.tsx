@@ -58,24 +58,29 @@ export const DraggableScrollToTop = () => {
             return;
         }
 
-        const handleScroll = (e: Event) => {
-            const target = e.target as HTMLElement;
+        const handleScroll = (e?: Event) => {
+            const target = e?.target as HTMLElement;
             const isDoc = !target || (target as unknown as Document) === document || target === document.documentElement || target === document.body;
-            const currentScrollY = isDoc ? window.scrollY : target.scrollTop;
+            const currentScrollY = isDoc ? (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0) : target.scrollTop;
 
             if (currentScrollY === undefined) return;
 
-            scrollContainerRef.current = isDoc ? window : target;
-
-            // Only show when scrolled down past 100px AND actively scrolling UP
-            if (currentScrollY > 100 && currentScrollY < lastScrollY.current - 3) {
-                setIsVisible(true);
-            } else if (currentScrollY > lastScrollY.current + 3 || currentScrollY <= 100) {
-                setIsVisible(false);
+            if (isDoc) {
+                scrollContainerRef.current = window;
+            } else if (target && target.scrollHeight && target.scrollHeight >= window.innerHeight) {
+                scrollContainerRef.current = target;
             }
 
-            lastScrollY.current = currentScrollY;
+            // Show whenever scrolled down past 50px
+            if (currentScrollY > 50) {
+                setIsVisible(true);
+            } else {
+                setIsVisible(false);
+            }
         };
+
+        // Check initial state
+        handleScroll();
 
         window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
         return () => window.removeEventListener('scroll', handleScroll, { capture: true });
