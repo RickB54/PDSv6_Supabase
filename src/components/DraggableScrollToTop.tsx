@@ -3,12 +3,14 @@ import { ArrowUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export const DraggableScrollToTop = () => {
+    const [isVisible, setIsVisible] = useState(false);
     const [isEnabled, setIsEnabled] = useState(() => localStorage.getItem('pds_show_scroll_to_top') !== 'false');
     const [position, setPosition] = useState({ x: -24, y: -24 }); // default bottom right offset
     const [isDragging, setIsDragging] = useState(false);
     const dragRef = useRef<HTMLButtonElement>(null);
     const dragStartPos = useRef({ x: 0, y: 0 });
     const rawDragStart = useRef({ x: 0, y: 0 });
+    const lastScrollY = useRef(0);
     const scrollContainerRef = useRef<HTMLElement | Window>(window);
 
     useEffect(() => {
@@ -51,15 +53,28 @@ export const DraggableScrollToTop = () => {
     }, []);
 
     useEffect(() => {
-        if (!isEnabled) return;
+        if (!isEnabled) {
+            setIsVisible(false);
+            return;
+        }
 
         const handleScroll = (e: Event) => {
             const target = e.target as HTMLElement;
-            if (!target || (target as unknown as Document) === document || target === document.documentElement || target === document.body) {
-                scrollContainerRef.current = window;
-            } else if (target.scrollHeight && target.scrollHeight >= window.innerHeight) {
-                scrollContainerRef.current = target;
+            const isDoc = !target || (target as unknown as Document) === document || target === document.documentElement || target === document.body;
+            const currentScrollY = isDoc ? window.scrollY : target.scrollTop;
+
+            if (currentScrollY === undefined) return;
+
+            scrollContainerRef.current = isDoc ? window : target;
+
+            // Only show when scrolled down past 100px AND actively scrolling UP
+            if (currentScrollY > 100 && currentScrollY < lastScrollY.current - 3) {
+                setIsVisible(true);
+            } else if (currentScrollY > lastScrollY.current + 3 || currentScrollY <= 100) {
+                setIsVisible(false);
             }
+
+            lastScrollY.current = currentScrollY;
         };
 
         window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
@@ -131,6 +146,7 @@ export const DraggableScrollToTop = () => {
                 (scrollContainerRef.current as HTMLElement).scrollTo({ top: 0, behavior: 'smooth' });
             } catch {}
         }
+        setIsVisible(false);
     };
 
     if (!isEnabled) return null;
@@ -140,7 +156,9 @@ export const DraggableScrollToTop = () => {
             ref={dragRef}
             variant="default"
             size="icon"
-            className="fixed z-[99999] h-12 w-12 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40 touch-none transition-all duration-300 opacity-100 pointer-events-auto flex items-center justify-center"
+            className={`fixed z-[99999] h-12 w-12 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-500 text-white border border-blue-400/40 touch-none transition-all duration-300 flex items-center justify-center ${
+                isVisible ? 'opacity-100 pointer-events-auto scale-100' : 'opacity-0 pointer-events-none scale-90'
+            }`}
             style={{
                 bottom: '24px',
                 right: '24px',
