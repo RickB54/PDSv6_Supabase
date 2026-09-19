@@ -1280,6 +1280,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     const matchingCust = customers.find(c => c.name === booking.customer);
     setSelectedCustomer(matchingCust || null);
 
+    const isShopLoc = (booking.placeOfService || '').toLowerCase().includes('shop');
+
     // Populate formData from booking first, then fallback to customer
     setFormData({
       customer: booking.customer || "",
@@ -1294,8 +1296,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       vehicleColor: booking.vehicleColor || "",
       vehicleCondition: booking.vehicleCondition || "",
       address: booking.address || matchingCust?.address || "",
-      time: timeString,
-      endTime: endTimeString,
+      time: booking.date ? format(parseISO(booking.date), "HH:mm") : "09:00",
+      endTime: booking.endTime ? format(parseISO(booking.endTime), "HH:mm") : "17:00",
       assignedEmployee: booking.assignedEmployee || "",
       bookedBy: booking.bookedBy || (booking as any).source || (booking as any).source_origin || "",
       howFound: (booking as any).howFound || matchingCust?.howFound || "",
