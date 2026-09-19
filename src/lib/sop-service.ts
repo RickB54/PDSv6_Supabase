@@ -416,8 +416,10 @@ export const sopService = {
     try {
       const metaRecord = await contentService.getServiceMeta(MASTER_SOPS_META_KEY);
       if (metaRecord && metaRecord.meta && Array.isArray(metaRecord.meta.sops) && metaRecord.meta.sops.length > 0) {
-        sopMemoryCache = metaRecord.meta.sops;
-        return sopMemoryCache!;
+        const loaded: MasterSOPItem[] = metaRecord.meta.sops;
+        const missing = DEFAULT_MASTER_SOPS.filter(def => !loaded.some(item => item.id === def.id || item.code === def.code));
+        sopMemoryCache = [...loaded, ...missing];
+        return sopMemoryCache;
       }
     } catch (e) {
       console.warn('Failed to load master SOPs from Supabase meta, using defaults', e);

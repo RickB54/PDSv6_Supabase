@@ -17,6 +17,7 @@ import { toast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/auth';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface CaddyHistoryEntry {
@@ -101,6 +102,14 @@ export function StaticCaddyWorksheetModal({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const currentUser = getCurrentUser();
+    const isEmployeeView = currentUser?.role === 'employee' || 
+      localStorage.getItem('view_as_mode') === 'employee' || 
+      localStorage.getItem('perspective_mode') === 'employee' || 
+      localStorage.getItem('pds_user_role') === 'employee' ||
+      window.location.pathname.startsWith('/dashboard/employee');
+    const isReadOnly = isEmployeeView;
+
     const [data, setData] = useState<CaddyData>(DEFAULT_DATA);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -682,14 +691,14 @@ export function StaticCaddyWorksheetModal({
                                     <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
                                         <button 
                                             onClick={() => moveSlot(caddy, idx, 'up')}
-                                            disabled={idx === 0}
+                                            disabled={isReadOnly || idx === 0}
                                             className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
                                         >
                                             <ChevronUp className="w-3 h-3" />
                                         </button>
                                         <button 
                                             onClick={() => moveSlot(caddy, idx, 'down')}
-                                            disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
+                                            disabled={isReadOnly || idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
                                             className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
                                         >
                                             <ChevronDown className="w-3 h-3" />
@@ -700,8 +709,9 @@ export function StaticCaddyWorksheetModal({
                                 <div className="flex-[5] min-w-0 px-1">
                                     <Input
                                         value={item.name}
+                                        readOnly={isReadOnly}
                                         onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
-                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
+                                        className={`h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm ${isReadOnly ? 'cursor-not-allowed opacity-90' : ''}`}
                                         placeholder={isChem ? "Chemical Name" : "Item Name"}
                                     />
                                 </div>
@@ -709,20 +719,22 @@ export function StaticCaddyWorksheetModal({
                                     <Input
                                         value={item.ratio}
                                         maxLength={6}
+                                        readOnly={isReadOnly}
                                         onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
-                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full px-1 text-center text-xs font-semibold shadow-sm"
+                                        className={`h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full px-1 text-center text-xs font-semibold shadow-sm ${isReadOnly ? 'cursor-not-allowed opacity-90' : ''}`}
                                         placeholder="Ratio"
                                     />
                                 </div>
                                 <div className="flex-[3.5] min-w-0 px-1">
                                     <Input
                                         value={item.purpose}
+                                        readOnly={isReadOnly}
                                         onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
-                                        className="h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm"
+                                        className={`h-8 bg-zinc-900/50 border-zinc-700/50 text-white w-full min-w-0 px-1.5 text-xs shadow-sm ${isReadOnly ? 'cursor-not-allowed opacity-90' : ''}`}
                                         placeholder="Purpose"
                                     />
                                 </div>
-                                {!isBase && (
+                                {!isBase && !isReadOnly && (
                                     <div className="w-6 shrink-0 flex items-center justify-center">
                                         <button
                                             onClick={() => handleDeleteSlot(caddy, idx)}
@@ -740,9 +752,10 @@ export function StaticCaddyWorksheetModal({
                                     <span className="text-[10px] font-semibold text-fuchsia-400 shrink-0">Desc:</span>
                                     <Input
                                         value={item.description || ''}
+                                        readOnly={isReadOnly}
                                         onChange={(e) => updateSlot(caddy, idx, 'description', e.target.value)}
                                         placeholder="Description (clay bars, pads, brushes, left/right side details...)"
-                                        className="h-7 text-xs bg-zinc-900/80 border-zinc-700/60 text-zinc-200 w-full"
+                                        className={`h-7 text-xs bg-zinc-900/80 border-zinc-700/60 text-zinc-200 w-full ${isReadOnly ? 'cursor-not-allowed opacity-90' : ''}`}
                                     />
                                 </div>
                             )}
@@ -781,14 +794,14 @@ export function StaticCaddyWorksheetModal({
                                         <div className="flex flex-col gap-0.5 bg-zinc-900/80 p-0.5 rounded border border-zinc-700/50 shrink-0">
                                             <button 
                                                 onClick={() => moveSlot(caddy, idx, 'up')}
-                                                disabled={idx === 0}
+                                                disabled={isReadOnly || idx === 0}
                                                 className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
                                             >
                                                 <ChevronUp className="w-3.5 h-3.5" />
                                             </button>
                                             <button 
                                                 onClick={() => moveSlot(caddy, idx, 'down')}
-                                                disabled={idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
+                                                disabled={isReadOnly || idx === (showExtraSlots ? (caddy === 'interior' || caddy === 'exterior' ? data[caddy as 'interior'|'exterior'].length : data.custom_caddies.find(c=>c.id===caddy)?.slots.length || 0) - 1 : 7)}
                                                 className="text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-sm disabled:opacity-20 disabled:hover:bg-transparent transition-all"
                                             >
                                                 <ChevronDown className="w-3.5 h-3.5" />
@@ -799,8 +812,9 @@ export function StaticCaddyWorksheetModal({
                                     <div className="flex-[5] min-w-0 px-2">
                                         <Input
                                             value={item.name}
+                                            readOnly={isReadOnly}
                                             onChange={(e) => updateSlot(caddy, idx, 'name', e.target.value)}
-                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm text-sm"
+                                            className={`h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm text-sm ${isReadOnly ? 'cursor-not-allowed opacity-90 focus:ring-0 focus:border-zinc-800' : ''}`}
                                             placeholder={isChem ? "Chemical Name (e.g. Pink Perfection)" : "Item Name (e.g. Clay Bar / Microfiber)"}
                                         />
                                     </div>
@@ -808,20 +822,22 @@ export function StaticCaddyWorksheetModal({
                                         <Input
                                             value={item.ratio}
                                             maxLength={6}
+                                            readOnly={isReadOnly}
                                             onChange={(e) => updateSlot(caddy, idx, 'ratio', e.target.value)}
-                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full text-center font-semibold shadow-sm text-sm"
+                                            className={`h-9 bg-zinc-900/50 border-zinc-800 text-white w-full text-center font-semibold shadow-sm text-sm ${isReadOnly ? 'cursor-not-allowed opacity-90 focus:ring-0 focus:border-zinc-800' : ''}`}
                                             placeholder="Ratio"
                                         />
                                     </div>
                                     <div className="flex-[4] min-w-0 px-2">
                                         <Input
                                             value={item.purpose}
+                                            readOnly={isReadOnly}
                                             onChange={(e) => updateSlot(caddy, idx, 'purpose', e.target.value)}
-                                            className="h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm text-sm"
+                                            className={`h-9 bg-zinc-900/50 border-zinc-800 text-white w-full shadow-sm text-sm ${isReadOnly ? 'cursor-not-allowed opacity-90 focus:ring-0 focus:border-zinc-800' : ''}`}
                                             placeholder="Purpose"
                                         />
                                     </div>
-                                    {!isBase && (
+                                    {!isBase && !isReadOnly && (
                                         <div className="w-10 shrink-0 flex items-center justify-center">
                                             <button
                                                 onClick={() => handleDeleteSlot(caddy, idx)}
@@ -839,9 +855,10 @@ export function StaticCaddyWorksheetModal({
                                         <span className="text-xs font-semibold text-fuchsia-400 shrink-0">Description:</span>
                                         <Input
                                             value={item.description || ''}
+                                            readOnly={isReadOnly}
                                             onChange={(e) => updateSlot(caddy, idx, 'description', e.target.value)}
                                             placeholder="Description (e.g. clay bars, pads, brushes, left side/right side details...)"
-                                            className="h-8 text-xs bg-zinc-900/80 border-zinc-700/60 text-zinc-200 w-full"
+                                            className={`h-8 text-xs bg-zinc-900/80 border-zinc-700/60 text-zinc-200 w-full ${isReadOnly ? 'cursor-not-allowed opacity-90' : ''}`}
                                         />
                                     </div>
                                 )}
@@ -1007,14 +1024,16 @@ export function StaticCaddyWorksheetModal({
                                         <HistoryIcon className="w-4 h-4" />
                                     </Button>
                                     
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setShowManageCaddies(true)}
-                                        title="Caddy Settings"
-                                        className="h-9 w-9 p-0 border-zinc-700 flex items-center justify-center shrink-0 bg-zinc-900 text-zinc-400 hover:text-white"
-                                    >
-                                        <Settings2 className="h-4 w-4" />
-                                    </Button>
+                                    {!isReadOnly && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setShowManageCaddies(true)}
+                                            title="Caddy Settings"
+                                            className="h-9 w-9 p-0 border-zinc-700 flex items-center justify-center shrink-0 bg-zinc-900 text-zinc-400 hover:text-white"
+                                        >
+                                            <Settings2 className="h-4 w-4" />
+                                        </Button>
+                                    )}
 
                                     {/* Icon-Only Double Arrow Expand/Collapse All Button (Exact 36px x 36px size) */}
                                     <Button
@@ -1040,13 +1059,15 @@ export function StaticCaddyWorksheetModal({
                                         <span className="text-xs font-bold hidden sm:inline">Print Selected ({pdfSelection.length})</span>
                                     </Button>
                                     
-                                    <Button onClick={handleSave}
-                                        disabled={isSaving}
-                                        title="Save"
-                                        className="h-9 w-9 p-0 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center shrink-0"
-                                    >
-                                        <Save className="w-4 h-4" />
-                                    </Button>
+                                    {!isReadOnly && (
+                                        <Button onClick={handleSave}
+                                            disabled={isSaving}
+                                            title="Save"
+                                            className="h-9 w-9 p-0 bg-green-600 hover:bg-green-500 text-white flex items-center justify-center shrink-0"
+                                        >
+                                            <Save className="w-4 h-4" />
+                                        </Button>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -1054,6 +1075,12 @@ export function StaticCaddyWorksheetModal({
                 </DialogHeader>
 
                 <div className="p-6 overflow-y-auto">
+                    {isReadOnly && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 px-3.5 py-2.5 rounded-lg text-xs font-semibold mb-4 flex items-center gap-2">
+                            <span className="text-amber-400 text-sm">🔒</span>
+                            <span>View-Only Mode — Employee account detected. Editing chemical caddies is restricted.</span>
+                        </div>
+                    )}
                     {showManageCaddies ? (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between border-b border-fuchsia-500/20 pb-2">

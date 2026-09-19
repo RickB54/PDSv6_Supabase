@@ -99,7 +99,7 @@ export const CRMSOPModal: React.FC<CRMSOPModalProps> = ({ open, onOpenChange }) 
         </div>
 
         {/* Document Content Scroll View */}
-        <ScrollArea className="flex-1 p-4 md:p-8 bg-zinc-950 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-zinc-950 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900">
           <div className="max-w-4xl mx-auto space-y-8 pb-8">
 
             {/* PAGE 1 */}
@@ -392,7 +392,7 @@ export const CRMSOPModal: React.FC<CRMSOPModalProps> = ({ open, onOpenChange }) 
             )}
 
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

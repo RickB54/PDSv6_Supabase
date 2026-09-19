@@ -119,7 +119,7 @@ export const WaterSpotRemovalGuideModal: React.FC<WaterSpotRemovalGuideModalProp
         </div>
 
         {/* Content Body */}
-        <ScrollArea className="flex-1 p-4 md:p-8 bg-zinc-950">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-zinc-950 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900">
           <div className="max-w-4xl mx-auto space-y-8 text-zinc-300 text-sm leading-relaxed pb-12">
             
             {/* Banner & Core Principle */}
@@ -238,7 +238,7 @@ export const WaterSpotRemovalGuideModal: React.FC<WaterSpotRemovalGuideModalProp
             )}
 
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

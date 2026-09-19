@@ -1563,93 +1563,99 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                 {/* Section Divider */}
                                 <div className="my-8 border-t border-zinc-800" />
 
-                                {/* Section 3: Paint Correction Process */}
-                                <div className="space-y-4">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
-                                        <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2">
-                                            Section 3 — Paint Correction Process
-                                        </h3>
-                                        <Badge variant="outline" className="border-amber-500/30 text-amber-300 bg-amber-950/40 self-start sm:self-auto">
-                                            {masterSOPs.filter(s => s.category === 'paint_correction').length || 10}-Step Standard Procedure
-                                        </Badge>
-                                    </div>
-
-                                    <Accordion type="single" collapsible className="w-full space-y-2">
-                                        {masterSOPs.filter(s => s.category === 'paint_correction').map((item) => (
-                                            <AccordionItem key={item.id} value={item.id} className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
-                                                <AccordionTrigger className="hover:no-underline py-3 text-left">
-                                                    <div className="flex items-center justify-between w-full pr-4">
-                                                        <span className="font-semibold text-zinc-200 flex items-center gap-2">
-                                                            <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs flex items-center justify-center font-bold shrink-0">{item.stepNumber}</span>
-                                                            Step {item.stepNumber} — {item.title}
-                                                        </span>
-                                                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                                            {isAdmin && (
-                                                                <Button 
-                                                                    size="sm" 
-                                                                    variant="ghost" 
-                                                                    className="h-7 px-2 text-[11px] font-bold text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 rounded-md"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSopEditingItem(item);
-                                                                        setSopDefaultCategory('paint_correction');
-                                                                        setSopModalOpen(true);
-                                                                    }}
-                                                                >
-                                                                    <Pencil className="h-3 w-3 mr-1" /> Edit Step
-                                                                </Button>
-                                                            )}
-                                                            <SOPTooltip sopIdOrCode={item.id} variant="icon" />
-                                                        </div>
-                                                    </div>
-                                                </AccordionTrigger>
-                                                <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3 space-y-2">
-                                                    {item.shortSummary && (
-                                                        <p className="text-xs text-zinc-400 italic">"{item.shortSummary}"</p>
-                                                    )}
-                                                    <p>{item.detailedInstructions}</p>
-                                                    {item.ricksTips && (
-                                                        <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 mt-2 flex items-start gap-1.5">
-                                                            <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                                                            <div>
-                                                                <strong className="text-amber-400 uppercase text-[10px] block">Rick's Tip:</strong>
-                                                                {item.ricksTips}
+                                {/* Section 3: Paint Correction Process (Collapsed Accordion) */}
+                                <Accordion type="single" collapsible className="w-full">
+                                    <AccordionItem value="section-3-paint-correction" className="border border-amber-500/30 bg-amber-950/20 rounded-xl px-4 overflow-hidden">
+                                        <AccordionTrigger className="hover:no-underline py-4 text-left">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full pr-4">
+                                                <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2">
+                                                    <Sparkles className="w-5 h-5 text-amber-400 shrink-0" />
+                                                    Section 3 — Paint Correction Process
+                                                </h3>
+                                                <Badge variant="outline" className="border-amber-500/40 text-amber-300 bg-amber-950/60 self-start sm:self-auto font-bold text-xs">
+                                                    {masterSOPs.filter(s => s.category === 'paint_correction').length || 10}-Step Standard Procedure (Collapsed SOP)
+                                                </Badge>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="pt-3 pb-4 space-y-4 border-t border-amber-500/20">
+                                            <Accordion type="single" collapsible className="w-full space-y-2">
+                                                {masterSOPs.filter(s => s.category === 'paint_correction').map((item) => (
+                                                    <AccordionItem key={item.id} value={item.id} className="border border-zinc-800 bg-zinc-950 rounded-lg px-4 overflow-hidden">
+                                                        <AccordionTrigger className="hover:no-underline py-3 text-left">
+                                                            <div className="flex items-center justify-between w-full pr-4">
+                                                                <span className="font-semibold text-zinc-200 flex items-center gap-2">
+                                                                    <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs flex items-center justify-center font-bold shrink-0">{item.stepNumber}</span>
+                                                                    Step {item.stepNumber} — {item.title}
+                                                                </span>
+                                                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                                    {isAdmin && (
+                                                                        <Button 
+                                                                            size="sm" 
+                                                                            variant="ghost" 
+                                                                            className="h-7 px-2 text-[11px] font-bold text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/30 rounded-md"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setSopEditingItem(item);
+                                                                                setSopDefaultCategory('paint_correction');
+                                                                                setSopModalOpen(true);
+                                                                            }}
+                                                                        >
+                                                                            <Pencil className="h-3 w-3 mr-1" /> Edit Step
+                                                                        </Button>
+                                                                    )}
+                                                                    <SOPTooltip sopIdOrCode={item.id} variant="icon" />
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    )}
-                                                    {item.dilutionRatio && item.dilutionRatio !== 'N/A' && (
-                                                        <div className="text-xs text-emerald-400 font-semibold mt-2 flex items-center gap-1">
-                                                            <Beaker className="h-3.5 w-3.5" />
-                                                            <span>Ratio: {item.dilutionRatio}</span>
-                                                        </div>
-                                                    )}
-                                                    {item.tools && item.tools.length > 0 && (
-                                                        <div className="text-xs text-blue-400 font-semibold flex items-center gap-1">
-                                                            <Wrench className="h-3.5 w-3.5" />
-                                                            <span>Tools: {item.tools.join(', ')}</span>
-                                                        </div>
-                                                    )}
-                                                    {isAdmin && (
-                                                        <div className="pt-2 flex items-center justify-end border-t border-zinc-900/80 mt-3">
-                                                            <Button 
-                                                                size="sm" 
-                                                                variant="outline" 
-                                                                className="h-7 px-2.5 text-[11px] font-bold text-purple-400 border-purple-500/30 hover:bg-purple-500/10"
-                                                                onClick={() => {
-                                                                    setSopEditingItem(item);
-                                                                    setSopDefaultCategory('paint_correction');
-                                                                    setSopModalOpen(true);
-                                                                }}
-                                                            >
-                                                                <Pencil className="h-3 w-3 mr-1" /> Edit Step Details
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                </AccordionContent>
-                                            </AccordionItem>
-                                        ))}
-                                    </Accordion>
-                                </div>
+                                                        </AccordionTrigger>
+                                                        <AccordionContent className="text-zinc-300 text-sm pb-4 leading-relaxed border-t border-zinc-900 pt-3 space-y-2">
+                                                            {item.shortSummary && (
+                                                                <p className="text-xs text-zinc-400 italic">"{item.shortSummary}"</p>
+                                                            )}
+                                                            <p>{item.detailedInstructions}</p>
+                                                            {item.ricksTips && (
+                                                                <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg text-xs text-amber-200 mt-2 flex items-start gap-1.5">
+                                                                    <Lightbulb className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                                                                    <div>
+                                                                        <strong className="text-amber-400 uppercase text-[10px] block">Rick's Tip:</strong>
+                                                                        {item.ricksTips}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {item.dilutionRatio && item.dilutionRatio !== 'N/A' && (
+                                                                <div className="text-xs text-emerald-400 font-semibold mt-2 flex items-center gap-1">
+                                                                    <Beaker className="h-3.5 w-3.5" />
+                                                                    <span>Ratio: {item.dilutionRatio}</span>
+                                                                </div>
+                                                            )}
+                                                            {item.tools && item.tools.length > 0 && (
+                                                                <div className="text-xs text-blue-400 font-semibold flex items-center gap-1">
+                                                                    <Wrench className="h-3.5 w-3.5" />
+                                                                    <span>Tools: {item.tools.join(', ')}</span>
+                                                                </div>
+                                                            )}
+                                                            {isAdmin && (
+                                                                <div className="pt-2 flex items-center justify-end border-t border-zinc-900/80 mt-3">
+                                                                    <Button 
+                                                                        size="sm" 
+                                                                        variant="outline" 
+                                                                        className="h-7 px-2.5 text-[11px] font-bold text-purple-400 border-purple-500/30 hover:bg-purple-500/10"
+                                                                        onClick={() => {
+                                                                            setSopEditingItem(item);
+                                                                            setSopDefaultCategory('paint_correction');
+                                                                            setSopModalOpen(true);
+                                                                        }}
+                                                                    >
+                                                                        <Pencil className="h-3 w-3 mr-1" /> Edit Step Details
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+                                                        </AccordionContent>
+                                                    </AccordionItem>
+                                                ))}
+                                            </Accordion>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                </Accordion>
 
                                 <SOPEditModal
                                     open={sopModalOpen}

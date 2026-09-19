@@ -153,14 +153,6 @@ export const getMenuGroups = (counts: {
             ]
         },
         {
-            title: "Label System", icon: Tag, iconColor: "text-rose-400",
-            items: [
-                { title: "Chemical Labels", url: "/chemicals?labels=open", key: "chemical-labels", icon: Tag, helpTopicId: 'chemical-cards' },
-                { title: "Mixed Labels", url: "/chemicals?mixed=open", key: "mixed-labels", icon: FlaskConical, helpTopicId: 'chemical-cards' },
-                { title: "PDF All Cards", url: "/chemicals?pdf=all", key: "pdf-all-cards", icon: Printer, helpTopicId: 'chemical-cards' },
-            ]
-        },
-        {
             title: "Inventory & Assets", icon: Package, iconColor: "text-cyan-400",
             items: [
                 { title: "Inventory Control", url: "/inventory-control", role: "admin", key: "inventory-control", badge: counts.inventoryCount, badgeColor: counts.inventoryCount > 0 ? 'red' : 'blue', icon: Package, helpTopicId: 'inventory-control' },
