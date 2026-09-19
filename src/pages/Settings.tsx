@@ -115,7 +115,7 @@ const Settings = () => {
   const [nukeError, setNukeError] = useState<string | null>(null);
   const [wipeResult, setWipeResult] = useState<{ msg: string; details: string | null } | null>(null);
 
-  const [hideChatBot, setHideChatBot] = useState(() => localStorage.getItem('hide_chat_bot') === 'true');
+  const [showChatBot, setShowChatBot] = useState(() => localStorage.getItem('hide_chat_bot') !== 'true');
   const [cbAnim, setCbAnim] = useState(() => localStorage.getItem('sticky_notes_anim') !== 'false');
   const [cbMasonry, setCbMasonry] = useState(() => localStorage.getItem('sticky_notes_masonry') === 'true');
   const [cbTags, setCbTags] = useState(() => localStorage.getItem('sticky_notes_tags') !== 'false');
@@ -123,10 +123,15 @@ const Settings = () => {
 
   useEffect(() => {
     const handleUpdate = () => {
-      setHideChatBot(localStorage.getItem('hide_chat_bot') === 'true');
+      setShowChatBot(localStorage.getItem('hide_chat_bot') !== 'true');
+      setShowScrollToTop(localStorage.getItem('pds_show_scroll_to_top') !== 'false');
     };
     window.addEventListener('hide-chat-bot-updated', handleUpdate);
-    return () => window.removeEventListener('hide-chat-bot-updated', handleUpdate);
+    window.addEventListener('pds-settings-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('hide-chat-bot-updated', handleUpdate);
+      window.removeEventListener('pds-settings-updated', handleUpdate);
+    };
   }, []);
 
   // Supabase diagnostics block state
@@ -766,20 +771,20 @@ const Settings = () => {
                   <MessageCircle className="w-5 h-5 text-blue-400" />
                 </div>
                 <div>
-                  <Label htmlFor="hide-chat-bot" className="text-white font-semibold cursor-pointer">Hide AI Chat Bot</Label>
-                  <p className="text-[10px] text-zinc-500">Globally hide the floating chat assistant button</p>
+                  <Label htmlFor="show-chat-bot" className="text-white font-semibold cursor-pointer">AI Chat Bot Assistant</Label>
+                  <p className="text-[10px] text-zinc-500">Show the floating chat assistant button</p>
                 </div>
               </div>
               <Switch 
-                id="hide-chat-bot"
-                checked={hideChatBot}
+                id="show-chat-bot"
+                checked={showChatBot}
                 onCheckedChange={(val) => {
-                  setHideChatBot(val);
-                  localStorage.setItem('hide_chat_bot', String(val));
+                  setShowChatBot(val);
+                  localStorage.setItem('hide_chat_bot', String(!val));
                   window.dispatchEvent(new CustomEvent('hide-chat-bot-updated'));
                   toast({
-                    title: val ? "Chat Bot Hidden" : "Chat Bot Restored",
-                    description: val ? "The AI assistant button has been removed from view." : "The AI assistant button is now visible.",
+                    title: val ? "Chat Bot Restored" : "Chat Bot Hidden",
+                    description: val ? "The AI assistant button is now visible." : "The AI assistant button has been removed from view.",
                   });
                 }}
                 className="data-[state=checked]:bg-blue-600"
@@ -803,6 +808,10 @@ const Settings = () => {
                   setShowScrollToTop(val);
                   localStorage.setItem('pds_show_scroll_to_top', String(val));
                   window.dispatchEvent(new Event('pds-settings-updated'));
+                  toast({
+                    title: val ? "Scroll-To-Top Enabled" : "Scroll-To-Top Disabled",
+                    description: val ? "The floating go-to-top up arrow is now visible." : "The floating go-to-top button has been hidden.",
+                  });
                 }}
                 className="data-[state=checked]:bg-blue-600"
               />
