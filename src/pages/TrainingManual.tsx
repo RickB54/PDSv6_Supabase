@@ -1233,47 +1233,130 @@ export const TrainingManual = ({ mode = "default" }: TrainingManualProps) => {
                                             <p className="text-xs text-zinc-400">View complete PDF reference documents for CRM intake, paint correction, headlight restoration & water spot removal.</p>
                                         </div>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-2 shrink-0">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setCrmSopOpen(true)}
-                                            className="bg-indigo-950/50 border-indigo-500/40 text-indigo-300 hover:bg-indigo-900/60 font-semibold text-xs h-9 shadow-sm"
-                                        >
-                                            <FileText className="w-4 h-4 mr-1.5 text-indigo-400" /> CRM SOP (v3 PDF)
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setPaintGuideOpen(true)}
-                                            className="bg-cyan-950/50 border-cyan-500/40 text-cyan-300 hover:bg-cyan-900/60 font-semibold text-xs h-9 shadow-sm"
-                                        >
-                                            <ShieldCheck className="w-4 h-4 mr-1.5 text-cyan-400" /> Paint Protection Guide (PDF)
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setPaintCorrectionGuideOpen(true)}
-                                            className="bg-amber-950/50 border-amber-500/40 text-amber-300 hover:bg-amber-900/60 font-semibold text-xs h-9 shadow-sm"
-                                        >
-                                            <Sparkles className="w-4 h-4 mr-1.5 text-amber-400" /> Paint Correction Guide (PDF)
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setHeadlightGuideOpen(true)}
-                                            className="bg-yellow-950/50 border-yellow-500/40 text-yellow-300 hover:bg-yellow-900/60 font-semibold text-xs h-9 shadow-sm"
-                                        >
-                                            <Wrench className="w-4 h-4 mr-1.5 text-yellow-400" /> Headlight Restoration Guide (PDF)
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setWaterSpotGuideOpen(true)}
-                                            className="bg-blue-950/50 border-blue-500/40 text-blue-300 hover:bg-blue-900/60 font-semibold text-xs h-9 shadow-sm"
-                                        >
-                                            <Droplets className="w-4 h-4 mr-1.5 text-blue-400" /> Water Spot Removal Guide (PDF)
-                                        </Button>
+                                    <div className="flex flex-wrap items-center gap-3 shrink-0">
+                                        {/* CRM SOP */}
+                                        <div className="flex items-center gap-1 bg-indigo-950/40 p-1 rounded-lg border border-indigo-500/30">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setCrmSopOpen(true)}
+                                                className="text-indigo-300 hover:bg-indigo-900/50 font-semibold text-xs h-8 px-2.5"
+                                            >
+                                                <FileText className="w-4 h-4 mr-1.5 text-indigo-400" /> CRM SOP
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const link = document.createElement('a');
+                                                    link.href = '/sop-guides/Prime_Auto_Detail_CRM_Standard_Operating_Procedures.pdf';
+                                                    link.download = 'Prime_Auto_Detail_CRM_Standard_Operating_Procedures.pdf';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }}
+                                                className="bg-indigo-900/60 border-indigo-500/50 text-indigo-200 hover:bg-indigo-800 text-[11px] h-8 px-2 font-bold"
+                                                title="Download PDF directly"
+                                            >
+                                                <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
+                                            </Button>
+                                        </div>
+
+                                        {/* Paint Protection Guide */}
+                                        <div className="flex items-center gap-1 bg-cyan-950/40 p-1 rounded-lg border border-cyan-500/30">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setPaintGuideOpen(true)}
+                                                className="text-cyan-300 hover:bg-cyan-900/50 font-semibold text-xs h-8 px-2.5"
+                                            >
+                                                <ShieldCheck className="w-4 h-4 mr-1.5 text-cyan-400" /> Paint Protection Guide
+                                            </Button>
+                                        </div>
+
+                                        {/* Paint Correction Guide */}
+                                        <div className="flex items-center gap-1 bg-amber-950/40 p-1 rounded-lg border border-amber-500/30">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setPaintCorrectionGuideOpen(true)}
+                                                className="text-amber-300 hover:bg-amber-900/50 font-semibold text-xs h-8 px-2.5"
+                                            >
+                                                <Sparkles className="w-4 h-4 mr-1.5 text-amber-400" /> Paint Correction Guide
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const link = document.createElement('a');
+                                                    link.href = '/sop-guides/Prime_Auto_Detail_Paint_Correction_Employee_Training_Guide.pdf';
+                                                    link.download = 'Prime_Auto_Detail_Paint_Correction_Employee_Training_Guide.pdf';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }}
+                                                className="bg-amber-900/60 border-amber-500/50 text-amber-200 hover:bg-amber-800 text-[11px] h-8 px-2 font-bold"
+                                                title="Download PDF directly"
+                                            >
+                                                <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
+                                            </Button>
+                                        </div>
+
+                                        {/* Headlight Restoration Guide */}
+                                        <div className="flex items-center gap-1 bg-yellow-950/40 p-1 rounded-lg border border-yellow-500/30">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setHeadlightGuideOpen(true)}
+                                                className="text-yellow-300 hover:bg-yellow-900/50 font-semibold text-xs h-8 px-2.5"
+                                            >
+                                                <Wrench className="w-4 h-4 mr-1.5 text-yellow-400" /> Headlight Restoration Guide
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const link = document.createElement('a');
+                                                    link.href = '/sop-guides/Prime_Auto_Detail_Headlight_Restoration_Employee_Training_Guide.pdf';
+                                                    link.download = 'Prime_Auto_Detail_Headlight_Restoration_Employee_Training_Guide.pdf';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }}
+                                                className="bg-yellow-900/60 border-yellow-500/50 text-yellow-200 hover:bg-yellow-800 text-[11px] h-8 px-2 font-bold"
+                                                title="Download PDF directly"
+                                            >
+                                                <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
+                                            </Button>
+                                        </div>
+
+                                        {/* Water Spot Removal Guide */}
+                                        <div className="flex items-center gap-1 bg-blue-950/40 p-1 rounded-lg border border-blue-500/30">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => setWaterSpotGuideOpen(true)}
+                                                className="text-blue-300 hover:bg-blue-900/50 font-semibold text-xs h-8 px-2.5"
+                                            >
+                                                <Droplets className="w-4 h-4 mr-1.5 text-blue-400" /> Water Spot Removal Guide
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const link = document.createElement('a');
+                                                    link.href = '/sop-guides/Prime_Auto_Detail_Water_Spot_Removal_Employee_Training_Guide.pdf';
+                                                    link.download = 'Prime_Auto_Detail_Water_Spot_Removal_Employee_Training_Guide.pdf';
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    document.body.removeChild(link);
+                                                }}
+                                                className="bg-blue-900/60 border-blue-500/50 text-blue-200 hover:bg-blue-800 text-[11px] h-8 px-2 font-bold"
+                                                title="Download PDF directly"
+                                            >
+                                                <Download className="w-3.5 h-3.5 mr-1" /> Download PDF
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
 
