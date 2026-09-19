@@ -432,7 +432,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       if (statusFilter) {
         customerEvents = customerEvents.filter(e => {
           const st = (e as any).status || (e.type === 'manual-block' ? 'blocked' : 'pending');
-          if (statusFilter === 'cancelled' || statusFilter === 'canceled') {
+          if (statusFilter === 'cancelled' || (statusFilter as string) === 'canceled') {
             return st === 'cancelled' || st === 'canceled';
           }
           return st === statusFilter;

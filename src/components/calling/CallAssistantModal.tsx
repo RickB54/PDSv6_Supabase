@@ -754,11 +754,11 @@ This estimate is based on the caller's selection: ${selectedScenario.label} with
             const scenario = v.scenarios.find(s => s.id === v.selectedScenarioId);
             summary += `\n🚘 Vehicle ${idx + 1}: ${v.year || ''} ${v.make || ''} ${v.model || ''} [Category: ${v.type.toUpperCase()}]\n`;
             if (scenario) {
-                summary += `Package Selected: ${scenario.packageName || 'Custom'}\n`;
+                summary += `Package Selected: ${(scenario as any).packageName || 'Custom'}\n`;
                 if (scenario.addOnIds && scenario.addOnIds.length > 0) {
                     summary += `Add-ons: ${scenario.addOnIds.join(', ')}\n`;
                 }
-                summary += `Estimated Quote: $${scenario.price || 0}\n`;
+                summary += `Estimated Quote: $${(scenario as any).price || 0}\n`;
             }
             if (v.notes) summary += `Vehicle Notes: ${v.notes}\n`;
         });
@@ -802,7 +802,7 @@ This estimate is based on the caller's selection: ${selectedScenario.label} with
                     dateStyle: "medium",
                     timeStyle: "short"
                 });
-                const accountType = "prospect";
+                const accountType: string = "prospect";
                 const customerData = {
                     id: callerPhone ? `cust_${callerPhone.replace(/\D/g, '')}` : `cust_${Date.now()}`,
                     name: callerName,

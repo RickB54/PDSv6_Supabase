@@ -102,22 +102,6 @@ const BookNow = () => {
   const isAdmin = user?.role === 'admin' || user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
   const isRickAdmin = user?.email === 'rberube54@gmail.com' || user?.email === 'Rick.PrimeAutoDetail@gmail.com';
 
-  // Abandoned draft capture — fires on blur / 2.5 s debounce, never per-keystroke
-  const { onContactBlur, markConverted } = useDraftSaver(
-    { name: formData.name, email: formData.email, phone: formData.phone, address: formData.address, make: formData.make, model: formData.model, year: formData.year, color: formData.color, package: formData.package },
-    addOns,
-    vehicleType,
-    date,
-    isSubmitting,
-    testModeActive
-  );
-
-  // Coupon states
-  const [couponCode, setCouponCode] = useState('');
-  const [matchedCoupon, setMatchedCoupon] = useState<any | null>(null);
-  const [couponError, setCouponError] = useState<string>('');
-  const [showCouponField, setShowCouponField] = useState(false);
-
   // Date/Time states
   const [date, setDate] = useState<Date | undefined>(() => {
     if (!urlDateStr) return undefined;
@@ -138,6 +122,22 @@ const BookNow = () => {
     return '';
   });
   const [isEditingDate, setIsEditingDate] = useState(!date || !selectedTime);
+
+  // Abandoned draft capture — fires on blur / 2.5 s debounce, never per-keystroke
+  const { onContactBlur, markConverted } = useDraftSaver(
+    { name: formData.name, email: formData.email, phone: formData.phone, address: formData.address, make: formData.make, model: formData.model, year: formData.year, color: formData.color, package: formData.package },
+    addOns,
+    vehicleType,
+    date,
+    isSubmitting,
+    testModeActive
+  );
+
+  // Coupon states
+  const [couponCode, setCouponCode] = useState('');
+  const [matchedCoupon, setMatchedCoupon] = useState<any | null>(null);
+  const [couponError, setCouponError] = useState<string>('');
+  const [showCouponField, setShowCouponField] = useState(false);
 
   // 2. Specialized Logic Functions
   const fillTestData = () => {

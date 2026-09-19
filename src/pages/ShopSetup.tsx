@@ -1119,9 +1119,9 @@ const ShopSetup = () => {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             loading="lazy"
                           />
-                        ) : doc.thumbnail_url ? (
+                        ) : (doc as any).thumbnail_url ? (
                           <img
-                            src={doc.thumbnail_url}
+                            src={(doc as any).thumbnail_url}
                             alt={doc.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             loading="lazy"

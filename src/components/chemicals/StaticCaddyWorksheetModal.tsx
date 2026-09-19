@@ -392,9 +392,9 @@ export function StaticCaddyWorksheetModal({
             colorClass: 'text-fuchsia-400',
             visible: true,
             collapsed: true,
-            slots: Array(8).fill(null).map((_, i) => ({ slot: i + 1, name: '', ratio: '', purpose: '', description: '' })).concat([
-                { slot: 'Extra 1', name: '', ratio: '', purpose: '', description: '' },
-                { slot: 'Extra 2', name: '', ratio: '', purpose: '', description: '' }
+            slots: Array(8).fill(null).map((_, i) => ({ slot: (i + 1) as any, name: '', ratio: '', purpose: '', description: '' })).concat([
+                { slot: 'Extra 1' as any, name: '', ratio: '', purpose: '', description: '' },
+                { slot: 'Extra 2' as any, name: '', ratio: '', purpose: '', description: '' }
             ])
         });
         setData(newData);
