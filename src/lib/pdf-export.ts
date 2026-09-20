@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { servicePackages, addOns, getServicePrice, getAddOnPrice, getCanonicalAddonName, type VehicleType } from './services';
+import { calculateBookingPricing } from './discountUtils';
 
 const mapToServiceVehicleType = (type: string = ""): VehicleType => {
   const t = type.toLowerCase();
@@ -242,12 +243,16 @@ export const exportCustomerHistoryPDF = async (data: DetailedHistoryData, previe
       }).join('\n');
     }
 
+    const bSubtotal = Number(b.price || b.service_price || 0);
+    const bDiscAmt = Number(b.discountAmount || 0);
+    const bPricing = calculateBookingPricing(bSubtotal, bDiscAmt, 'dollar');
+
     ledger.push({
       date: b.date || b.created_at,
       src: 'BOOKING',
       act: b.service || 'Service',
       tech: `STATUS: ${b.status?.toUpperCase()}\nVEHICLE: ${b.vehicleYear || ''} ${b.vehicleMake || ''} ${b.vehicleModel || ''}\nBASE SERVICE: $${basePrice.toFixed(2)}\nADD-ONS: ${addonBreakdown.length > 0 ? addonBreakdown.join(', ') : 'None'}${rescheduleLines}`,
-      val: `$${(b.price || 0).toFixed(2)}`,
+      val: `$${bPricing.total.toFixed(2)}`,
       note: sanitize(b.notes)
     });
   });

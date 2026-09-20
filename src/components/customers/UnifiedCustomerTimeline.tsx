@@ -3,6 +3,7 @@ import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { Customer } from "@/lib/supa-data";
+import { calculateBookingPricing } from "@/lib/discountUtils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -391,7 +392,14 @@ export const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEm
                         </div>
                         <div className="bg-zinc-900/80 px-3 py-2 rounded-xl border border-zinc-800 text-[11px] text-zinc-400">
                           <div className="text-[9px] font-black uppercase tracking-widest text-zinc-600 mb-0.5">Monetary Value</div>
-                          <span className="text-emerald-500 font-black tracking-tight">${booking.price?.toFixed(2) || '0.00'}</span>
+                          {(() => {
+                            const subtotal = Number(booking.price || booking.service_price || 0);
+                            const discAmt = Number(booking.discountAmount || 0);
+                            const pricing = calculateBookingPricing(subtotal, discAmt, 'dollar');
+                            return (
+                              <span className="text-emerald-500 font-black tracking-tight">${pricing.total.toFixed(2)}</span>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>

@@ -74,6 +74,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { getCustomerDetailedHistory } from "@/lib/supa-data";
 import { exportCustomerHistoryPDF } from "@/lib/pdf-export";
+import { calculateBookingPricing } from "@/lib/discountUtils";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -204,7 +205,7 @@ export function CustomerIntelligence360Modal({ customers, trigger, inline = fals
           probonoPrimaryReason: b.probonoPrimaryReason || null,
           probonoReasons: b.probonoReasons || []
         },
-        value: b.price || 0,
+        value: calculateBookingPricing(Number(b.price || b.service_price || 0), Number(b.discountAmount || 0), 'dollar').total,
         status: b.status,
         raw: b
       });

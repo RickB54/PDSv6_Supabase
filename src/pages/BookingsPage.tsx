@@ -641,10 +641,18 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     const destFee = isShop ? 0 : Number(booking.destinationFee ?? booking.booking_vehicle?.destinationFee ?? 0);
     subtotal += destFee;
 
-    const discAmt = Number(booking.discountAmount || 0);
-    const pricing = calculateBookingPricing(subtotal, discAmt, 'dollar');
+    const discCode = booking.discountCode || booking.booking_vehicle?.discountCode;
+    const matchedC = discCode ? coupons.find(c => c.code.trim().toUpperCase() === discCode.trim().toUpperCase()) : null;
+    const discVal = matchedC 
+      ? (matchedC.percent || matchedC.amount || 0) 
+      : Number(booking.discountAmount || 0);
+    const discType = matchedC 
+      ? (matchedC.percent ? 'percent' : 'dollar') 
+      : 'dollar';
+
+    const pricing = calculateBookingPricing(subtotal, discVal, discType);
     return pricing.total;
-  }, [items, allServices, allAddons]);
+  }, [items, allServices, allAddons, coupons]);
 
   const handleArchiveToggle = (booking: Booking) => {
     update(booking.id, { isArchived: !booking.isArchived });
@@ -4694,8 +4702,25 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                                 const basePrice = svc ? getServicePrice(svc.id, vType) : 0;
                                                 const total = getEventPrice(event);
                                                 const bookingItem = items.find(i => i.id === event.id) || event;
-                                                const discCode = bookingItem.discountCode;
-                                                const discAmt = Number(bookingItem.discountAmount || 0);
+                                                const discCode = bookingItem.discountCode || bookingItem.booking_vehicle?.discountCode;
+                                                const matchedC = discCode ? coupons.find(c => c.code.trim().toUpperCase() === discCode.trim().toUpperCase()) : null;
+                                                const discVal = matchedC ? (matchedC.percent || matchedC.amount || 0) : Number(bookingItem.discountAmount || 0);
+                                                const discType = matchedC ? (matchedC.percent ? 'percent' : 'dollar') : 'dollar';
+                                                
+                                                let subtotal = svc ? getServicePrice(svc.id, vType) : Number(bookingItem.service_price || 0);
+                                                const addons = bookingItem.addons || bookingItem.add_ons || [];
+                                                const addonsArray = Array.isArray(addons) ? addons : (typeof addons === 'string' ? JSON.parse(addons) : []);
+                                                addonsArray.forEach((a: string) => {
+                                                  const canonical = getCanonicalAddonName(a);
+                                                  const addonDef = allAddons.find(ad => ad.name === canonical);
+                                                  if (addonDef) subtotal += getAddOnPrice(addonDef.id, vType);
+                                                });
+                                                const isShop = isShopPlaceOfService(bookingItem.placeOfService || bookingItem.booking_vehicle?.placeOfService);
+                                                const destFee = isShop ? 0 : Number(bookingItem.destinationFee ?? bookingItem.booking_vehicle?.destinationFee ?? 0);
+                                                subtotal += destFee;
+
+                                                const pricing = calculateBookingPricing(subtotal, discVal, discType);
+
                                                 return (
                                                   <div className="flex flex-wrap gap-1 items-center">
                                                     <Badge variant="outline" className="text-[10px] font-black uppercase text-green-400 bg-green-500/10 border-green-500/20 px-1.5 py-0 h-4">
@@ -4704,9 +4729,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                                     <Badge variant="outline" className="text-[10px] font-black uppercase text-zinc-400 bg-zinc-800/40 border-zinc-700/50 px-1.5 py-0 h-4">
                                                       Service: ${basePrice}
                                                     </Badge>
-                                                    {discAmt > 0 && (
+                                                    {pricing.discountAmount > 0 && (
                                                       <Badge variant="outline" className="text-[10px] font-black uppercase text-amber-400 bg-amber-500/10 border-amber-500/20 px-1.5 py-0 h-4">
-                                                        Discount: -${discAmt.toFixed(2)} {discCode ? `(${discCode})` : ''}
+                                                        Discount: -${pricing.discountAmount.toFixed(2)} {discCode ? `(${discCode})` : ''}
                                                       </Badge>
                                                     )}
                                                     {(bookingItem.probonoPrimaryReason || bookingItem.probonoReason) && (
