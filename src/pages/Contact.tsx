@@ -22,6 +22,7 @@ import { useDemoMode } from "@/contexts/DemoContext";
 import { useDraftSaver } from "@/hooks/useDraftSaver";
 import * as contactSvc from "@/services/supabase/contact";
 import { checkClientRateLimit } from "@/lib/rateLimit";
+import { isShopPlaceOfService, normalizePlaceOfService } from "@/lib/utils";
 import { upsertSupabaseCustomer } from "@/lib/supa-data";
 import { servicePackages as builtInPackages, addOns as builtInAddOns } from "@/lib/services";
 import { getCustomServices, getAllPackageMeta, getAllAddOnMeta } from "@/lib/servicesMeta";
@@ -726,13 +727,14 @@ const Contact = () => {
                   <div className="space-y-2">
                     <Label htmlFor="placeOfService" className="font-bold">Place of Service{!businessStatus?.shopOnly && " *"}</Label>
                     <Select 
-                      value={formData.placeOfService || "Customer's address"} 
+                      value={normalizePlaceOfService(formData.placeOfService)} 
                       onValueChange={(val) => {
+                        const isShop = isShopPlaceOfService(val);
                         setFormData(prev => ({
                           ...prev,
                           placeOfService: val,
-                          address: val === 'Shop in Methuen' ? '54 Boston Street' : (prev.address === '54 Boston Street' ? '' : prev.address),
-                          city: val === 'Shop in Methuen' ? 'Methuen' : (prev.city === 'Methuen' ? '' : prev.city)
+                          address: isShop ? '54 Boston Street' : (prev.address === '54 Boston Street' ? '' : prev.address),
+                          city: isShop ? 'Methuen' : (prev.city === 'Methuen' ? '' : prev.city)
                         }));
                       }}
                       disabled={!!businessStatus?.shopOnly}
@@ -751,7 +753,7 @@ const Contact = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="address" className="font-bold">
-                      {formData.placeOfService === 'Shop in Methuen' ? 'Shop Street Address' : 'Street Address (Optional)'}
+                      {isShopPlaceOfService(formData.placeOfService) ? 'Shop Street Address' : 'Street Address (Optional)'}
                     </Label>
                     <Input
                       id="address"
@@ -759,14 +761,14 @@ const Contact = () => {
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       onBlur={onContactBlur}
                       placeholder="123 Detail Lane"
-                      disabled={formData.placeOfService === 'Shop in Methuen'}
+                      disabled={isShopPlaceOfService(formData.placeOfService)}
                       className="h-12"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="city" className="font-bold">
-                      {formData.placeOfService === 'Shop in Methuen' ? 'Shop City / Town' : 'City / Town *'}
+                      {isShopPlaceOfService(formData.placeOfService) ? 'Shop City / Town' : 'City / Town *'}
                     </Label>
                     <Input
                       id="city"
@@ -774,11 +776,11 @@ const Contact = () => {
                       onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                       onBlur={onContactBlur}
                       placeholder="Methuen"
-                      required={formData.placeOfService !== 'Shop in Methuen'}
-                      disabled={formData.placeOfService === 'Shop in Methuen'}
-                      className={errors.city && formData.placeOfService !== 'Shop in Methuen' ? "border-destructive h-12" : "h-12"}
+                      required={!isShopPlaceOfService(formData.placeOfService)}
+                      disabled={isShopPlaceOfService(formData.placeOfService)}
+                      className={errors.city && !isShopPlaceOfService(formData.placeOfService) ? "border-destructive h-12" : "h-12"}
                     />
-                    {errors.city && formData.placeOfService !== 'Shop in Methuen' && (
+                    {errors.city && !isShopPlaceOfService(formData.placeOfService) && (
                       <p className="text-xs text-red-600 font-bold uppercase tracking-tight mt-1 ml-1">⚠️ {errors.city}</p>
                     )}
                   </div>

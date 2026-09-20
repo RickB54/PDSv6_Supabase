@@ -37,6 +37,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 // Calendar component import removed (replaced by AvailabilityPicker)
 import { AvailabilityPicker } from "@/components/AvailabilityPicker";
 import { DestinationFeeInline } from "@/components/distance/DestinationFeeInline";
+import { isShopPlaceOfService, normalizePlaceOfService } from "@/lib/utils";
 import { format } from "date-fns";
 import { cn, formatETDate, formatETTime } from "@/lib/utils";
 const getServiceDuration = (id: string = '') => {
@@ -543,7 +544,7 @@ const BookNow = () => {
     const price = found ? (found.pricing[vehicleType] ?? found.pricing['compact'] ?? 0) : 0;
     return sum + price;
   }, 0);
-  const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : bookingDestFee;
+  const activeDestFee = isShopPlaceOfService(formData.placeOfService) ? 0 : bookingDestFee;
   const total = packagePrice + addOnsTotal + activeDestFee;
   const appliedDiscount = matchedCoupon
     ? calculateDiscount(total, matchedCoupon.percent || matchedCoupon.amount || 0, matchedCoupon.percent ? 'percent' : 'amount')
@@ -760,14 +761,16 @@ const BookNow = () => {
       let createdBooking: any = null;
       try {
         if (isSupabaseEnabled()) {
-          const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : bookingDestFee;
-          const activeDestMiles = formData.placeOfService === 'Shop in Methuen' ? 0 : bookingDistance;
+          const isShop = isShopPlaceOfService(formData.placeOfService);
+          const canonicalPos = normalizePlaceOfService(formData.placeOfService);
+          const activeDestFee = isShop ? 0 : bookingDestFee;
+          const activeDestMiles = isShop ? 0 : bookingDistance;
           createdBooking = await bookingsSvc.create({
             customer_name: formData.name,
             phone: formData.phone,
             email: formData.email,
             address: formData.address,
-            place_of_service: formData.placeOfService,
+            place_of_service: canonicalPos,
             destination_fee: activeDestFee,
             destination_miles: activeDestMiles,
             vehicle_type: vehicleType,
