@@ -8,6 +8,7 @@ import { getFreeBusy, isSignedIn, getCalendarConfig, listCalendarEvents, loadGCa
 
 import type { Booking } from '@/store/bookings';
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { isShopPlaceOfService, normalizePlaceOfService } from './utils';
 
 export interface CalendarEvent {
     id: string;
@@ -44,7 +45,11 @@ export interface CalendarEvent {
     discountCode?: string;
     discountAmount?: number;
     placeOfService?: string;
+    destinationFee?: number;
+    destinationMiles?: number;
+    booking_vehicle?: any;
     probonoReason?: string;
+    probonoReasons?: string[];
     probonoPrimaryReason?: string;
     createdAt?: string; // Add createdAt to pass the booking time
 }
@@ -96,6 +101,10 @@ export async function getUnifiedCalendarEvents(
                 customerId: booking.customerId,
                 discountCode: booking.discountCode,
                 discountAmount: booking.discountAmount,
+                placeOfService: normalizePlaceOfService(booking.placeOfService),
+                destinationFee: isShopPlaceOfService(booking.placeOfService) ? 0 : ((booking as any).destinationFee || 0),
+                destinationMiles: isShopPlaceOfService(booking.placeOfService) ? 0 : ((booking as any).destinationMiles || 0),
+                booking_vehicle: (booking as any).booking_vehicle,
                 probonoReason: booking.probonoReason,
                 probonoReasons: booking.probonoReasons,
                 probonoPrimaryReason: booking.probonoPrimaryReason,
