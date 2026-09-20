@@ -34,6 +34,7 @@ import { PenTool } from "lucide-react";
 import { auditEmployeeAction } from "@/lib/audit";
 import { servicePackages, addOns, getAddOnPrice, getServicePrice, type VehicleType, getCanonicalAddonName } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
+import { calculateBookingPricing } from "@/lib/discountUtils";
 import { useLocation } from "react-router-dom";
 import { getUnifiedCustomers } from "@/lib/customers";
 import localforage from "localforage";
@@ -564,11 +565,11 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.destinationFee, formData.placeOfService]);
 
   const liveTotal = useMemo(() => {
-    let total = 0;
+    let subtotal = 0;
     const vType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
     const pkg = allServices.find(s => s.name === formData.service);
     if (pkg) {
-      total = getServicePrice(pkg.id, vType);
+      subtotal = getServicePrice(pkg.id, vType);
     }
     
     if (formData.addons && formData.addons.length > 0) {
@@ -576,29 +577,24 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         const canonical = getCanonicalAddonName(addonName);
         const addon = allAddons.find(a => a.name === canonical);
         if (addon) {
-          total += getAddOnPrice(addon.id, vType);
+          subtotal += getAddOnPrice(addon.id, vType);
         }
       });
     }
 
-    if (formData.discountType === 'custom' && formData.customDiscount) {
-      const customVal = Number(formData.customDiscount);
-      if (!isNaN(customVal) && customVal > 0) {
-        total = Math.max(0, total - customVal);
-      }
-    } else if (formData.discountType === 'coupon' && matchedCoupon) {
-      if (matchedCoupon.percent) {
-        total = Math.max(0, total * (1 - matchedCoupon.percent / 100));
-      } else if (matchedCoupon.amount) {
-        total = Math.max(0, total - matchedCoupon.amount);
-      }
-    }
-    
     const activeDestFee = isShopPlaceOfService(formData.placeOfService) ? 0 : (formData.destinationFee || 0);
-    total += activeDestFee;
-    
-    return Math.round(total);
-  }, [formData.service, formData.vehicle, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon, formData.destinationFee, formData.placeOfService]);
+    subtotal += activeDestFee;
+
+    const discVal = formData.discountType === 'custom' 
+      ? Number(formData.customDiscount || 0) 
+      : (matchedCoupon ? (matchedCoupon.percent || matchedCoupon.amount || 0) : 0);
+    const discType = formData.discountType === 'custom' 
+      ? 'dollar' 
+      : (matchedCoupon?.percent ? 'percent' : 'dollar');
+
+    const pricing = calculateBookingPricing(subtotal, discVal, discType);
+    return pricing.total;
+  }, [formData.service, formData.vehicle, formData.vehicleMake, formData.vehicleModel, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon, formData.destinationFee, formData.placeOfService]);
 
   const activeBlinkSection = useMemo(() => {
     if (!formData.time) return 1; // 1. Time (Start/End)
@@ -628,7 +624,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     
     const vType = mapToServiceVehicleType(booking.vehicle || booking.vehicleType || '', booking.vehicleMake || booking.make || '', booking.vehicleModel || booking.model || '');
     const svc = allServices.find(s => s.name === title);
-    let total = svc ? getServicePrice(svc.id, vType) : 0;
+    let subtotal = svc ? getServicePrice(svc.id, vType) : Number(booking.service_price || 0);
     
     const addons = booking.addons || booking.add_ons || [];
     const addonsArray = Array.isArray(addons) ? addons : (typeof addons === 'string' ? JSON.parse(addons) : []);
@@ -637,14 +633,17 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       const canonical = getCanonicalAddonName(a);
       const addonDef = allAddons.find(ad => ad.name === canonical);
       if (addonDef) {
-        total += getAddOnPrice(addonDef.id, vType);
+        subtotal += getAddOnPrice(addonDef.id, vType);
       }
     });
 
-    if (booking.discountAmount) {
-      total = Math.max(0, total - booking.discountAmount);
-    }
-    return Math.round(total);
+    const isShop = isShopPlaceOfService(booking.placeOfService || booking.booking_vehicle?.placeOfService);
+    const destFee = isShop ? 0 : Number(booking.destinationFee ?? booking.booking_vehicle?.destinationFee ?? 0);
+    subtotal += destFee;
+
+    const discAmt = Number(booking.discountAmount || 0);
+    const pricing = calculateBookingPricing(subtotal, discAmt, 'dollar');
+    return pricing.total;
   }, [items, allServices, allAddons]);
 
   const handleArchiveToggle = (booking: Booking) => {
@@ -1557,22 +1556,23 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       let discountAmount = 0;
       let finalDiscountCode = "";
       
+      const discVal = formData.discountType === 'custom' 
+        ? Number(formData.customDiscount || 0) 
+        : (matchedCoupon ? (matchedCoupon.percent || matchedCoupon.amount || 0) : 0);
+      const discType = formData.discountType === 'custom' 
+        ? 'dollar' 
+        : (matchedCoupon?.percent ? 'percent' : 'dollar');
+
+      const pricing = calculateBookingPricing(calculatedPrice, discVal, discType);
+      discountAmount = pricing.discountAmount;
+
       if (formData.discountType === 'custom' && formData.customDiscount) {
-        const customVal = Number(formData.customDiscount);
-        if (!isNaN(customVal) && customVal > 0) {
-          discountAmount = Math.ceil(customVal);
-          finalDiscountCode = "CUSTOM";
-        }
+        finalDiscountCode = "CUSTOM";
       } else if (formData.discountType === 'coupon' && matchedCoupon) {
         finalDiscountCode = matchedCoupon.code;
-        if (matchedCoupon.percent) {
-          discountAmount = Math.ceil(calculatedPrice * (matchedCoupon.percent / 100));
-        } else if (matchedCoupon.amount) {
-          discountAmount = Math.ceil(matchedCoupon.amount);
-        }
       }
       
-      const finalPriceForTotal = Math.max(0, Math.ceil(calculatedPrice) - discountAmount);
+      const finalPriceForTotal = pricing.total;
 
       let resultingBooking: any;
 
