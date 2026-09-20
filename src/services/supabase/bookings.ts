@@ -1,6 +1,7 @@
 import supabase from '@/lib/supabase';
 import { isDemoActive } from '@/lib/supa-data';
 import { checkClientRateLimit } from '@/lib/rateLimit';
+import { isShopPlaceOfService, normalizePlaceOfService } from '@/lib/utils';
 
 // Helper to sanitize undefined checks
 const clean = (s?: string) => s || null;
@@ -173,9 +174,12 @@ export async function create(input: BookingInput) {
         type: input.vehicle_type || '',
         color: input.color || '',
         condition: input.condition || '',
-        placeOfService: input.place_of_service || '',
-        destinationFee: (input.place_of_service || '').toLowerCase().includes('shop') ? 0 : (input.destination_fee || 0),
-        destinationMiles: (input.place_of_service || '').toLowerCase().includes('shop') ? 0 : (input.destination_miles || 0)
+        placeOfService: normalizePlaceOfService(input.place_of_service),
+        place_of_service: normalizePlaceOfService(input.place_of_service),
+        destinationFee: isShopPlaceOfService(input.place_of_service) ? 0 : (input.destination_fee || 0),
+        destination_fee: isShopPlaceOfService(input.place_of_service) ? 0 : (input.destination_fee || 0),
+        destinationMiles: isShopPlaceOfService(input.place_of_service) ? 0 : (input.destination_miles || 0),
+        destination_miles: isShopPlaceOfService(input.place_of_service) ? 0 : (input.destination_miles || 0)
       }
     };
 

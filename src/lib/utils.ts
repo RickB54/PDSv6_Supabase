@@ -129,3 +129,20 @@ export function toInputDateFormat(dStr: string | Date | undefined | null): strin
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Checks whether a place of service string represents a shop location.
+ */
+export function isShopPlaceOfService(pos?: string | null): boolean {
+  if (!pos) return false;
+  const lower = pos.toLowerCase().trim();
+  return lower.includes('shop') || lower.includes('methuen') || lower.includes('in-shop') || lower.includes('in shop');
+}
+
+/**
+ * Normalizes any place of service string into canonical 'Shop in Methuen' or "Customer's address".
+ */
+export function normalizePlaceOfService(pos?: string | null): string {
+  return isShopPlaceOfService(pos) ? 'Shop in Methuen' : "Customer's address";
+}
+

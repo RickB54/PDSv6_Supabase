@@ -9,6 +9,8 @@ import {
     invalidateFinancialCache, 
     invalidateAuditHistoryCache 
 } from './app-cache';
+import { isShopPlaceOfService, normalizePlaceOfService } from './utils';
+
 // Re-export supabase so other files can import it from here if needed, 
 // but primarily so this file can use it.
 export { supabase };
@@ -150,8 +152,8 @@ export interface Customer {
  *    - Deduplicates by email.
  */
 // Singleton ephemeral client to prevent "Multiple GoTrueClient" warnings
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Missing Supabase Environment Variables in supa-data.ts");
@@ -2842,9 +2844,9 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                     howFound: b.how_found || meta.howFound || meta.how_found || b.howFound || '',
                     discountCode: b.discount_code || meta.discountCode || meta.discount_code || '',
                     discountAmount: Number(b.discount_amount || meta.discountAmount || meta.discount_amount || 0),
-                    placeOfService: meta.placeOfService || meta.place_of_service || b.place_of_service || '',
-                    destinationFee: (meta.placeOfService || meta.place_of_service || b.place_of_service || '').toLowerCase().includes('shop') ? 0 : Number(meta.destinationFee || meta.destination_fee || b.destination_fee || 0),
-                    destinationMiles: (meta.placeOfService || meta.place_of_service || b.place_of_service || '').toLowerCase().includes('shop') ? 0 : Number(meta.destinationMiles || meta.destination_miles || b.destination_miles || 0),
+                    placeOfService: normalizePlaceOfService(meta.placeOfService || meta.place_of_service || b.place_of_service),
+                    destinationFee: isShopPlaceOfService(meta.placeOfService || meta.place_of_service || b.place_of_service) ? 0 : Number(meta.destinationFee || meta.destination_fee || b.destination_fee || 0),
+                    destinationMiles: isShopPlaceOfService(meta.placeOfService || meta.place_of_service || b.place_of_service) ? 0 : Number(meta.destinationMiles || meta.destination_miles || b.destination_miles || 0),
                     probonoReason: b.probono_reason || meta.probonoReason || meta.probono_reason || '',
                     probonoReasons: meta.probonoReasons || meta.probono_reasons || [],
                     probonoPrimaryReason: b.probono_primary_reason || meta.probonoPrimaryReason || meta.probono_primary_reason || '',
@@ -2861,12 +2863,18 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
 export const upsertSupabaseBooking = async (booking: any) => {
     if (isDemoActive()) return { ...booking, id: booking.id || `demo_b_${Date.now()}` };
     try {
+        const rawPos = booking.placeOfService || booking.booking_vehicle?.placeOfService || booking.booking_vehicle?.place_of_service || '';
+        const canonicalPos = normalizePlaceOfService(rawPos);
+        const isShop = isShopPlaceOfService(canonicalPos);
+        const feeToSave = isShop ? 0 : Number(booking.destinationFee ?? booking.booking_vehicle?.destinationFee ?? booking.booking_vehicle?.destination_fee ?? 0);
+        const milesToSave = isShop ? 0 : Number(booking.destinationMiles ?? booking.booking_vehicle?.destinationMiles ?? booking.booking_vehicle?.destination_miles ?? 0);
+
         console.log('[upsertSupabaseBooking] INCOMING BOOKING:', JSON.stringify({
             id: booking.id,
             title: booking.title,
-            probonoReason: booking.probonoReason,
-            probonoReasons: booking.probonoReasons,
-            probonoPrimaryReason: booking.probonoPrimaryReason
+            placeOfService: canonicalPos,
+            destinationFee: feeToSave,
+            destinationMiles: milesToSave
         }, null, 2));
 
         // EXPLICITLY DEFINE ONLY THE KEYS THAT EXIST IN THE DB
@@ -2893,9 +2901,12 @@ export const upsertSupabaseBooking = async (booking: any) => {
               custom_reminder_date: booking.customReminderDate,
               discountCode: booking.discountCode || '',
               discountAmount: Number(booking.discountAmount || 0),
-              placeOfService: booking.placeOfService || '',
-              destinationFee: (booking.placeOfService || '').toLowerCase().includes('shop') ? 0 : Number(booking.destinationFee || 0),
-              destinationMiles: (booking.placeOfService || '').toLowerCase().includes('shop') ? 0 : Number(booking.destinationMiles || 0),
+              placeOfService: canonicalPos,
+              place_of_service: canonicalPos,
+              destinationFee: feeToSave,
+              destination_fee: feeToSave,
+              destinationMiles: milesToSave,
+              destination_miles: milesToSave,
               probonoReason: booking.probonoReason || '',
               probonoReasons: booking.probonoReasons || [],
               probonoPrimaryReason: booking.probonoPrimaryReason || '',

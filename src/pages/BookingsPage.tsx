@@ -21,7 +21,7 @@ import { Save, LogOut } from "lucide-react";
 import { useBookingsStore, type Booking } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import type { BookingStatus } from "@/store/bookings";
-import { cn, formatETDate, formatETTime } from "@/lib/utils";
+import { cn, formatETDate, formatETTime, isShopPlaceOfService, normalizePlaceOfService } from "@/lib/utils";
 import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -557,7 +557,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       });
     }
     
-    const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : (formData.destinationFee || 0);
+    const activeDestFee = isShopPlaceOfService(formData.placeOfService) ? 0 : (formData.destinationFee || 0);
     subtotal += activeDestFee;
     
     return subtotal;
@@ -594,7 +594,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       }
     }
     
-    const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : (formData.destinationFee || 0);
+    const activeDestFee = isShopPlaceOfService(formData.placeOfService) ? 0 : (formData.destinationFee || 0);
     total += activeDestFee;
     
     return Math.round(total);
@@ -1009,13 +1009,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
             discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
             discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
             customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
-            placeOfService: booking.placeOfService || "Customer's address",
+            placeOfService: normalizePlaceOfService(booking.placeOfService),
             probonoReason: booking.probonoReason || "",
             probonoReasons: booking.probonoReasons || [],
             probonoPrimaryReason: booking.probonoPrimaryReason || "",
             howFound: booking.howFound || "",
-            destinationFee: 0,
-            destinationMiles: 0
+            destinationFee: isShopPlaceOfService(booking.placeOfService) ? 0 : ((booking as any).destinationFee || 0),
+            destinationMiles: isShopPlaceOfService(booking.placeOfService) ? 0 : ((booking as any).destinationMiles || 0)
           });
           
           setSelectedDate(booking.date ? parseISO(booking.date) : new Date());
@@ -1280,7 +1280,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     const matchingCust = customers.find(c => c.name === booking.customer);
     setSelectedCustomer(matchingCust || null);
 
-    const isShopLoc = (booking.placeOfService || '').toLowerCase().includes('shop');
+    const normPos = normalizePlaceOfService(booking.placeOfService);
+    const isShopLoc = isShopPlaceOfService(normPos);
 
     // Populate formData from booking first, then fallback to customer
     setFormData({
@@ -1310,7 +1311,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       discountType: booking.discountCode && booking.discountCode !== 'CUSTOM' ? 'coupon' : (booking.discountAmount ? 'custom' : 'coupon'),
       discountCode: booking.discountCode && booking.discountCode !== 'CUSTOM' ? booking.discountCode : '',
       customDiscount: booking.discountCode === 'CUSTOM' || (!booking.discountCode && booking.discountAmount) ? String(booking.discountAmount) : '',
-      placeOfService: booking.placeOfService || "Customer's address",
+      placeOfService: normPos,
       probonoReason: booking.probonoReason || "",
       probonoReasons: booking.probonoReasons || [],
       probonoPrimaryReason: booking.probonoPrimaryReason || "",
@@ -1546,10 +1547,12 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         });
       }
       
-      const activeDestFee = formData.placeOfService === 'Shop in Methuen' ? 0 : (formData.destinationFee || 0);
-      const activeDestMiles = formData.placeOfService === 'Shop in Methuen' ? 0 : (formData.destinationMiles || 0);
+      const isShop = isShopPlaceOfService(formData.placeOfService);
+      const normPlace = normalizePlaceOfService(formData.placeOfService);
+      const activeDestFee = isShop ? 0 : (formData.destinationFee || 0);
+      const activeDestMiles = isShop ? 0 : (formData.destinationMiles || 0);
       calculatedPrice += activeDestFee;
- 
+
       // Apply discount to calculatedPrice if matched or manual
       let discountAmount = 0;
       let finalDiscountCode = "";
@@ -1570,9 +1573,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       }
       
       const finalPriceForTotal = Math.max(0, Math.ceil(calculatedPrice) - discountAmount);
- 
+
       let resultingBooking: any;
- 
+
       if (selectedBooking) {
         // Update
         const updates: Partial<Booking> = {
@@ -1601,12 +1604,21 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           price: calculatedPrice,
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
-          placeOfService: formData.placeOfService,
+          placeOfService: normPlace,
           destinationFee: activeDestFee,
           destinationMiles: activeDestMiles,
           probonoReason: formData.probonoReason || "",
           probonoReasons: formData.probonoReasons || [],
-          probonoPrimaryReason: formData.probonoPrimaryReason || ""
+          probonoPrimaryReason: formData.probonoPrimaryReason || "",
+          booking_vehicle: {
+            ...((selectedBooking as any)?.booking_vehicle || {}),
+            placeOfService: normPlace,
+            place_of_service: normPlace,
+            destinationFee: activeDestFee,
+            destination_fee: activeDestFee,
+            destinationMiles: activeDestMiles,
+            destination_miles: activeDestMiles,
+          }
         };
 
         // Reschedule Tracking Logic
@@ -1629,7 +1641,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           
           (updates as any).rescheduleHistory = updatedHistory;
           (updates as any).booking_vehicle = {
-            ...((selectedBooking as any).booking_vehicle || {}),
+            ...((updates as any).booking_vehicle || {}),
             reschedule_history: updatedHistory
           };
 
@@ -1659,7 +1671,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         
         await update(selectedBooking.id, updates);
         resultingBooking = { ...selectedBooking, ...updates };
- 
+
         // Notify Admin if Employee
         const currentUser = getCurrentUser();
         if (currentUser?.role === 'employee') {
@@ -1699,12 +1711,20 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           createdAt: new Date().toISOString(),
           discountCode: finalDiscountCode,
           discountAmount: discountAmount,
-          placeOfService: formData.placeOfService,
+          placeOfService: normPlace,
           destinationFee: activeDestFee,
           destinationMiles: activeDestMiles,
           probonoReason: formData.probonoReason || "",
           probonoReasons: formData.probonoReasons || [],
-          probonoPrimaryReason: formData.probonoPrimaryReason || ""
+          probonoPrimaryReason: formData.probonoPrimaryReason || "",
+          booking_vehicle: {
+            placeOfService: normPlace,
+            place_of_service: normPlace,
+            destinationFee: activeDestFee,
+            destination_fee: activeDestFee,
+            destinationMiles: activeDestMiles,
+            destination_miles: activeDestMiles,
+          }
         };
         
         await add(newBooking as any);
@@ -2790,7 +2810,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         -{matchedCoupon.percent ? `${matchedCoupon.percent}%` : `$${matchedCoupon.amount}`} ({matchedCoupon.code})
                       </div>
                     ) : null}
-                    {formData.placeOfService !== 'Shop in Methuen' && (formData.destinationFee || 0) > 0 && (
+                    {!isShopPlaceOfService(formData.placeOfService) && (formData.destinationFee || 0) > 0 && (
                       <div className="text-[10px] text-amber-400 font-bold uppercase mt-0.5">
                         +${formData.destinationFee} Dest. Fee ({formData.destinationMiles} mi)
                       </div>
@@ -3074,13 +3094,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                     <div className="col-span-3">
                       <select
                         className="flex h-10 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-white focus:ring-purple-500/20"
-                        value={formData.placeOfService}
+                        value={normalizePlaceOfService(formData.placeOfService)}
                         onChange={(e) => {
                           const newLoc = e.target.value;
                           setFormData(prev => ({
                             ...prev,
                             placeOfService: newLoc,
-                            ...(newLoc === 'Shop in Methuen' ? { destinationFee: 0, destinationMiles: 0 } : {})
+                            ...(isShopPlaceOfService(newLoc) ? { destinationFee: 0, destinationMiles: 0 } : {})
                           }));
                         }}
                       >
@@ -3090,7 +3110,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                     </div>
                   </div>
                   {/* Customer address + destination fee - only for mobile service */}
-                  {formData.placeOfService !== 'Shop in Methuen' && (
+                  {!isShopPlaceOfService(formData.placeOfService) && (
                     <div className="col-span-4 pt-1 space-y-1">
                       {formData.address && (
                         <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
