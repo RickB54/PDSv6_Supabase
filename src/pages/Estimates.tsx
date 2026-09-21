@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Printer, Save, Trash2, Plus, Copy, Search, Check, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail, MessageSquare, Phone } from "lucide-react";
+import { FileText, Printer, Save, Trash2, Plus, Copy, Search, Check, CheckCircle, XCircle, FileBarChart, Pencil, Calendar, Clock, AlertCircle, Info, Sparkles, Loader2, Eye, Send, Users, X, Link as LinkIcon, ArrowUp, ArrowDown, Mail, MessageSquare, Phone, Columns } from "lucide-react";
 import { getSupabaseEstimates, upsertSupabaseEstimate, deleteSupabaseEstimate, Customer, resolvePlaceOfService, logUniqueEngagement } from "@/lib/supa-data";
 import { refineTextWithAI } from "@/lib/ai-refiner";
 import supabase from "@/lib/supabase";
@@ -113,6 +113,52 @@ const getInternalNotes = (notes: string): string => {
     return "";
 };
 
+// ─── Estimate Section & Scenario Helper ────────────────────────────────────────
+export interface EstimateSectionData {
+    headerIndex: number;
+    title: string;
+    items: { name: string; price: number; originalIndex: number }[];
+    subtotal: number;
+}
+
+const getEstimateSections = (servicesList: { name: string; price: number }[]): EstimateSectionData[] => {
+    const sections: EstimateSectionData[] = [];
+    let currentSection: EstimateSectionData | null = null;
+
+    servicesList.forEach((s, idx) => {
+        const isHeader = String(s.name || '').startsWith('---') && s.price === 0;
+        if (isHeader) {
+            if (currentSection) {
+                sections.push(currentSection);
+            }
+            const cleanTitle = s.name.replace(/^---+\s*/, '').replace(/\s*---+$/, '').trim();
+            currentSection = {
+                headerIndex: idx,
+                title: cleanTitle || `Section ${sections.length + 1}`,
+                items: [],
+                subtotal: 0
+            };
+        } else if (!s.name?.startsWith('VIRTUAL_')) {
+            if (!currentSection) {
+                currentSection = {
+                    headerIndex: -1,
+                    title: 'Main Services',
+                    items: [],
+                    subtotal: 0
+                };
+            }
+            currentSection.items.push({ name: s.name, price: s.price || 0, originalIndex: idx });
+            currentSection.subtotal += (s.price || 0);
+        }
+    });
+
+    if (currentSection) {
+        sections.push(currentSection);
+    }
+
+    return sections;
+};
+
 // ─── Estimate Note Templates ──────────────────────────────────────────────────
 const NOTE_TEMPLATES: { label: string; text: string }[] = [
     {
@@ -170,6 +216,7 @@ const Estimates = () => {
     const [isMenuMode, setIsMenuMode] = useState(false);
     const [isHideVehicleSubtotals, setIsHideVehicleSubtotals] = useState(false);
     const [isShowCategorySubtotals, setIsShowCategorySubtotals] = useState(false);
+    const [isCompareMode, setIsCompareMode] = useState(false);
     const [selectedTemplate, setSelectedTemplate] = useState("");
     
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -751,6 +798,53 @@ const Estimates = () => {
         y += 3;
         doc.line(20, y, 190, y);
         y += 8;
+
+        // SCENARIO COMPARISON BREAKDOWN FOR PDF
+        const pdfSectionHeaders = (estimate.services || []).map((s, idx) => ({ ...s, originalIndex: idx }))
+            .filter(s => String(s.name || '').startsWith('---') && s.price === 0);
+
+        if (pdfSectionHeaders.length >= 2) {
+            if (y > 220) {
+                doc.addPage();
+                y = 20;
+            }
+
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "bold");
+            doc.text("Scenario Comparison Breakdown:", 20, y);
+            y += 7;
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+
+            const pdfSectionTotals: { title: string; total: number }[] = [];
+            pdfSectionHeaders.forEach((hdr) => {
+                const nextHeaderIndex = (estimate.services || []).findIndex((sx, i) => i > hdr.originalIndex && String(sx.name || '').startsWith('---') && sx.price === 0);
+                const sliceEnd = nextHeaderIndex === -1 ? estimate.services.length : nextHeaderIndex;
+                const sTotal = estimate.services.slice(hdr.originalIndex + 1, sliceEnd).reduce((sum, sx) => sum + (sx.price || 0), 0);
+                const cleanTitle = hdr.name.replace(/^---+\s*/, '').replace(/\s*---+$/, '').trim();
+                pdfSectionTotals.push({ title: cleanTitle, total: sTotal });
+
+                doc.text(`• ${cleanTitle}:`, 25, y);
+                doc.text(`$${sTotal.toFixed(2)}`, 180, y, { align: "right" });
+                y += 6;
+            });
+
+            if (pdfSectionTotals.length >= 2) {
+                const secA = pdfSectionTotals[0];
+                const secB = pdfSectionTotals[1];
+                const pdfDelta = secB.total - secA.total;
+                const pdfSign = pdfDelta >= 0 ? '+' : '-';
+                doc.setFont("helvetica", "bold");
+                doc.text(`Price Difference (${secB.title} vs ${secA.title}):`, 25, y);
+                doc.text(`${pdfSign}$${Math.abs(pdfDelta).toFixed(2)}`, 180, y, { align: "right" });
+                doc.setFont("helvetica", "normal");
+                y += 8;
+            }
+
+            y += 2;
+            doc.line(20, y, 190, y);
+            y += 8;
+        }
 
         // CALCULATE CATEGORY SUBTOTALS FOR MULTI-VEHICLE
         const nameMap: Record<string, number> = {};
@@ -1961,7 +2055,7 @@ Precision. Protection. Perfection.`;
                                             </div>
                                         </div>
                                     )})}
-                                    <div className="flex gap-2 w-full mt-4">
+                                    <div className="flex flex-col sm:flex-row gap-2 w-full mt-4">
                                         <Button 
                                             variant="outline" 
                                             size="sm" 
@@ -1986,7 +2080,111 @@ Precision. Protection. Perfection.`;
                                         >
                                             <FileText className="h-4 w-4 mr-2" /> Add Section Header
                                         </Button>
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm" 
+                                            onClick={() => {
+                                                setIsCompareMode(true);
+                                                const headers = services.filter(s => String(s.name || '').startsWith('---') && s.price === 0);
+                                                if (headers.length === 0) {
+                                                    const wrappedServices = [
+                                                        { name: "--- Option A ---", price: 0 },
+                                                        ...services,
+                                                        { name: "--- Option B ---", price: 0 },
+                                                        ...services.map(s => ({ ...s }))
+                                                    ];
+                                                    setServices(wrappedServices);
+                                                } else {
+                                                    const lastHeaderIdx = services.map((s, i) => (String(s.name || '').startsWith('---') && s.price === 0) ? i : -1).filter(i => i !== -1).pop() || 0;
+                                                    const nextHeaderIndex = services.findIndex((sx, idx) => idx > lastHeaderIdx && String(sx.name || '').startsWith('---') && sx.price === 0);
+                                                    const sliceEnd = nextHeaderIndex === -1 ? services.length : nextHeaderIndex;
+                                                    const charCode = 65 + headers.length;
+                                                    const optionLabel = String.fromCharCode(charCode);
+                                                    const sectionToCopy = services.slice(lastHeaderIdx, sliceEnd).map((item, idx) => {
+                                                        if (idx === 0) {
+                                                            return { ...item, name: `--- Option ${optionLabel} ---` };
+                                                        }
+                                                        return { ...item };
+                                                    });
+                                                    const newServices = [...services];
+                                                    newServices.splice(sliceEnd, 0, ...sectionToCopy);
+                                                    setServices(newServices);
+                                                }
+                                            }}
+                                            className="flex-1 border-dashed border-blue-700/50 text-blue-400 hover:text-blue-300 hover:border-blue-500 hover:bg-blue-500/10 font-bold"
+                                        >
+                                            <Columns className="h-4 w-4 mr-2 text-blue-400" /> Compare Scenarios
+                                        </Button>
                                     </div>
+
+                                    {/* Scenario Comparison & Delta Card */}
+                                    {(() => {
+                                        const sections = getEstimateSections(services);
+                                        if (sections.length < 2) return null;
+
+                                        const scenarioA = sections[0];
+                                        const scenarioB = sections[1];
+                                        const delta = scenarioB.subtotal - scenarioA.subtotal;
+                                        const isHigher = delta > 0;
+                                        const isLower = delta < 0;
+
+                                        return (
+                                            <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-blue-950/40 via-zinc-900 to-zinc-950 border border-blue-500/30 space-y-4 shadow-xl">
+                                                <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <Columns className="h-5 w-5 text-blue-400" />
+                                                        <span className="font-black text-white text-base uppercase tracking-wide">
+                                                            Scenario Comparison ({scenarioA.title} vs {scenarioB.title})
+                                                        </span>
+                                                    </div>
+                                                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-[10px] font-black uppercase tracking-wider">
+                                                        {sections.length} Scenarios Active
+                                                    </Badge>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {sections.map((sec, idx) => (
+                                                        <div key={idx} className={`p-3.5 rounded-lg border ${idx === 0 ? 'bg-zinc-900/80 border-zinc-800' : 'bg-blue-950/20 border-blue-500/30'}`}>
+                                                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800/80">
+                                                                <span className="font-bold text-sm text-amber-400">{sec.title}</span>
+                                                                <span className="font-black text-white text-base">${sec.subtotal.toFixed(2)}</span>
+                                                            </div>
+                                                            <div className="space-y-1 text-xs text-zinc-400">
+                                                                {sec.items.length === 0 ? (
+                                                                    <div className="italic text-zinc-600">No line items in section</div>
+                                                                ) : (
+                                                                    sec.items.map((it, i) => (
+                                                                        <div key={i} className="flex justify-between items-center py-0.5">
+                                                                            <span className="truncate max-w-[200px]">{it.name}</span>
+                                                                            <span className="font-mono text-zinc-300">${it.price.toFixed(2)}</span>
+                                                                        </div>
+                                                                    ))
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-2">
+                                                    <div className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                                                        Price Difference ({scenarioB.title} − {scenarioA.title}):
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="outline" className={`text-sm font-black px-3 py-1 ${
+                                                            isHigher ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                                                            isLower ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                                                            'bg-zinc-800 text-zinc-300 border-zinc-700'
+                                                        }`}>
+                                                            {delta >= 0 ? `+ $${delta.toFixed(2)}` : `- $${Math.abs(delta).toFixed(2)}`}
+                                                        </Badge>
+                                                        <span className="text-xs text-zinc-400 font-medium">
+                                                            ({isHigher ? `${scenarioB.title} is $${delta.toFixed(2)} higher` : isLower ? `${scenarioB.title} is $${Math.abs(delta).toFixed(2)} lower` : 'Identical pricing'})
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                     <div className="border-t border-zinc-800 pt-3 mt-3 flex flex-col sm:flex-row justify-between sm:items-start font-black text-white text-lg gap-3">
                                         <div className="flex flex-col gap-2">
                                             <div className="flex items-center gap-2">
