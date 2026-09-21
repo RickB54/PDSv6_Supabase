@@ -820,9 +820,9 @@ const Estimates = () => {
                     ? `Discount on Service (${estimate.discount}%):`
                     : `Discount on Service:`;
 
-                doc.text(discountLabel, 140, y);
+                doc.text(discountLabel, 165, y, { align: "right" });
                 doc.text(`-$${pricing.discountAmount.toFixed(2)}`, 180, y, { align: "right" });
-                y += 12;
+                y += 7;
                 doc.setFontSize(12);
                 doc.setTextColor(0, 0, 0);
 
