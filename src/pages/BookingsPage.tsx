@@ -35,6 +35,7 @@ import { auditEmployeeAction } from "@/lib/audit";
 import { servicePackages, addOns, getAddOnPrice, getServicePrice, type VehicleType, getCanonicalAddonName } from "@/lib/services";
 import { getCustomPackages, getCustomAddOns } from "@/lib/servicesMeta";
 import { calculateBookingPricing } from "@/lib/discountUtils";
+import { normalizeVehicleType } from "@/lib/pricingHelpers";
 import { useLocation } from "react-router-dom";
 import { getUnifiedCustomers } from "@/lib/customers";
 import localforage from "localforage";
@@ -2832,15 +2833,21 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
 
                 {formData.addons && formData.addons.length > 0 && (
                   <div className="pt-2 border-t border-zinc-800/60 flex flex-wrap gap-1.5 w-full">
-                    {formData.addons.map((a, i) => (
-                      <Badge
-                        key={i}
-                        variant="outline"
-                        className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] font-black uppercase py-1 px-2.5 h-auto min-h-[22px] whitespace-normal text-left max-w-full leading-tight shadow-sm"
-                      >
-                        {a}
-                      </Badge>
-                    ))}
+                    {formData.addons.map((a, i) => {
+                      const vType = (normalizeVehicleType(formData.vehicle || "midsize") || "midsize") as any;
+                      const canonical = getCanonicalAddonName(a);
+                      const addonPrice = getAddOnPrice(a, vType);
+                      return (
+                        <Badge
+                          key={i}
+                          variant="outline"
+                          className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] font-black uppercase py-1 px-2.5 h-auto min-h-[22px] whitespace-normal text-left max-w-full leading-tight shadow-sm flex items-center gap-1.5"
+                        >
+                          <span>{canonical}</span>
+                          <span className="text-emerald-400 font-bold">(${addonPrice > 0 ? addonPrice.toFixed(2) : "94.00"})</span>
+                        </Badge>
+                      );
+                    })}
                   </div>
                 )}
               </div>
