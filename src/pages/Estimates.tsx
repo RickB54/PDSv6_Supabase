@@ -784,43 +784,40 @@ const Estimates = () => {
             if (estimate.discount && estimate.discount > 0) {
                 doc.setFontSize(10);
                 doc.setTextColor(150, 150, 150);
-                const subtotal = estimate.services.reduce((sum, s) => sum + s.price, 0);
+                
+                // Separate base Detail Service package from Add-Ons
+                const serviceItems = (estimate.services || []).filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
+                const firstPackage = serviceItems[0];
+                const baseServicePrice = firstPackage ? firstPackage.price : estimate.services.reduce((sum, s) => sum + s.price, 0);
+                const addonsTotal = serviceItems.slice(1).reduce((sum, s) => sum + s.price, 0);
 
-                // Self-healing: if discountType is missing (old records), back-calculate from saved total
-                let resolvedType = estimate.discountType;
-                if (!resolvedType && estimate.total != null && subtotal > 0) {
-                    const asPercent = Math.round(subtotal * (1 - estimate.discount / 100) * 100) / 100;
-                    const asAmount  = Math.round((subtotal - estimate.discount) * 100) / 100;
-                    const savedTotal = Math.round(estimate.total * 100) / 100;
-                    if (Math.abs(asPercent - savedTotal) < 0.02) {
-                        resolvedType = 'percent';
-                    } else if (Math.abs(asAmount - savedTotal) < 0.02) {
-                        resolvedType = 'amount';
-                    } else {
-                        resolvedType = 'percent'; // safest fallback for coupon discounts
-                    }
-                }
-
-                const discountAmount = calculateDiscount(subtotal, estimate.discount, resolvedType || 'percent');
+                let resolvedType = estimate.discountType || 'percent';
+                const discountAmount = calculateDiscount(baseServicePrice, estimate.discount, resolvedType);
                 const discountLabel = resolvedType === 'percent'
-                    ? `Discount (${estimate.discount}%):`
-                    : `Discount:`;
+                    ? `Discount on Service (${estimate.discount}%):`
+                    : `Discount on Service:`;
 
                 doc.text(discountLabel, 140, y);
                 doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
                 y += 12;
                 doc.setFontSize(12);
                 doc.setTextColor(0, 0, 0);
-            } else {
-                // NO DISCOUNT: Remove the extra gap
-                y += 2;
-            }
 
-            doc.setFont("helvetica", "bold");
-            doc.text("Estimated Total:", 125, y);
-            doc.text(`$${(estimate.total || 0).toFixed(2)}`, 180, y, { align: "right" });
-            doc.setFont("helvetica", "normal");
-            y += 12;
+                const finalEstimatedTotal = Math.max(0, (baseServicePrice - discountAmount) + addonsTotal);
+                doc.setFont("helvetica", "bold");
+                doc.text("Estimated Total:", 125, y);
+                doc.text(`$${finalEstimatedTotal.toFixed(2)}`, 180, y, { align: "right" });
+                doc.setFont("helvetica", "normal");
+                y += 12;
+            } else {
+                y += 2;
+                const grandTotal = (estimate.services || []).reduce((sum, s) => sum + s.price, 0);
+                doc.setFont("helvetica", "bold");
+                doc.text("Estimated Total:", 125, y);
+                doc.text(`$${(estimate.total || grandTotal || 0).toFixed(2)}`, 180, y, { align: "right" });
+                doc.setFont("helvetica", "normal");
+                y += 12;
+            }
         }
 
         const publicNotesText = getPublicNotes(estimate.notes || "")

@@ -989,38 +989,51 @@ const Invoicing = () => {
 
     doc.setFontSize(12);
     
-    if (invoice.discount && invoice.discount.amount > 0) {
+    if (invoice.discount && (invoice.discount.amount > 0 || invoice.discount.value > 0)) {
       doc.setFontSize(10);
       doc.setTextColor(150, 150, 150);
+      
+      const serviceItems = (invoice.services || []).filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
+      const firstPackage = serviceItems[0];
+      const baseServicePrice = firstPackage ? firstPackage.price : invoice.services?.reduce((sum, s) => sum + s.price, 0) || 0;
+      const addonsTotal = serviceItems.slice(1).reduce((sum, s) => sum + s.price, 0);
+
+      const discountAmt = calculateDiscount(baseServicePrice, invoice.discount.value, invoice.discount.type);
+
       let discountLabel = "";
       if (invoice.discount.code && invoice.discount.code !== 'CUSTOM') {
         const symbol = invoice.discount.type === 'percent' ? '%' : '$';
-        discountLabel = `${invoice.discount.code} (${invoice.discount.value}${symbol} Off):`;
+        discountLabel = `${invoice.discount.code} (${invoice.discount.value}${symbol} Off Service):`;
       } else {
         discountLabel = invoice.discount.type === 'percent' 
-          ? `Discount (${invoice.discount.value}%):` 
-          : `Discount (Fixed):`;
+          ? `Discount on Service (${invoice.discount.value}%):` 
+          : `Discount on Service:`;
       }
       doc.text(discountLabel, 165, y, { align: "right" });
-      doc.text(`-$${invoice.discount.amount.toFixed(2)}`, 180, y, { align: "right" });
+      doc.text(`-$${discountAmt.toFixed(2)}`, 180, y, { align: "right" });
       y += 7;
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
-    }
 
-    if (invoice.adjustment && invoice.adjustment > 0) {
-      doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text("Adjusted:", 165, y, { align: "right" });
-      doc.text(`-$${invoice.adjustment.toFixed(2)}`, 180, y, { align: "right" });
-      y += 7;
-      doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
-    }
+      const calculatedTotal = Math.max(0, (baseServicePrice - discountAmt) + addonsTotal - (invoice.adjustment || 0));
+      doc.text("Total Amount:", 125, y);
+      doc.text(`$${calculatedTotal.toFixed(2)}`, 180, y, { align: "right" });
+      y += 8;
+    } else {
+      if (invoice.adjustment && invoice.adjustment > 0) {
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.text("Adjusted:", 165, y, { align: "right" });
+        doc.text(`-$${invoice.adjustment.toFixed(2)}`, 180, y, { align: "right" });
+        y += 7;
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+      }
 
-    doc.text("Total Amount:", 125, y);
-    doc.text(`$${invoice.total.toFixed(2)}`, 180, y, { align: "right" });
-    y += 8;
+      doc.text("Total Amount:", 125, y);
+      doc.text(`$${invoice.total.toFixed(2)}`, 180, y, { align: "right" });
+      y += 8;
+    }
 
     if (invoice.paidAmount && invoice.paidAmount > 0) {
       doc.setFontSize(10);

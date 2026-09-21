@@ -243,20 +243,22 @@ export default function CustomerInvoicePage() {
 
     const isPaid = invoice.paymentStatus === 'paid';
 
-    // Calculate actual total
-    let subtotal = invoice.services.reduce((sum, s) => sum + Number(s.price), 0);
-    let finalTotal = subtotal;
+    // Calculate actual total with discount on Detail Service ONLY
+    const serviceItems = (invoice.services || []).filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
+    const firstPackage = serviceItems[0];
+    const baseServicePrice = firstPackage ? Number(firstPackage.price) : invoice.services.reduce((sum, s) => sum + Number(s.price), 0);
+    const addonsTotal = serviceItems.slice(1).reduce((sum, s) => sum + Number(s.price), 0);
+    const subtotal = baseServicePrice + addonsTotal;
+    
     let discountAmount = 0;
     if (invoice.discount && invoice.discount.value > 0) {
         if (invoice.discount.type === 'percent') {
-            discountAmount = Math.round(subtotal * (invoice.discount.value / 100));
+            discountAmount = Math.round(baseServicePrice * (invoice.discount.value / 100));
         } else {
             discountAmount = Math.round(invoice.discount.value);
         }
-        finalTotal = Math.max(0, Math.round(subtotal) - discountAmount);
-    } else {
-        finalTotal = Math.round(finalTotal);
     }
+    const finalTotal = Math.max(0, Math.round(baseServicePrice - discountAmount) + addonsTotal);
 
     return (
         <div className="min-h-screen bg-zinc-950 text-white pb-20 font-sans">
