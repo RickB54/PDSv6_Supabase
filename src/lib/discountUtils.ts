@@ -32,7 +32,7 @@ export interface BookingPricingResult {
  * - total = discountedServicePrice + addonsTotal + destinationFee
  */
 export const calculateBookingPricing = (
-  servicePriceOrSubtotal: number,
+  servicePrice: number,
   discountValue: number = 0,
   discountType: string = 'percent',
   addonsTotal: number = 0,
@@ -40,21 +40,15 @@ export const calculateBookingPricing = (
 ): BookingPricingResult => {
   const addons = Math.max(0, Math.round(addonsTotal || 0));
   const destFee = Math.max(0, Math.round(destinationFee || 0));
-  const inputPrice = Math.max(0, Math.round(servicePriceOrSubtotal || 0));
+  const svcPrice = Math.max(0, Math.round(servicePrice || 0));
 
-  // Infer base service price if input was total subtotal
-  let servicePrice = inputPrice;
-  if (addons > 0 && inputPrice > addons) {
-    servicePrice = inputPrice - addons;
-  }
-
-  const discountAmount = calculateDiscount(servicePrice, discountValue, discountType);
-  const discountedServicePrice = Math.max(0, servicePrice - discountAmount);
-  const subtotal = servicePrice + addons;
+  const discountAmount = calculateDiscount(svcPrice, discountValue, discountType);
+  const discountedServicePrice = Math.max(0, svcPrice - discountAmount);
+  const subtotal = svcPrice + addons;
   const total = Math.max(0, discountedServicePrice + addons + destFee);
 
   return {
-    servicePrice,
+    servicePrice: svcPrice,
     addonsTotal: addons,
     subtotal,
     discountAmount,

@@ -569,22 +569,20 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     let subtotal = 0;
     const vType = mapToServiceVehicleType(formData.vehicle, formData.vehicleMake, formData.vehicleModel);
     const pkg = allServices.find(s => s.name === formData.service);
-    if (pkg) {
-      subtotal = getServicePrice(pkg.id, vType);
-    }
+    let servicePrice = pkg ? getServicePrice(pkg.id, vType) : 0;
     
+    let addonsTotal = 0;
     if (formData.addons && formData.addons.length > 0) {
       formData.addons.forEach(addonName => {
         const canonical = getCanonicalAddonName(addonName);
         const addon = allAddons.find(a => a.name === canonical);
         if (addon) {
-          subtotal += getAddOnPrice(addon.id, vType);
+          addonsTotal += getAddOnPrice(addon.id, vType);
         }
       });
     }
 
     const activeDestFee = isShopPlaceOfService(formData.placeOfService) ? 0 : (formData.destinationFee || 0);
-    subtotal += activeDestFee;
 
     const discVal = formData.discountType === 'custom' 
       ? Number(formData.customDiscount || 0) 
@@ -593,7 +591,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       ? 'dollar' 
       : (matchedCoupon?.percent ? 'percent' : 'dollar');
 
-    const pricing = calculateBookingPricing(subtotal, discVal, discType);
+    const pricing = calculateBookingPricing(servicePrice, discVal, discType, addonsTotal, activeDestFee);
     return pricing.total;
   }, [formData.service, formData.vehicle, formData.vehicleMake, formData.vehicleModel, formData.addons, allServices, allAddons, formData.discountType, formData.customDiscount, matchedCoupon, formData.destinationFee, formData.placeOfService]);
 
@@ -625,8 +623,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     
     const vType = mapToServiceVehicleType(booking.vehicle || booking.vehicleType || '', booking.vehicleMake || booking.make || '', booking.vehicleModel || booking.model || '');
     const svc = allServices.find(s => s.name === title);
-    let subtotal = svc ? getServicePrice(svc.id, vType) : Number(booking.service_price || 0);
+    let servicePrice = svc ? getServicePrice(svc.id, vType) : Number(booking.service_price || 0);
     
+    let addonsTotal = 0;
     const addons = booking.addons || booking.add_ons || [];
     const addonsArray = Array.isArray(addons) ? addons : (typeof addons === 'string' ? JSON.parse(addons) : []);
     
@@ -634,13 +633,12 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       const canonical = getCanonicalAddonName(a);
       const addonDef = allAddons.find(ad => ad.name === canonical);
       if (addonDef) {
-        subtotal += getAddOnPrice(addonDef.id, vType);
+        addonsTotal += getAddOnPrice(addonDef.id, vType);
       }
     });
 
     const isShop = isShopPlaceOfService(booking.placeOfService || booking.booking_vehicle?.placeOfService);
     const destFee = isShop ? 0 : Number(booking.destinationFee ?? booking.booking_vehicle?.destinationFee ?? 0);
-    subtotal += destFee;
 
     const discCode = booking.discountCode || booking.booking_vehicle?.discountCode;
     const matchedC = discCode ? coupons.find(c => c.code.trim().toUpperCase() === discCode.trim().toUpperCase()) : null;
@@ -651,7 +649,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       ? (matchedC.percent ? 'percent' : 'dollar') 
       : 'dollar';
 
-    const pricing = calculateBookingPricing(subtotal, discVal, discType);
+    const pricing = calculateBookingPricing(servicePrice, discVal, discType, addonsTotal, destFee);
     return pricing.total;
   }, [items, allServices, allAddons, coupons]);
 
@@ -4714,19 +4712,19 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                                 const discVal = matchedC ? (matchedC.percent || matchedC.amount || 0) : Number(bookingItem.discountAmount || 0);
                                                 const discType = matchedC ? (matchedC.percent ? 'percent' : 'dollar') : 'dollar';
                                                 
-                                                let subtotal = svc ? getServicePrice(svc.id, vType) : Number(bookingItem.service_price || 0);
+                                                let servicePrice = svc ? getServicePrice(svc.id, vType) : Number(bookingItem.service_price || 0);
+                                                let addonsTotal = 0;
                                                 const addons = bookingItem.addons || bookingItem.add_ons || [];
                                                 const addonsArray = Array.isArray(addons) ? addons : (typeof addons === 'string' ? JSON.parse(addons) : []);
                                                 addonsArray.forEach((a: string) => {
                                                   const canonical = getCanonicalAddonName(a);
                                                   const addonDef = allAddons.find(ad => ad.name === canonical);
-                                                  if (addonDef) subtotal += getAddOnPrice(addonDef.id, vType);
+                                                  if (addonDef) addonsTotal += getAddOnPrice(addonDef.id, vType);
                                                 });
                                                 const isShop = isShopPlaceOfService(bookingItem.placeOfService || bookingItem.booking_vehicle?.placeOfService);
                                                 const destFee = isShop ? 0 : Number(bookingItem.destinationFee ?? bookingItem.booking_vehicle?.destinationFee ?? 0);
-                                                subtotal += destFee;
 
-                                                const pricing = calculateBookingPricing(subtotal, discVal, discType);
+                                                const pricing = calculateBookingPricing(servicePrice, discVal, discType, addonsTotal, destFee);
 
                                                 return (
                                                   <div className="flex flex-wrap gap-1 items-center">
