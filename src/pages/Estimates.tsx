@@ -159,11 +159,37 @@ const getEstimateSections = (servicesList: { name: string; price: number }[]): E
     return sections;
 };
 
+export const calculateSectionPricing = (
+    secItems: { name: string; price: number }[],
+    discVal: number = 0,
+    discType: string = 'percent'
+) => {
+    const validServices = secItems.filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
+    const addonItems = validServices.filter(s => 
+        addOns.some(a => a.name.toLowerCase() === s.name.toLowerCase())
+    );
+    const addonNames = new Set(addonItems.map(a => a.name.toLowerCase()));
+    const packageItems = validServices.filter(s => !addonNames.has(s.name.toLowerCase()));
+
+    const baseServicePrice = packageItems.length > 0 
+        ? packageItems.reduce((sum, s) => sum + s.price, 0)
+        : (validServices[0] ? validServices[0].price : 0);
+    const addonsTotal = packageItems.length > 0
+        ? addonItems.reduce((sum, s) => sum + s.price, 0)
+        : validServices.slice(1).reduce((sum, s) => sum + s.price, 0);
+
+    return calculateBookingPricing(baseServicePrice, discVal, discType, addonsTotal, 0);
+};
+
 // ─── Estimate Note Templates ──────────────────────────────────────────────────
 const NOTE_TEMPLATES: { label: string; text: string }[] = [
     {
         label: "🚗 Standard Single Vehicle",
         text: "Thank you for choosing Prime Auto Detail, [Customer Name]!\n\nHere is your personalized estimate for your [Vehicle Year/Make/Model]. The prices listed below reflect the services we discussed during our call.\n\nSimply choose the package that works best for you and click ACCEPT below. If you have any questions before committing, feel free to reach out and I will walk you through everything personally.\n\nAll prices are valid for 30 days from the estimate date. Final pricing may vary slightly based on actual vehicle condition at time of service.\n\n— Rick Berube | Prime Auto Detail | 978-566-1008"
+    },
+    {
+        label: "⚖️ Compare Scenarios (Option A vs B)",
+        text: "The pricing below shows two service options for comparison. You will only be charged for the option you choose, not both.\n\nOption A reflects our standard recommended service. Option B includes additional recommended treatments. Please review both options below and let us know which option you prefer!\n\n— Rick Berube | Prime Auto Detail | 978-566-1008"
     },
     {
         label: "🚙🚙 Multi-Vehicle (Menu Mode)",
@@ -804,44 +830,136 @@ const Estimates = () => {
             .filter(s => String(s.name || '').startsWith('---') && s.price === 0);
 
         if (pdfSectionHeaders.length >= 2) {
-            if (y > 220) {
+            const pdfSections = pdfSectionHeaders.map((hdr) => {
+                const nextHeaderIndex = (estimate.services || []).findIndex((sx, i) => i > hdr.originalIndex && String(sx.name || '').startsWith('---') && sx.price === 0);
+                const sliceEnd = nextHeaderIndex === -1 ? estimate.services.length : nextHeaderIndex;
+                const sectionItems = (estimate.services || []).slice(hdr.originalIndex + 1, sliceEnd).filter(sx => !sx.name?.startsWith('VIRTUAL_'));
+                const cleanTitle = hdr.name.replace(/^---+\s*/, '').replace(/\s*---+$/, '').trim();
+                const pricing = calculateSectionPricing(sectionItems, estimate.discount || 0, estimate.discountType || 'percent');
+                return { title: cleanTitle, items: sectionItems, pricing };
+            });
+
+            if (y > 180) {
                 doc.addPage();
                 y = 20;
             }
 
             doc.setFontSize(11);
             doc.setFont("helvetica", "bold");
-            doc.text("Scenario Comparison Breakdown:", 20, y);
-            y += 7;
-            doc.setFontSize(10);
-            doc.setFont("helvetica", "normal");
+            doc.setTextColor(16, 185, 129);
+            doc.text("SCENARIO COMPARISON BREAKDOWN", 20, y);
+            doc.setTextColor(0, 0, 0);
+            y += 6;
 
-            const pdfSectionTotals: { title: string; total: number }[] = [];
-            pdfSectionHeaders.forEach((hdr) => {
-                const nextHeaderIndex = (estimate.services || []).findIndex((sx, i) => i > hdr.originalIndex && String(sx.name || '').startsWith('---') && sx.price === 0);
-                const sliceEnd = nextHeaderIndex === -1 ? estimate.services.length : nextHeaderIndex;
-                const sTotal = estimate.services.slice(hdr.originalIndex + 1, sliceEnd).reduce((sum, sx) => sum + (sx.price || 0), 0);
-                const cleanTitle = hdr.name.replace(/^---+\s*/, '').replace(/\s*---+$/, '').trim();
-                pdfSectionTotals.push({ title: cleanTitle, total: sTotal });
+            if (pdfSections.length === 2) {
+                const colWidth = 82;
+                const col1X = 20;
+                const col2X = 108;
 
-                doc.text(`• ${cleanTitle}:`, 25, y);
-                doc.text(`$${sTotal.toFixed(2)}`, 180, y, { align: "right" });
-                y += 6;
-            });
+                const calcColHeight = (sec: typeof pdfSections[0]) => {
+                    let h = 12;
+                    sec.items.forEach(it => {
+                        const lines = doc.splitTextToSize(it.name, 48);
+                        h += lines.length * 5;
+                    });
+                    if (sec.pricing.discountAmount > 0) h += 6;
+                    h += 9;
+                    return h;
+                };
 
-            if (pdfSectionTotals.length >= 2) {
-                const secA = pdfSectionTotals[0];
-                const secB = pdfSectionTotals[1];
-                const pdfDelta = secB.total - secA.total;
-                const pdfSign = pdfDelta >= 0 ? '+' : '-';
+                const h1 = calcColHeight(pdfSections[0]);
+                const h2 = calcColHeight(pdfSections[1]);
+                const maxBoxHeight = Math.max(h1, h2, 42);
+
+                if (y + maxBoxHeight + 25 > 280) {
+                    doc.addPage();
+                    y = 20;
+                }
+
+                const boxStartY = y;
+
+                [col1X, col2X].forEach((colX, idx) => {
+                    const sec = pdfSections[idx];
+
+                    doc.setDrawColor(200, 210, 225);
+                    doc.setFillColor(248, 250, 252);
+                    doc.roundedRect(colX, boxStartY, colWidth, maxBoxHeight, 2, 2, "FD");
+
+                    doc.setFillColor(238, 242, 255);
+                    doc.roundedRect(colX, boxStartY, colWidth, 9, 2, 2, "F");
+
+                    doc.setFontSize(10);
+                    doc.setFont("helvetica", "bold");
+                    doc.setTextColor(30, 41, 59);
+                    doc.text(sec.title, colX + 4, boxStartY + 6);
+
+                    let itemY = boxStartY + 14;
+                    doc.setFontSize(9);
+                    doc.setFont("helvetica", "normal");
+                    doc.setTextColor(50, 50, 50);
+
+                    sec.items.forEach(it => {
+                        const lines = doc.splitTextToSize(it.name, 48);
+                        doc.text(lines, colX + 4, itemY);
+                        doc.text(`$${it.price.toFixed(2)}`, colX + colWidth - 4, itemY, { align: "right" });
+                        itemY += lines.length * 5;
+                    });
+
+                    if (sec.pricing.discountAmount > 0) {
+                        itemY += 1;
+                        doc.setFontSize(8.5);
+                        doc.setTextColor(180, 83, 9);
+                        const discLabel = (estimate.discountType || 'percent') === 'percent'
+                            ? `Discount (${estimate.discount}%):`
+                            : `Discount:`;
+                        doc.text(discLabel, colX + 4, itemY);
+                        doc.text(`-$${sec.pricing.discountAmount.toFixed(2)}`, colX + colWidth - 4, itemY, { align: "right" });
+                    }
+
+                    doc.setDrawColor(220, 225, 230);
+                    doc.line(colX + 4, boxStartY + maxBoxHeight - 8, colX + colWidth - 4, boxStartY + maxBoxHeight - 8);
+
+                    doc.setFontSize(10);
+                    doc.setFont("helvetica", "bold");
+                    doc.setTextColor(16, 185, 129);
+                    doc.text(`${sec.title} Total:`, colX + 4, boxStartY + maxBoxHeight - 3);
+                    doc.text(`$${sec.pricing.total.toFixed(2)}`, colX + colWidth - 4, boxStartY + maxBoxHeight - 3, { align: "right" });
+                });
+
+                y = boxStartY + maxBoxHeight + 6;
+
+                const secA = pdfSections[0];
+                const secB = pdfSections[1];
+                const delta = secB.pricing.total - secA.pricing.total;
+                const isHigher = delta > 0;
+                const isLower = delta < 0;
+                const sign = delta >= 0 ? '+' : '-';
+
+                doc.setDrawColor(59, 130, 246);
+                doc.setFillColor(240, 249, 255);
+                doc.roundedRect(20, y, 170, 11, 2, 2, "FD");
+
+                doc.setFontSize(9.5);
                 doc.setFont("helvetica", "bold");
-                doc.text(`Price Difference (${secB.title} vs ${secA.title}):`, 25, y);
-                doc.text(`${pdfSign}$${Math.abs(pdfDelta).toFixed(2)}`, 180, y, { align: "right" });
-                doc.setFont("helvetica", "normal");
-                y += 8;
+                doc.setTextColor(30, 58, 138);
+                doc.text(`Price Difference (${secB.title} − ${secA.title}):`, 24, y + 7);
+
+                const diffText = `${sign}$${Math.abs(delta).toFixed(2)} ${isHigher ? `(${secB.title} is $${delta.toFixed(2)} higher)` : isLower ? `(${secB.title} is $${Math.abs(delta).toFixed(2)} lower)` : '(Identical)'}`;
+                doc.text(diffText, 186, y + 7, { align: "right" });
+
+                y += 17;
+            } else {
+                pdfSections.forEach(sec => {
+                    doc.setFontSize(10);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`• ${sec.title}:`, 25, y);
+                    doc.text(`$${sec.pricing.total.toFixed(2)}`, 180, y, { align: "right" });
+                    y += 6;
+                });
+                y += 4;
             }
 
-            y += 2;
+            doc.setDrawColor(200, 200, 200);
             doc.line(20, y, 190, y);
             y += 8;
         }
@@ -888,7 +1006,7 @@ const Estimates = () => {
             }
         }
 
-        if (!isEstimateMenuMode) {
+        if (!isEstimateMenuMode && pdfSectionHeaders.length < 2) {
             doc.setFontSize(12);
             
             if (estimate.discount && estimate.discount > 0) {
@@ -1368,6 +1486,19 @@ Precision. Protection. Perfection.`;
                                 </div>
                                 <div className="text-right shrink-0">
                                     {(() => {
+                                        const sectionsCount = getEstimateSections(services).length;
+                                        if (sectionsCount >= 2) {
+                                            return (
+                                                <div className="text-right">
+                                                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-xs font-bold px-2.5 py-1">
+                                                        Compare Scenarios Active
+                                                    </Badge>
+                                                    <div className="text-[10px] text-zinc-400 mt-1">
+                                                        See Option Totals Below
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
                                         const subtotal = services.reduce((sum, s) => sum + s.price, 0);
                                         const total = calculateTotal();
                                         return (
@@ -2085,6 +2216,10 @@ Precision. Protection. Perfection.`;
                                             size="sm" 
                                             onClick={() => {
                                                 setIsCompareMode(true);
+                                                const disclaimer = "The pricing below shows two service options for comparison. You will only be charged for the option you choose, not both.";
+                                                if (!notes.includes("You will only be charged for the option you choose")) {
+                                                    setNotes(prev => prev.trim() ? `${prev.trim()}\n\n${disclaimer}` : disclaimer);
+                                                }
                                                 const headers = services.filter(s => String(s.name || '').startsWith('---') && s.price === 0);
                                                 if (headers.length === 0) {
                                                     const wrappedServices = [
@@ -2122,9 +2257,14 @@ Precision. Protection. Perfection.`;
                                         const sections = getEstimateSections(services);
                                         if (sections.length < 2) return null;
 
-                                        const scenarioA = sections[0];
-                                        const scenarioB = sections[1];
-                                        const delta = scenarioB.subtotal - scenarioA.subtotal;
+                                        const sectionPricings = sections.map(sec => ({
+                                            ...sec,
+                                            pricing: calculateSectionPricing(sec.items, discount, discountType)
+                                        }));
+
+                                        const scenarioA = sectionPricings[0];
+                                        const scenarioB = sectionPricings[1];
+                                        const delta = scenarioB.pricing.total - scenarioA.pricing.total;
                                         const isHigher = delta > 0;
                                         const isLower = delta < 0;
 
@@ -2143,11 +2283,11 @@ Precision. Protection. Perfection.`;
                                                 </div>
 
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {sections.map((sec, idx) => (
+                                                    {sectionPricings.map((sec, idx) => (
                                                         <div key={idx} className={`p-3.5 rounded-lg border ${idx === 0 ? 'bg-zinc-900/80 border-zinc-800' : 'bg-blue-950/20 border-blue-500/30'}`}>
                                                             <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800/80">
                                                                 <span className="font-bold text-sm text-amber-400">{sec.title}</span>
-                                                                <span className="font-black text-white text-base">${sec.subtotal.toFixed(2)}</span>
+                                                                <span className="font-black text-white text-base">${sec.pricing.total.toFixed(2)}</span>
                                                             </div>
                                                             <div className="space-y-1 text-xs text-zinc-400">
                                                                 {sec.items.length === 0 ? (
@@ -2160,6 +2300,16 @@ Precision. Protection. Perfection.`;
                                                                         </div>
                                                                     ))
                                                                 )}
+                                                                {sec.pricing.discountAmount > 0 && (
+                                                                    <div className="flex justify-between items-center py-1 mt-1 border-t border-zinc-800/80 text-amber-400 font-bold">
+                                                                        <span>Discount on Service ({discountType === 'percent' ? `${discount}%` : `$${discount}`}):</span>
+                                                                        <span className="font-mono">-${sec.pricing.discountAmount.toFixed(2)}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-2 pt-2 border-t border-zinc-800/60 flex justify-between items-center text-xs font-bold text-emerald-400">
+                                                                <span>{sec.title} Total:</span>
+                                                                <span className="text-sm">${sec.pricing.total.toFixed(2)}</span>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -2221,7 +2371,7 @@ Precision. Protection. Perfection.`;
                                                 </label>
                                             </div>
                                         </div>
-                                        {!isMenuMode && (
+                                        {!isMenuMode && getEstimateSections(services).length < 2 && (
                                             <div className="flex gap-4">
                                                 <span>Estimated Total</span>
                                                 <span className="text-amber-500">${calculateTotal().toFixed(2)}</span>
@@ -2359,7 +2509,13 @@ Precision. Protection. Perfection.`;
                                     <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-3 sm:gap-6 justify-between md:justify-end w-full md:w-auto mt-4 md:mt-0">
                                         <div className="text-right">
                                             <div className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Total</div>
-                                            <div className="text-xl font-bold text-white">${(est.total || 0).toFixed(2)}</div>
+                                            {getEstimateSections(est.services).length >= 2 ? (
+                                                <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-[10px] font-black uppercase mt-1">
+                                                    Scenarios Active
+                                                </Badge>
+                                            ) : (
+                                                <div className="text-xl font-bold text-white">${(est.total || 0).toFixed(2)}</div>
+                                            )}
                                         </div>
 
                                         <div className="text-right min-w-[100px]">
@@ -2802,12 +2958,61 @@ Precision. Protection. Perfection.`;
                                         </div>
                                     );
                                 })}
-                                {!selectedEstimate.notes?.includes('[MENU_MODE]') && (
-                                    <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
-                                        <span className="text-lg font-bold text-white">Total</span>
-                                        <span className="text-2xl font-bold text-amber-500">${(selectedEstimate.total || 0).toFixed(2)}</span>
-                                    </div>
-                                )}
+                                {(() => {
+                                    const sections = getEstimateSections(selectedEstimate.services);
+                                    if (sections.length >= 2) {
+                                        const sectionPricings = sections.map(sec => ({
+                                            ...sec,
+                                            pricing: calculateSectionPricing(sec.items, selectedEstimate.discount || 0, selectedEstimate.discountType || 'percent')
+                                        }));
+                                        const secA = sectionPricings[0];
+                                        const secB = sectionPricings[1];
+                                        const delta = secB.pricing.total - secA.pricing.total;
+                                        const isHigher = delta > 0;
+                                        const isLower = delta < 0;
+
+                                        return (
+                                            <div className="mt-4 p-4 rounded-xl bg-zinc-900 border border-blue-500/30 space-y-3">
+                                                <div className="text-xs font-black uppercase text-blue-400 tracking-wider">
+                                                    Scenario Comparison Breakdown
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    {sectionPricings.map((sec, idx) => (
+                                                        <div key={idx} className="p-3 bg-zinc-950 rounded-lg border border-zinc-800 space-y-1">
+                                                            <div className="flex justify-between text-sm font-bold text-amber-400">
+                                                                <span>{sec.title}</span>
+                                                                <span>${sec.pricing.total.toFixed(2)}</span>
+                                                            </div>
+                                                            {sec.pricing.discountAmount > 0 && (
+                                                                <div className="text-xs text-amber-400/90 font-medium">
+                                                                    Discount on Service: -${sec.pricing.discountAmount.toFixed(2)}
+                                                                </div>
+                                                            )}
+                                                            <div className="text-[11px] text-emerald-400 font-bold">
+                                                                {sec.title} Total: ${sec.pricing.total.toFixed(2)}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <div className="text-xs text-zinc-300 font-bold pt-2 border-t border-zinc-800 flex justify-between">
+                                                    <span>Price Difference ({secB.title} − {secA.title}):</span>
+                                                    <span className="text-blue-400 font-mono">
+                                                        {delta >= 0 ? `+ $${delta.toFixed(2)}` : `- $${Math.abs(delta).toFixed(2)}`} ({isHigher ? `${secB.title} is $${delta.toFixed(2)} higher` : isLower ? `${secB.title} is $${Math.abs(delta).toFixed(2)} lower` : 'Identical'})
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    if (!selectedEstimate.notes?.includes('[MENU_MODE]')) {
+                                        return (
+                                            <div className="border-t border-zinc-800 mt-4 pt-4 flex justify-between items-center">
+                                                <span className="text-lg font-bold text-white">Total</span>
+                                                <span className="text-2xl font-bold text-amber-500">${(selectedEstimate.total || 0).toFixed(2)}</span>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                             </div>
 
                             {/* Pre-Check Data Block if customer accepted online */}
