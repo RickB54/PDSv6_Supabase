@@ -6,9 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCouponsStore, Coupon } from "@/store/coupons";
-import { TicketPercent, Plus, Hash, DollarSign, Percent, ToggleLeft, ToggleRight, Trash2, Tag, Edit, Save, X } from "lucide-react";
+import { TicketPercent, Plus, Hash, DollarSign, Percent, ToggleLeft, ToggleRight, Trash2, Tag, Edit, Save, X, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { HelpTooltipPopup } from "@/components/ui/HelpTooltipPopup";
 
 export default function DiscountCoupons() {
   const { toast } = useToast();
@@ -69,6 +70,30 @@ export default function DiscountCoupons() {
 
       <main className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
 
+        {/* Canonical Discount Math Policy Callout */}
+        <Card className="bg-gradient-to-r from-amber-500/10 via-zinc-900 to-zinc-900 border-amber-500/30 p-4 shadow-xl">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400 shrink-0 mt-0.5 border border-amber-500/30">
+              <Info className="w-5 h-5" />
+            </div>
+            <div className="space-y-1 text-sm">
+              <div className="font-bold text-amber-400 flex items-center gap-2">
+                <span>Discount Policy: Detail Service Packages Only</span>
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/30 text-[9px] uppercase font-black">System Rule</Badge>
+              </div>
+              <p className="text-zinc-300 text-xs leading-relaxed">
+                All percentage (%) and fixed dollar ($) coupons apply strictly to <strong>Detail Service Packages ONLY</strong>. 
+                <strong> Add-Ons</strong> (e.g. Pet Hair Removal, Engine Bay Cleaning) are <strong>NEVER discounted</strong> and are calculated at 100% full price after discounting the base package.
+              </p>
+              <div className="text-[11px] text-zinc-400 font-mono pt-1">
+                Formula: Total = (Base Service - Discount) + Add-Ons (100% Full Price) + Destination Fee
+                <br />
+                Example: $327 Base Service - 10% Coupon ($33) = $294 + $94 Pet Hair Removal = <strong>$388.00 Grand Total</strong>
+              </div>
+            </div>
+          </div>
+        </Card>
+
         {/* Stats & Actions */}
         <div className="flex flex-col md:flex-row gap-4">
           <Card className="flex-1 bg-gradient-to-br from-zinc-900 to-zinc-950 border-zinc-800 shadow-xl">
@@ -109,6 +134,28 @@ export default function DiscountCoupons() {
               <div className="flex items-center gap-2">
                 <Hash className="w-5 h-5 text-zinc-400" />
                 <CardTitle className="text-white text-lg">Manage Coupons</CardTitle>
+                <HelpTooltipPopup
+                  title="Discount Coupon Calculation Math"
+                  subtitle="System pricing rules for coupons vs add-ons"
+                  badge="DISCOUNT MATH"
+                  triggerLabel="Discount Math"
+                  side="bottom"
+                  align="start"
+                  steps={[
+                    {
+                      title: "1. Detail Service Package Only",
+                      desc: "All percentage (e.g. 10% FRIENDS&FAM) and dollar-off coupons discount the primary Detail Service package ONLY."
+                    },
+                    {
+                      title: "2. Add-Ons are 100% Full Price",
+                      desc: "Add-Ons (e.g. Pet Hair Removal, Engine Bay, Leather Conditioning) are NEVER discounted. They are added at 100% full price AFTER the service package discount."
+                    },
+                    {
+                      title: "3. Formula & Real Example",
+                      desc: "Total = (Base Service - Discount) + Add-Ons + Destination Fee. Example: $327 Service - 10% ($33) = $294. Plus $94 Pet Hair Removal = $388.00 Grand Total."
+                    }
+                  ]}
+                />
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant="outline" className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
@@ -224,6 +271,13 @@ export default function DiscountCoupons() {
             </DialogHeader>
 
             <div className="space-y-4 pt-2">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-xs text-amber-200/90 flex items-start gap-2">
+                <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Discount Policy:</strong> Coupons discount the base Detail Service package ONLY. Add-Ons are calculated at 100% full price.
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-xs text-zinc-400 font-bold uppercase">Coupon Code</label>
                 <div className="relative">
