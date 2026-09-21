@@ -159,25 +159,38 @@ const getEstimateSections = (servicesList: { name: string; price: number }[]): E
     return sections;
 };
 
+export const separatePackageAndAddons = (validItems: { name: string; price: number }[]) => {
+    if (!validItems || validItems.length === 0) {
+        return { baseServicePrice: 0, addonsTotal: 0 };
+    }
+
+    // Identify package item matching recognized service package
+    const packageIndex = validItems.findIndex(s => 
+        servicePackages.some(p => p.name.toLowerCase() === s.name.toLowerCase())
+    );
+
+    if (packageIndex !== -1) {
+        const baseServicePrice = validItems[packageIndex].price || 0;
+        const addonsTotal = validItems.reduce((sum, item, idx) => {
+            return idx === packageIndex ? sum : sum + (item.price || 0);
+        }, 0);
+        return { baseServicePrice, addonsTotal };
+    }
+
+    // If no item matches a recognized service package, treat the FIRST item as the package line,
+    // and ALL other items (including custom line items and add-ons) as non-discounted extras.
+    const baseServicePrice = validItems[0].price || 0;
+    const addonsTotal = validItems.slice(1).reduce((sum, item) => sum + (item.price || 0), 0);
+    return { baseServicePrice, addonsTotal };
+};
+
 export const calculateSectionPricing = (
     secItems: { name: string; price: number }[],
     discVal: number = 0,
     discType: string = 'percent'
 ) => {
     const validServices = secItems.filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
-    const addonItems = validServices.filter(s => 
-        addOns.some(a => a.name.toLowerCase() === s.name.toLowerCase())
-    );
-    const addonNames = new Set(addonItems.map(a => a.name.toLowerCase()));
-    const packageItems = validServices.filter(s => !addonNames.has(s.name.toLowerCase()));
-
-    const baseServicePrice = packageItems.length > 0 
-        ? packageItems.reduce((sum, s) => sum + s.price, 0)
-        : (validServices[0] ? validServices[0].price : 0);
-    const addonsTotal = packageItems.length > 0
-        ? addonItems.reduce((sum, s) => sum + s.price, 0)
-        : validServices.slice(1).reduce((sum, s) => sum + s.price, 0);
-
+    const { baseServicePrice, addonsTotal } = separatePackageAndAddons(validServices);
     return calculateBookingPricing(baseServicePrice, discVal, discType, addonsTotal, 0);
 };
 
@@ -416,20 +429,7 @@ const Estimates = () => {
 
     const calculateTotal = () => {
         const validServices = services.filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
-        const addonItems = validServices.filter(s => 
-            addOns.some(a => a.name.toLowerCase() === s.name.toLowerCase()) || 
-            selectedAddons.some(id => addOns.find(a => a.id === id)?.name.toLowerCase() === s.name.toLowerCase())
-        );
-        const addonNames = new Set(addonItems.map(a => a.name.toLowerCase()));
-        const packageItems = validServices.filter(s => !addonNames.has(s.name.toLowerCase()));
-
-        const baseServicePrice = packageItems.length > 0 
-            ? packageItems.reduce((sum, s) => sum + s.price, 0)
-            : (validServices[0] ? validServices[0].price : 0);
-        const addonsTotal = packageItems.length > 0
-            ? addonItems.reduce((sum, s) => sum + s.price, 0)
-            : validServices.slice(1).reduce((sum, s) => sum + s.price, 0);
-
+        const { baseServicePrice, addonsTotal } = separatePackageAndAddons(validServices);
         const pricing = calculateBookingPricing(baseServicePrice, discount, discountType, addonsTotal, destinationFee);
         return pricing.total;
     };
@@ -1013,18 +1013,9 @@ const Estimates = () => {
                 doc.setFontSize(10);
                 doc.setTextColor(150, 150, 150);
                 
-                // Separate base Detail Service package from Add-Ons
+                // Separate base Detail Service package from Add-Ons & Custom Line Items
                 const serviceItems = (estimate.services || []).filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
-                const addonItems = serviceItems.filter(s => addOns.some(a => a.name.toLowerCase() === s.name.toLowerCase()));
-                const addonNames = new Set(addonItems.map(a => a.name.toLowerCase()));
-                const packageItems = serviceItems.filter(s => !addonNames.has(s.name.toLowerCase()));
-
-                const baseServicePrice = packageItems.length > 0 
-                    ? packageItems.reduce((sum, s) => sum + s.price, 0)
-                    : (serviceItems[0] ? serviceItems[0].price : 0);
-                const addonsTotal = packageItems.length > 0
-                    ? addonItems.reduce((sum, s) => sum + s.price, 0)
-                    : serviceItems.slice(1).reduce((sum, s) => sum + s.price, 0);
+                const { baseServicePrice, addonsTotal } = separatePackageAndAddons(serviceItems);
 
                 let resolvedType = estimate.discountType || 'percent';
                 const pricing = calculateBookingPricing(baseServicePrice, estimate.discount, resolvedType, addonsTotal, 0);
@@ -1486,15 +1477,26 @@ Precision. Protection. Perfection.`;
                                 </div>
                                 <div className="text-right shrink-0">
                                     {(() => {
-                                        const sectionsCount = getEstimateSections(services).length;
-                                        if (sectionsCount >= 2) {
+                                        const sections = getEstimateSections(services);
+                                        if (sections.length >= 2) {
+                                            const sectionPricings = sections.map(sec => ({
+                                                title: sec.title,
+                                                total: calculateSectionPricing(sec.items, discount, discountType).total
+                                            }));
                                             return (
-                                                <div className="text-right">
-                                                    <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 text-xs font-bold px-2.5 py-1">
+                                                <div className="text-right flex flex-col items-end gap-1">
+                                                    <div className="text-[10px] text-blue-400 font-black uppercase tracking-wider mb-0.5">
                                                         Compare Scenarios Active
-                                                    </Badge>
-                                                    <div className="text-[10px] text-zinc-400 mt-1">
-                                                        See Option Totals Below
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                                                        {sectionPricings.map((sec, idx) => (
+                                                            <Badge key={idx} variant="outline" className={`font-mono font-black text-xs px-2.5 py-1 shadow-sm ${idx === 0 ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' : 'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}>
+                                                                {sec.title}: ${sec.total.toFixed(2)}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                    <div className="text-[10px] text-zinc-400 font-medium">
+                                                        {formatDisplayDate(estimateDate)}
                                                     </div>
                                                 </div>
                                             );
