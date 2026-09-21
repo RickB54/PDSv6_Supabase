@@ -725,7 +725,6 @@ const Estimates = () => {
 
         const contentStartY = 45;
         doc.setFontSize(10);
-        const targetDateStr = estimate.isSent && estimate.sentDate ? estimate.sentDate : null;
         
         // Left side header: Estimate Date & Quote Valid Until (bold labels, normal values)
         doc.setFont("helvetica", "bold");
@@ -738,7 +737,7 @@ const Estimates = () => {
         doc.text("Quote Valid Until:", 20, contentStartY + 6);
         const validUntilLabelWidth = doc.getTextWidth("Quote Valid Until:");
         doc.setFont("helvetica", "normal");
-        doc.text(` ${targetDateStr ? getValidUntilDate(targetDateStr) : "Pending Send"}`, 20 + validUntilLabelWidth, contentStartY + 6);
+        doc.text(` ${getValidUntilDate(estimate.estimateDate || estimate.date || new Date())}`, 20 + validUntilLabelWidth, contentStartY + 6);
         
         // Right side header: Customer, Vehicle, Place of Service (bold labels, normal values, wrapped at 75mm)
         const posText = resolvePlaceOfService(
