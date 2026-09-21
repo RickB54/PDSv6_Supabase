@@ -21,7 +21,7 @@ import jsPDF from "jspdf";
 import { cn, formatDisplayDate, getValidUntilDate, toInputDateFormat } from "@/lib/utils";
 import { savePDFToArchive } from "@/lib/pdfArchive";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
-import { calculateDiscount, applyDiscount } from "@/lib/discountUtils";
+import { calculateDiscount, applyDiscount, calculateBookingPricing } from "@/lib/discountUtils";
 import {
     Select,
     SelectContent,
@@ -71,6 +71,7 @@ interface Estimate {
     created_at?: string;
     isSent?: boolean;
     sentDate?: string;
+    placeOfService?: string;
 }
 
 
@@ -341,8 +342,23 @@ const Estimates = () => {
     }, [searchParams, customers, estimates]);
 
     const calculateTotal = () => {
-        const subtotal = services.reduce((sum, s) => sum + s.price, 0) + destinationFee;
-        return applyDiscount(subtotal, discount, discountType);
+        const validServices = services.filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
+        const addonItems = validServices.filter(s => 
+            addOns.some(a => a.name.toLowerCase() === s.name.toLowerCase()) || 
+            selectedAddons.some(id => addOns.find(a => a.id === id)?.name.toLowerCase() === s.name.toLowerCase())
+        );
+        const addonNames = new Set(addonItems.map(a => a.name.toLowerCase()));
+        const packageItems = validServices.filter(s => !addonNames.has(s.name.toLowerCase()));
+
+        const baseServicePrice = packageItems.length > 0 
+            ? packageItems.reduce((sum, s) => sum + s.price, 0)
+            : (validServices[0] ? validServices[0].price : 0);
+        const addonsTotal = packageItems.length > 0
+            ? addonItems.reduce((sum, s) => sum + s.price, 0)
+            : validServices.slice(1).reduce((sum, s) => sum + s.price, 0);
+
+        const pricing = calculateBookingPricing(baseServicePrice, discount, discountType, addonsTotal, destinationFee);
+        return pricing.total;
     };
 
     const createEstimate = async () => {
@@ -787,26 +803,32 @@ const Estimates = () => {
                 
                 // Separate base Detail Service package from Add-Ons
                 const serviceItems = (estimate.services || []).filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
-                const firstPackage = serviceItems[0];
-                const baseServicePrice = firstPackage ? firstPackage.price : estimate.services.reduce((sum, s) => sum + s.price, 0);
-                const addonsTotal = serviceItems.slice(1).reduce((sum, s) => sum + s.price, 0);
+                const addonItems = serviceItems.filter(s => addOns.some(a => a.name.toLowerCase() === s.name.toLowerCase()));
+                const addonNames = new Set(addonItems.map(a => a.name.toLowerCase()));
+                const packageItems = serviceItems.filter(s => !addonNames.has(s.name.toLowerCase()));
+
+                const baseServicePrice = packageItems.length > 0 
+                    ? packageItems.reduce((sum, s) => sum + s.price, 0)
+                    : (serviceItems[0] ? serviceItems[0].price : 0);
+                const addonsTotal = packageItems.length > 0
+                    ? addonItems.reduce((sum, s) => sum + s.price, 0)
+                    : serviceItems.slice(1).reduce((sum, s) => sum + s.price, 0);
 
                 let resolvedType = estimate.discountType || 'percent';
-                const discountAmount = calculateDiscount(baseServicePrice, estimate.discount, resolvedType);
+                const pricing = calculateBookingPricing(baseServicePrice, estimate.discount, resolvedType, addonsTotal, 0);
                 const discountLabel = resolvedType === 'percent'
                     ? `Discount on Service (${estimate.discount}%):`
                     : `Discount on Service:`;
 
                 doc.text(discountLabel, 140, y);
-                doc.text(`-$${discountAmount.toFixed(2)}`, 180, y, { align: "right" });
+                doc.text(`-$${pricing.discountAmount.toFixed(2)}`, 180, y, { align: "right" });
                 y += 12;
                 doc.setFontSize(12);
                 doc.setTextColor(0, 0, 0);
 
-                const finalEstimatedTotal = Math.max(0, (baseServicePrice - discountAmount) + addonsTotal);
                 doc.setFont("helvetica", "bold");
                 doc.text("Estimated Total:", 125, y);
-                doc.text(`$${finalEstimatedTotal.toFixed(2)}`, 180, y, { align: "right" });
+                doc.text(`$${pricing.total.toFixed(2)}`, 180, y, { align: "right" });
                 doc.setFont("helvetica", "normal");
                 y += 12;
             } else {
@@ -2169,7 +2191,7 @@ Precision. Protection. Perfection.`;
                                         </div>
                                         <div className="flex flex-wrap gap-1.5 items-center justify-end w-full sm:w-auto" onClick={e => e.stopPropagation()}>
                                             {(() => {
-                                                const daysPending = est.isSent && est.sentDate && est.status !== 'accepted' && est.status !== 'declined' && est.status !== 'denied' ? Math.floor((new Date().getTime() - new Date(est.sentDate).getTime()) / (1000 * 3600 * 24)) : null;
+                                                const daysPending = est.isSent && est.sentDate && est.status !== 'accepted' && est.status !== 'declined' ? Math.floor((new Date().getTime() - new Date(est.sentDate).getTime()) / (1000 * 3600 * 24)) : null;
                                                 return daysPending !== null && (
                                                     <Button 
                                                         size="sm" 
@@ -2438,7 +2460,7 @@ Precision. Protection. Perfection.`;
                                 </div>
                                 <div className="flex gap-3 items-center flex-wrap justify-end">
                                     {(() => {
-                                        const daysPending = selectedEstimate.isSent && selectedEstimate.sentDate && selectedEstimate.status !== 'accepted' && selectedEstimate.status !== 'declined' && selectedEstimate.status !== 'denied' ? Math.floor((new Date().getTime() - new Date(selectedEstimate.sentDate).getTime()) / (1000 * 3600 * 24)) : null;
+                                        const daysPending = selectedEstimate.isSent && selectedEstimate.sentDate && selectedEstimate.status !== 'accepted' && selectedEstimate.status !== 'declined' ? Math.floor((new Date().getTime() - new Date(selectedEstimate.sentDate).getTime()) / (1000 * 3600 * 24)) : null;
                                         return daysPending !== null && (
                                             <Button 
                                                 size="sm" 

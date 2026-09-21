@@ -17,7 +17,7 @@ import {
   logUniqueEngagement
 } from "@/lib/supa-data";
 import { normalizeVehicleType } from "@/lib/pricingHelpers";
-import { calculateDiscount, applyDiscount } from "@/lib/discountUtils";
+import { calculateDiscount, applyDiscount, calculateBookingPricing } from "@/lib/discountUtils";
 import { useToast } from "@/hooks/use-toast";
 import jsPDF from "jspdf";
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
@@ -279,8 +279,20 @@ const Invoicing = () => {
 
   const calculateTotal = () => {
     if (isPriceLocked) return lockedTotal;
-    const subtotal = calculateSubtotal();
-    return applyDiscount(subtotal, invoiceDiscount, invoiceDiscountType);
+    const validServices = services.filter(s => s.name && !s.name.startsWith('---') && !s.name.startsWith('VIRTUAL_'));
+    const addonItems = validServices.filter(s => addOns.some(a => a.name.toLowerCase() === s.name.toLowerCase()));
+    const addonNames = new Set(addonItems.map(a => a.name.toLowerCase()));
+    const packageItems = validServices.filter(s => !addonNames.has(s.name.toLowerCase()));
+
+    const baseServicePrice = packageItems.length > 0 
+      ? packageItems.reduce((sum, s) => sum + s.price, 0)
+      : (validServices[0] ? validServices[0].price : 0);
+    const addonsTotal = packageItems.length > 0
+      ? addonItems.reduce((sum, s) => sum + s.price, 0)
+      : validServices.slice(1).reduce((sum, s) => sum + s.price, 0);
+
+    const pricing = calculateBookingPricing(baseServicePrice, invoiceDiscount, invoiceDiscountType, addonsTotal, 0);
+    return Math.max(0, pricing.total - (editAdjustmentAmount || 0));
   };
 
   const handleCustomerChange = async (cid: string) => {
