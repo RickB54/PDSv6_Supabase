@@ -435,14 +435,24 @@ const Estimates = () => {
     };
 
     const createEstimate = async () => {
-        if (!selectedCustomer || services.length === 0) {
-            toast({ title: "Error", description: "Please select customer and add services", variant: "destructive" });
+        const validServices = services.filter(s => s.name && !s.name.trim().startsWith('---') && !s.name.trim().startsWith('VIRTUAL_'));
+
+        if (!selectedCustomer) {
+            toast({ title: "Error", description: "Please select a customer for this estimate.", variant: "destructive" });
             return;
         }
 
-        const customer = customers.find(c => c.id === selectedCustomer);
+        if (validServices.length === 0) {
+            toast({ title: "Error", description: "Please add at least one service line item to the estimate.", variant: "destructive" });
+            return;
+        }
+
+        let customer = customers.find(c => c.id === selectedCustomer);
         if (!customer) {
-            console.error('Customer not found for ID:', selectedCustomer);
+            customer = customers.find(c => c.name.toLowerCase() === selectedCustomer.toLowerCase());
+        }
+        if (!customer) {
+            console.error('Customer not found for ID or Name:', selectedCustomer);
             toast({ title: "Error", description: "Customer record not found. Please try re-selecting the customer.", variant: "destructive" });
             return;
         }
@@ -574,8 +584,13 @@ const Estimates = () => {
 
     const handleModify = (est: Estimate) => {
         setEditingEstimateId(est.id || null);
-        setSelectedCustomer(est.customerId);
-        setServices(est.services);
+        let resolvedCustId = est.customerId || "";
+        if (!resolvedCustId && est.customerName) {
+            const found = customers.find(c => c.name.toLowerCase() === est.customerName.toLowerCase());
+            if (found) resolvedCustId = found.id || "";
+        }
+        setSelectedCustomer(resolvedCustId);
+        setServices(est.services || []);
         setSelectedPackage(est.packageId || "");
         setSelectedVehicleType((est.vehicleType as any) || "midsize");
         setSelectedAddons(est.addonIds || []);
