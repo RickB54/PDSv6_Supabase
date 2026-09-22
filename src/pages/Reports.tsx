@@ -555,7 +555,7 @@ const Reports = () => {
     doc.setTextColor(100, 100, 100);
     doc.text(`Generated: ${new Date().toLocaleString()} | Filter: ${dateFilter.toUpperCase()}`, 105, 28, { align: "center" });
 
-    const fEstimates = filterByDate(estimates.filter(e => e.customerName !== 'Generic Customer' && e.customerName !== 'TEST Customer'));
+    const fEstimates = filterByDate(estimates.filter(e => e.customerName !== 'Generic Customer' && e.customerName !== 'TEST Customer'), 'estimateDate');
     const rows = (fEstimates || []).map(est => [
       est.estimateNumber || est.id?.substring(0, 6) || 'N/A',
       est.customerName || 'N/A',
@@ -1910,7 +1910,7 @@ const Reports = () => {
                     <ClipboardCheck className="h-6 w-6 text-cyan-500" />
                     Estimates Ledger
                   </h2>
-                  <p className="text-sm text-zinc-400">Total Estimates: {filterByDate(estimates).length}</p>
+                  <p className="text-sm text-zinc-400">Total Estimates: {filterByDate(estimates, 'estimateDate').length}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <Button variant="outline" size="sm" onClick={() => generateEstimatesReport(false)} className="border-zinc-700 bg-zinc-800/50 text-zinc-300 hover:bg-zinc-800 h-10 rounded-xl px-4"><Printer className="h-4 w-4 mr-2" /> Print</Button>
@@ -1922,7 +1922,7 @@ const Reports = () => {
                 <Table>
                   <TableHeader className="bg-zinc-900"><TableRow className="border-zinc-800 hover:bg-zinc-900/50"><TableHead className="text-zinc-400 whitespace-nowrap">ID</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Customer</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Service</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Amount</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Status</TableHead><TableHead className="text-zinc-400 whitespace-nowrap">Date</TableHead></TableRow></TableHeader>
                   <TableBody>
-                    {filterByDate(estimates).map(est => (
+                    {filterByDate(estimates, 'estimateDate').map(est => (
                       <TableRow key={est.id} className="border-zinc-800 hover:bg-zinc-800/50">
                         <TableCell className="font-mono text-zinc-500 whitespace-nowrap">#{est.estimateNumber || est.id?.substring(0, 6)}</TableCell>
                         <TableCell className="text-zinc-300 font-medium whitespace-nowrap">{est.customerName || 'N/A'}</TableCell>
@@ -1931,14 +1931,14 @@ const Reports = () => {
                         </TableCell>
                         <TableCell className="text-emerald-400 font-bold whitespace-nowrap">${(est.total || 0).toFixed(2)}</TableCell>
                         <TableCell className="whitespace-nowrap">
-                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${est.status === 'Accepted' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : est.status === 'Sent' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${est.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : est.status === 'sent' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' : est.status === 'declined' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-zinc-800 text-zinc-400 border border-zinc-700'}`}>
                             {est.status || 'Draft'}
                           </span>
                         </TableCell>
                         <TableCell className="text-zinc-400 whitespace-nowrap">{(() => { const dt = getValidItemDate(est); return dt ? dt.toLocaleDateString() : 'N/A'; })()}</TableCell>
                       </TableRow>
                     ))}
-                    {filterByDate(estimates).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-8">No estimates found.</TableCell></TableRow>}
+                    {filterByDate(estimates, 'estimateDate').length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-8">No estimates found for selected date range.</TableCell></TableRow>}
                   </TableBody>
                 </Table>
               </div>

@@ -1620,6 +1620,11 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
 
                 return {
                     ...e,
+                    // Explicitly map snake_case DB fields to camelCase so update
+                    // helpers (toggleSentStatus, handleStatusChange, etc.) always
+                    // have the UUID available via the expected camelCase key.
+                    customerId: e.customer_id,
+                    vehicleId: e.vehicle_id,
                     services: filteredServices,
                     customerName: reconstructedCust || 'Unknown Customer',
                     customer: e.customers ? {
@@ -1693,10 +1698,14 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
 
     // 2. Prepare Estimate Payload
     const isValidUUID = (str?: string) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
-    const validCustomerId = isValidUUID(customerId) ? customerId : null;
-    const validVehicleId = isValidUUID(vehicleId) ? vehicleId : null;
-    const validDate = p.date || p.estimateDate || new Date().toISOString().split('T')[0];
-    const validEstimateDate = p.estimateDate || p.date || new Date().toISOString().split('T')[0];
+    // Fallback: accept snake_case customer_id / vehicle_id from raw Supabase records
+    // so that callers passing a spread DB row still send a valid UUID.
+    const resolvedCustomerId = customerId || (p as any).customer_id;
+    const resolvedVehicleId  = vehicleId  || (p as any).vehicle_id;
+    const validCustomerId = isValidUUID(resolvedCustomerId) ? resolvedCustomerId : null;
+    const validVehicleId  = isValidUUID(resolvedVehicleId)  ? resolvedVehicleId  : null;
+    const validDate = p.date || p.estimateDate || (p as any).estimate_date || new Date().toISOString().split('T')[0];
+    const validEstimateDate = p.estimateDate || (p as any).estimate_date || p.date || new Date().toISOString().split('T')[0];
 
     const cleanServices = (p.services || []).filter((s: any) => s.name && !s.name.startsWith('VIRTUAL_'));
     const payload = {
