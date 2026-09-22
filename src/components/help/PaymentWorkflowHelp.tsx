@@ -113,24 +113,24 @@ export function PaymentWorkflowHelp({ variant = 'invoicing-dashboard' }: Props) 
       ]
     },
     'customer-estimate-page': {
-      title: 'Customer Estimate View',
+      title: 'Estimate Guide for Customers',
       icon: <MonitorPlay className="w-5 h-5 text-blue-600" />,
       steps: [
         {
-          title: "1. What the Customer Sees",
-          desc: "The customer reviews the proposed services, estimated total, and validity date (usually 30 days)."
+          title: "1. Reviewing Your Estimate",
+          desc: "Please review the proposed services, estimated total, and validity date for your detailing service."
         },
         {
-          title: "2. The Acceptance Flow",
-          desc: "If they click Accept, a Pre-Check form appears asking about pet hair, stains, and paint condition. They must fill this out to complete acceptance."
+          title: "2. Accepting Your Estimate",
+          desc: "Click 'Accept Estimate' to proceed. A brief vehicle pre-check form will appear to capture details like paint condition, stains, or special requests."
         },
         {
-          title: "3. Post-Acceptance",
-          desc: "Once submitted, you receive a notification. The customer does NOT pay here. You will contact them to schedule the actual detailing appointment."
+          title: "3. Next Steps After Acceptance",
+          desc: "Once submitted, Rick at Prime Auto Detail will be notified and will follow up with you to confirm your appointment. No payment is required on this page."
         },
         {
-          title: "4. Declining",
-          desc: "If they click Decline, the status updates immediately and you are notified. The estimate is closed."
+          title: "4. Declining Your Estimate",
+          desc: "If you choose not to proceed at this time, click 'Decline Estimate'. You can always contact us at PrimeAutoDetail.net if you have questions."
         }
       ]
     },

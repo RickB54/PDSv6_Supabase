@@ -89,9 +89,20 @@ export default function BookingsAnalyticsPage() {
 
     useEffect(() => {
         const handleRefresh = () => handleFullRefresh();
+        const handleCacheInvalidated = (e: any) => {
+            const domain = e?.detail?.domain;
+            if (!domain || domain === 'financials' || domain.startsWith('financial')) {
+                loadedTabsRef.current.clear();
+                loadTabData(activeTab, true);
+            }
+        };
         window.addEventListener('refresh-analytics', handleRefresh);
-        return () => window.removeEventListener('refresh-analytics', handleRefresh);
-    }, [handleFullRefresh]);
+        window.addEventListener('app-cache-invalidated', handleCacheInvalidated);
+        return () => {
+            window.removeEventListener('refresh-analytics', handleRefresh);
+            window.removeEventListener('app-cache-invalidated', handleCacheInvalidated);
+        };
+    }, [activeTab, handleFullRefresh, loadTabData]);
 
     return (
         <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw]">

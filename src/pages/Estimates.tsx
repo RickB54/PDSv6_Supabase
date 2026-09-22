@@ -345,6 +345,14 @@ const Estimates = () => {
 
     useEffect(() => {
         loadData();
+        const handleCacheInvalidated = (e: any) => {
+            const domain = e?.detail?.domain;
+            if (!domain || domain === 'financials' || domain.startsWith('financial')) {
+                loadData();
+            }
+        };
+        window.addEventListener('app-cache-invalidated', handleCacheInvalidated);
+        return () => window.removeEventListener('app-cache-invalidated', handleCacheInvalidated);
     }, [isDemoMode]);
 
     const loadData = async () => {

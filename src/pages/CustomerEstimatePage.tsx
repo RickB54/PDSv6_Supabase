@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { addOns as builtInAddOns } from '@/lib/services';
 import { getAddOnMeta, getCustomAddOns } from '@/lib/servicesMeta';
 import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
+import { invalidateFinancialCache } from '@/lib/app-cache';
 import { formatDisplayDate, getValidUntilDate } from '@/lib/utils';
 import servicesQrCode from "@/assets/services-qr.png";
 import { DistanceMapWidget } from '@/components/distance/DistanceMapWidget';
@@ -197,6 +198,9 @@ export default function CustomerEstimatePage() {
 
             if (updateError) throw updateError;
 
+            // Invalidate financials cache so Estimates list & Analytics update immediately
+            invalidateFinancialCache();
+
             // Log engagement
             await supabase.from('engagements').insert({
                 customer_id: estimate.customerId,
@@ -321,6 +325,9 @@ export default function CustomerEstimatePage() {
                 .eq('id', id);
 
             if (updateError) throw updateError;
+
+            // Invalidate financials cache so Estimates list & Analytics update immediately
+            invalidateFinancialCache();
 
             // Immediately update local state so the view updates
             setEstimate({
@@ -491,7 +498,7 @@ export default function CustomerEstimatePage() {
                         <div>
                             <h2 className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-1 flex items-center gap-2">
                                 Service Estimate
-                                {user && <PaymentWorkflowHelp variant="customer-estimate-page" />}
+                                <PaymentWorkflowHelp variant="customer-estimate-page" />
                             </h2>
                             <p className="text-3xl font-black text-white">#{estimate.estimateNumber || 'N/A'}</p>
                         </div>
