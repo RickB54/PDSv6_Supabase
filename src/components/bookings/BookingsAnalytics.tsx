@@ -3722,7 +3722,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setPerfDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
+                                                setPerfDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) });
                                             }}
                                         >
                                             This Week
@@ -3733,7 +3733,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setPerfDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
+                                                setPerfDateFilter({ start: startOfMonth(d), end: endOfMonth(d) });
                                             }}
                                         >
                                             This Month
@@ -3743,7 +3743,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             size="sm" 
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
-                                                setSnapshotDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) });
+                                                setPerfDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) });
                                             }}
                                         >
                                             This Year
@@ -3940,7 +3940,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setInvDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
+                                                setInvDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) });
                                             }}
                                         >
                                             This Week
@@ -3951,7 +3951,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setInvDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
+                                                setInvDateFilter({ start: startOfMonth(d), end: endOfMonth(d) });
                                             }}
                                         >
                                             This Month
@@ -3961,7 +3961,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             size="sm" 
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
-                                                setPerfDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) });
+                                                setInvDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) });
                                             }}
                                         >
                                             This Year
@@ -4224,7 +4224,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setQuotesDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
+                                                setQuotesDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) });
                                             }}
                                         >
                                             This Week
@@ -4235,7 +4235,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setQuotesDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
+                                                setQuotesDateFilter({ start: startOfMonth(d), end: endOfMonth(d) });
                                             }}
                                         >
                                             This Month
@@ -4674,9 +4674,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                                 onClick={() => { setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setProbonoFilterOpen(false); }}>Today</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7*24*60*60*1000), end: endOfDay(d) }); setProbonoFilterOpen(false); }}>This Week</Button>
+                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) }); setProbonoFilterOpen(false); }}>This Week</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); setProbonoFilterOpen(false); }}>This Month</Button>
+                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: startOfMonth(d), end: endOfMonth(d) }); setProbonoFilterOpen(false); }}>This Month</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                                 onClick={() => { setQualDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) }); setProbonoFilterOpen(false); }}>This Year</Button>
                                         </div>
@@ -4965,7 +4965,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setInsDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) });
+                                                setInsDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) });
                                             }}
                                         >
                                             This Week
@@ -4976,7 +4976,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
                                             onClick={() => {
                                                 const d = new Date();
-                                                setInsDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) });
+                                                setInsDateFilter({ start: startOfMonth(d), end: endOfMonth(d) });
                                             }}
                                         >
                                             This Month
@@ -5411,8 +5411,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setQualFilterOpen(false); }}>All Time</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setQualFilterOpen(false); }}>Today</Button>
-                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Week</Button>
-                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: new Date(d.getFullYear(), d.getMonth(), 1), end: endOfDay(d) }); setQualFilterOpen(false); }}>This Month</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) }); setQualFilterOpen(false); }}>This Week</Button>
+                                            <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { const d = new Date(); setQualDateFilter({ start: startOfMonth(d), end: endOfMonth(d) }); setQualFilterOpen(false); }}>This Month</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700" onClick={() => { setQualDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) }); setQualFilterOpen(false); }}>This Year</Button>
                                         </div>
                                     </div>
