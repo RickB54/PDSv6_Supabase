@@ -2619,254 +2619,258 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     const portalTarget = document.getElementById('crm-sticky-header-portal');
     const businessIntelligenceHeader = (
-        <div className="flex flex-col gap-2 p-3 bg-zinc-950/40 transition-all duration-300">
-            {/* Bookmarks Bar */}
-            <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mr-1 flex items-center gap-1">
-                    <BookOpen className="w-3 h-3"/> Jump To:
-                </span>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'revenue-performance' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-violet-500/20 border-violet-500/60 text-violet-300 font-bold shadow-sm shadow-violet-950/50 ring-1 ring-violet-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('revenue-performance');
-                        scrollToSection('revenue-performance');
-                    }}
-                >
-                    Revenue & Pipeline
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'services-to-be-done' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-amber-500/20 border-amber-500/60 text-amber-300 font-bold shadow-sm shadow-amber-950/50 ring-1 ring-amber-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('services-to-be-done');
-                        scrollToSection('services-to-be-done');
-                    }}
-                >
-                    Services To Be Done
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'service-detail' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('services-to-be-done');
-                        scrollToSection('services-to-be-done');
-                    }}
-                >
-                    Service Logs
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'invoices-tracker' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-indigo-500/20 border-indigo-500/60 text-indigo-300 font-bold shadow-sm shadow-indigo-950/50 ring-1 ring-indigo-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('invoices-tracker');
-                        scrollToSection('invoices-tracker');
-                    }}
-                >
-                    Invoices
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'estimates-tracker' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('estimates-tracker');
-                        scrollToSection('estimates-tracker');
-                    }}
-                >
-                    Estimates & Quotes
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'addon-performance' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-teal-500/20 border-teal-500/60 text-teal-300 font-bold shadow-sm shadow-teal-950/50 ring-1 ring-teal-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('addon-performance');
-                        scrollToSection('addon-performance');
-                    }}
-                >
-                    Add-on Performance
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'probono-tracker' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-pink-500/20 border-pink-500/60 text-pink-300 font-bold shadow-sm shadow-pink-950/50 ring-1 ring-pink-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('probono-tracker');
-                        scrollToSection('probono-tracker');
-                    }}
-                >
-                    Probono Jobs
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'customer-insights' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-blue-500/20 border-blue-500/60 text-blue-300 font-bold shadow-sm shadow-blue-950/50 ring-1 ring-blue-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('customer-insights');
-                        scrollToSection('customer-insights');
-                    }}
-                >
-                    Customer Insights
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'acquisition-intake' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-cyan-500/20 border-cyan-500/60 text-cyan-300 font-bold shadow-sm shadow-cyan-950/50 ring-1 ring-cyan-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('acquisition-intake');
-                        scrollToSection('acquisition-intake');
-                    }}
-                >
-                    Acquisition & Intake
-                </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        (activeSection === 'operational-quality' && !showProfitability && !showEmployeeAnalytics)
-                            ? "bg-violet-500/20 border-violet-500/60 text-violet-300 font-bold shadow-sm shadow-violet-950/50 ring-1 ring-violet-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowProfitability(false);
-                        setShowEmployeeAnalytics(false);
-                        setActiveSection('operational-quality');
-                        scrollToSection('operational-quality');
-                    }}
-                >
-                    Quality Review
-                </Button>
-
-                <div className="flex-1 min-w-[20px]"></div>
-                <div className="flex items-center gap-1.5 border-l border-zinc-800/50 pl-2">
-                    <CustomerIntelligence360Modal 
-                        customers={customers} 
-                        trigger={
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500/80 hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Customer Intelligence 360">
-                                <Target className="h-4 w-4" />
-                            </Button>
-                        } 
-                    />
-
-
-                    <DropdownMenu modal={false}>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-500/80 hover:text-rose-400 hover:bg-rose-500/10 transition-colors" title="Save to PDF">
-                                <FileDown className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-800 text-white z-[9999]">
-                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'current')} className="cursor-pointer font-bold text-rose-400 hover:bg-zinc-800">Current Dashboard View</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'weekly')} className="cursor-pointer hover:bg-zinc-800 border-t border-zinc-800">Weekly Report</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'monthly')} className="cursor-pointer hover:bg-zinc-800">Monthly Report</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'yearly')} className="cursor-pointer hover:bg-zinc-800">Yearly Report</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'custom')} className="cursor-pointer hover:bg-zinc-800">Custom Report...</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button variant="ghost" size="icon" onClick={generatePriceHistoryPDF} className="h-6 w-6 text-purple-500/80 hover:text-purple-400 hover:bg-purple-500/10 transition-colors" title="Price Audit">
-                        <FileBarChart className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={clearAllFilters} className="h-6 w-6 text-red-500/80 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Clear Filters">
-                        <FilterX className="h-4 w-4" />
-                    </Button>
-                    <div className="w-[1px] h-4 bg-zinc-800/50 mx-1"></div>
+        <div className="flex flex-col gap-1.5 p-2 sm:px-4 sm:py-2 bg-zinc-950/60 transition-all duration-300">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5 md:gap-2">
+                {/* Bookmarks Bar: horizontal scroll on mobile, clean wrap on desktop */}
+                <div className="flex items-center gap-1.5 overflow-x-auto md:overflow-x-visible flex-nowrap md:flex-wrap no-scrollbar scroll-smooth flex-1 min-w-0 py-0.5">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mr-1 flex items-center gap-1 shrink-0 select-none">
+                        <BookOpen className="w-3 h-3 text-zinc-400"/> Jump To:
+                    </span>
                     <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" 
-                        title="Workflow Help"
-                        onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'intake-workflows', role: 'admin' } }))}
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'revenue-performance' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-violet-500/20 border-violet-500/60 text-violet-300 font-bold shadow-sm shadow-violet-950/50 ring-1 ring-violet-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('revenue-performance');
+                            scrollToSection('revenue-performance');
+                        }}
                     >
-                        <GitBranch className="h-4 w-4" />
+                        Revenue & Pipeline
                     </Button>
                     <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" 
-                        title="Business Analytics Help"
-                        onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'analytics', role: 'admin' } }))}
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'services-to-be-done' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-amber-500/20 border-amber-500/60 text-amber-300 font-bold shadow-sm shadow-amber-950/50 ring-1 ring-amber-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('services-to-be-done');
+                            scrollToSection('services-to-be-done');
+                        }}
                     >
-                        <LineChartIcon className="h-4 w-4" />
+                        Services To Be Done
                     </Button>
                     <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        disabled={isRefreshing}
-                        onClick={onRefresh}
-                        className="h-6 w-6 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ml-1"
-                        title="Refresh Data"
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'service-detail' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('services-to-be-done');
+                            scrollToSection('services-to-be-done');
+                        }}
                     >
-                        {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                        Service Logs
                     </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'invoices-tracker' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-indigo-500/20 border-indigo-500/60 text-indigo-300 font-bold shadow-sm shadow-indigo-950/50 ring-1 ring-indigo-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('invoices-tracker');
+                            scrollToSection('invoices-tracker');
+                        }}
+                    >
+                        Invoices
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'estimates-tracker' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('estimates-tracker');
+                            scrollToSection('estimates-tracker');
+                        }}
+                    >
+                        Estimates & Quotes
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'addon-performance' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-teal-500/20 border-teal-500/60 text-teal-300 font-bold shadow-sm shadow-teal-950/50 ring-1 ring-teal-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('addon-performance');
+                            scrollToSection('addon-performance');
+                        }}
+                    >
+                        Add-on Performance
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'probono-tracker' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-pink-500/20 border-pink-500/60 text-pink-300 font-bold shadow-sm shadow-pink-950/50 ring-1 ring-pink-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('probono-tracker');
+                            scrollToSection('probono-tracker');
+                        }}
+                    >
+                        Probono Jobs
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'customer-insights' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-blue-500/20 border-blue-500/60 text-blue-300 font-bold shadow-sm shadow-blue-950/50 ring-1 ring-blue-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('customer-insights');
+                            scrollToSection('customer-insights');
+                        }}
+                    >
+                        Customer Insights
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'acquisition-intake' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-cyan-500/20 border-cyan-500/60 text-cyan-300 font-bold shadow-sm shadow-cyan-950/50 ring-1 ring-cyan-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('acquisition-intake');
+                            scrollToSection('acquisition-intake');
+                        }}
+                    >
+                        Acquisition & Intake
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className={cn(
+                            "h-6 px-2 text-[10px] transition-all duration-200 shrink-0 whitespace-nowrap",
+                            (activeSection === 'operational-quality' && !showProfitability && !showEmployeeAnalytics)
+                                ? "bg-violet-500/20 border-violet-500/60 text-violet-300 font-bold shadow-sm shadow-violet-950/50 ring-1 ring-violet-500/30"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                        )} 
+                        onClick={() => {
+                            setShowProfitability(false);
+                            setShowEmployeeAnalytics(false);
+                            setActiveSection('operational-quality');
+                            scrollToSection('operational-quality');
+                        }}
+                    >
+                        Quality Review
+                    </Button>
+                </div>
+
+                {/* Utility Actions Bar: neatly aligned on mobile, pinned inline on desktop */}
+                <div className="flex items-center justify-between md:justify-end gap-1 shrink-0 border-t md:border-t-0 md:border-l border-zinc-800/60 pt-1.5 md:pt-0 md:pl-2.5">
+                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest md:hidden">Tools & Reports</span>
+                    <div className="flex items-center gap-1">
+                        <CustomerIntelligence360Modal 
+                            customers={customers} 
+                            trigger={
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-blue-500/80 hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Customer Intelligence 360">
+                                    <Target className="h-4 w-4" />
+                                </Button>
+                            } 
+                        />
+
+                        <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-500/80 hover:text-rose-400 hover:bg-rose-500/10 transition-colors" title="Save to PDF">
+                                    <FileDown className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 bg-zinc-900 border-zinc-800 text-white z-[9999]">
+                                <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'current')} className="cursor-pointer font-bold text-rose-400 hover:bg-zinc-800">Current Dashboard View</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'weekly')} className="cursor-pointer hover:bg-zinc-800 border-t border-zinc-800">Weekly Report</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'monthly')} className="cursor-pointer hover:bg-zinc-800">Monthly Report</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'yearly')} className="cursor-pointer hover:bg-zinc-800">Yearly Report</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleVisualReport('pdf', 'custom')} className="cursor-pointer hover:bg-zinc-800">Custom Report...</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button variant="ghost" size="icon" onClick={generatePriceHistoryPDF} className="h-6 w-6 text-purple-500/80 hover:text-purple-400 hover:bg-purple-500/10 transition-colors" title="Price Audit">
+                            <FileBarChart className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={clearAllFilters} className="h-6 w-6 text-red-500/80 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Clear Filters">
+                            <FilterX className="h-4 w-4" />
+                        </Button>
+                        <div className="w-[1px] h-3.5 bg-zinc-800/60 mx-0.5"></div>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" 
+                            title="Workflow Help"
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'intake-workflows', role: 'admin' } }))}
+                        >
+                            <GitBranch className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-emerald-500/80 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" 
+                            title="Business Analytics Help"
+                            onClick={() => window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'analytics', role: 'admin' } }))}
+                        >
+                            <LineChartIcon className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            disabled={isRefreshing}
+                            onClick={onRefresh}
+                            className="h-6 w-6 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ml-0.5"
+                            title="Refresh Data"
+                        >
+                            {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

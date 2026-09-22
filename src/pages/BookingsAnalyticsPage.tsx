@@ -125,46 +125,47 @@ export default function BookingsAnalyticsPage() {
             
             <div className="sticky top-[var(--header-total-height,64px)] z-40 bg-zinc-950/95 backdrop-blur-xl shadow-2xl flex flex-col transition-all">
                 {/* Tab Switcher */}
-                <div className="px-2 sm:px-6 flex gap-1 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth">
+                <div className="px-2 sm:px-6 flex gap-1 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth touch-pan-x">
                     <button
                         onClick={() => handleTabChange('crm')}
-                        className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
+                        className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
                             activeTab === 'crm'
                                 ? 'border-indigo-500 text-white font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
-                        <span>CRM &amp; Analytics</span>
+                        <span className="hidden sm:inline">CRM &amp; Analytics</span>
+                        <span className="sm:hidden">CRM</span>
                     </button>
                     {!isDemoMode && (
                         <button
                             onClick={() => handleTabChange('bi')}
-                            className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                            className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                                 activeTab === 'bi'
                                     ? 'border-emerald-500 text-emerald-400 font-bold'
                                     : 'border-transparent text-zinc-500 hover:text-zinc-300'
                             }`}
                         >
                             <Target className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Business Intelligence</span>
-                            <span className="sm:hidden">BI</span>
+                            <span className="hidden lg:inline">Business Intelligence</span>
+                            <span className="lg:hidden">BI</span>
                         </button>
                     )}
                     <button
                         onClick={() => handleTabChange('reviews')}
-                        className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                        className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'reviews'
                                 ? 'border-amber-500 text-amber-400 font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
                         <Star className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Review Intelligence</span>
-                        <span className="sm:hidden">Reviews</span>
+                        <span className="hidden lg:inline">Review Intelligence</span>
+                        <span className="lg:hidden">Reviews</span>
                     </button>
                     <button
                         onClick={() => handleTabChange('employees')}
-                        className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                        className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'employees'
                                 ? 'border-indigo-500 text-white font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
@@ -175,27 +176,29 @@ export default function BookingsAnalyticsPage() {
                     </button>
                     <button
                         onClick={() => handleTabChange('profitability')}
-                        className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                        className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'profitability'
                                 ? 'border-emerald-500 text-emerald-400 font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
                         <TrendingUp className="w-3.5 h-3.5" />
-                        <span>Profitability</span>
+                        <span className="hidden sm:inline">Profitability</span>
+                        <span className="sm:hidden">Profits</span>
                     </button>
                     {!isDemoMode && (
                         <button
                             onClick={() => handleTabChange('compensation')}
-                            className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                            className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                                 activeTab === 'compensation'
                                     ? 'border-purple-500 text-purple-400 font-bold'
                                     : 'border-transparent text-zinc-500 hover:text-zinc-300'
                             }`}
                         >
                             <Calculator className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Compensation Calculator</span>
-                            <span className="sm:hidden">Compensation</span>
+                            <span className="hidden lg:inline">Compensation Calculator</span>
+                            <span className="lg:hidden sm:inline hidden">Compensation</span>
+                            <span className="sm:hidden">Comp</span>
                         </button>
                     )}
                 </div>
