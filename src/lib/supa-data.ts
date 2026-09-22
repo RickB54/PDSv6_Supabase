@@ -3436,7 +3436,7 @@ export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
             const local = localStorage.getItem(AUDIT_FALLBACK_KEY);
             return local ? JSON.parse(local) : [];
         }
-    }, { domain: 'auditHistory', ttlMs: 5 * 60 * 1000 });
+    }, { domain: 'audit_history', ttlMs: 5 * 60 * 1000 });
 };
 
 /**
@@ -3444,7 +3444,7 @@ export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
  * for a specific audit when explicitly opened or exported.
  */
 export const getInventoryAuditById = async (id: string): Promise<AuditSnapshot | null> => {
-    return appCache.fetchWithCache(`auditHistory:audit_detail_${id}`, async () => {
+    return appCache.fetchWithCache(`audit_history:audit_detail_${id}`, async () => {
         try {
             const { data, error } = await supabase
                 .from('inventory_audit_history')
@@ -3477,7 +3477,7 @@ export const getInventoryAuditById = async (id: string): Promise<AuditSnapshot |
             console.warn(`getInventoryAuditById exception for ${id}:`, err);
             return null;
         }
-    }, { domain: 'auditHistory', ttlMs: 10 * 60 * 1000 });
+    }, { domain: 'audit_history', ttlMs: 10 * 60 * 1000 });
 };
 
 export const upsertInventoryAuditHistory = async (snapshot: AuditSnapshot) => {
