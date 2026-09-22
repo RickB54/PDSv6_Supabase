@@ -29,6 +29,7 @@ export interface BookingInput {
   place_of_service?: string;
   destination_fee?: number;
   destination_miles?: number;
+  how_found?: string;
 }
 
 export async function create(input: BookingInput) {
@@ -116,6 +117,7 @@ export async function create(input: BookingInput) {
         notes: input.email ? 'Created via Book Now' : 'Created via Book Now (Staff Entry)'
       };
       if (input.email) insertPayload.email = input.email;
+      if (input.how_found) insertPayload.how_found = input.how_found;
 
       const { data: newCust, error: cErr } = await supabase
         .from('customers')

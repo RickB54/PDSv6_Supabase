@@ -47,9 +47,10 @@ interface BookingsAnalyticsProps {
     defaultOpenAccordion?: string;
     onRefresh?: () => void;
     isRefreshing?: boolean;
+    view?: 'crm' | 'profitability' | 'compensation';
 }
 
-export function BookingsAnalytics({ bookings, customers, invoices = [], estimates = [], defaultOpenAccordion, onRefresh, isRefreshing }: BookingsAnalyticsProps) {
+export function BookingsAnalytics({ bookings, customers, invoices = [], estimates = [], defaultOpenAccordion, onRefresh, isRefreshing, view }: BookingsAnalyticsProps) {
     const navigate = useNavigate();
     const { add } = useTasksStore();
     const { update, remove } = useBookingsStore();
@@ -64,10 +65,36 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const [isChartJobsModalOpen, setIsChartJobsModalOpen] = useState(false);
     const [chartJobsModalTitle, setChartJobsModalTitle] = useState("");
 
-    const [showProfitability, setShowProfitability] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'profitability');
+    const [showProfitability, setShowProfitability] = useState(() => {
+        if (view === 'profitability') return true;
+        if (view === 'crm' || view === 'compensation') return false;
+        return new URLSearchParams(window.location.search).get('tab') === 'profitability';
+    });
     const [isProfitabilityFilterOpen, setIsProfitabilityFilterOpen] = useState(false);
     const [profTableSort, setProfTableSort] = useState<'default' | 'high' | 'low'>('default');
-    const [showEmployeeAnalytics, setShowEmployeeAnalytics] = useState(() => new URLSearchParams(window.location.search).get('tab') === 'employee-analytics');
+    const [showEmployeeAnalytics, setShowEmployeeAnalytics] = useState(() => {
+        if (view === 'compensation') return true;
+        if (view === 'crm' || view === 'profitability') return false;
+        const tab = new URLSearchParams(window.location.search).get('tab');
+        return tab === 'employee-analytics' || tab === 'compensation';
+    });
+
+    useEffect(() => {
+        if (view === 'profitability') {
+            setShowProfitability(true);
+            setShowEmployeeAnalytics(false);
+        } else if (view === 'compensation') {
+            setShowEmployeeAnalytics(true);
+            setShowProfitability(false);
+        } else if (view === 'crm') {
+            setShowProfitability(false);
+            setShowEmployeeAnalytics(false);
+        }
+    }, [view]);
+
+    const [quotesStatusFilter, setQuotesStatusFilter] = useState<'all' | 'accepted' | 'declined'>('all');
+    const [invStatusFilter, setInvStatusFilter] = useState<'all' | 'paid' | 'unpaid' | 'overdue'>('all');
+    const [acqStageFilter, setAcqStageFilter] = useState<'all' | 'prospect' | 'customer' | 'lost'>('all');
     const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const [perfFilterOpen, setPerfFilterOpen] = useState(false);
@@ -890,10 +917,15 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             const saved = localStorage.getItem('analytics_snap_dateFilter');
             if (saved) {
                 const p = JSON.parse(saved);
-                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+                if (p.isAllTime) {
+                    return { start: undefined, end: undefined };
+                }
+                if (p.start && p.end) {
+                    return { start: new Date(p.start), end: new Date(p.end) };
+                }
             }
         } catch (e) {}
-        return { start: startOfDay(new Date()), end: endOfDay(new Date()) };
+        return { start: startOfMonth(new Date()), end: endOfMonth(new Date()) };
     });
 
     // Insights Filter
@@ -1014,9 +1046,28 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 const end = endOfDay(acqDateFilter.end || acqDateFilter.start);
                 if (!isWithinInterval(bDate, { start, end })) return false;
             }
+
+            if (acqStageFilter !== 'all') {
+                const custName = (b.customer || '').trim().toLowerCase();
+                const matchedCust = customers.find(c => 
+                    (b.customerId && c.id === b.customerId) ||
+                    ((b as any).customer_id && c.id === (b as any).customer_id) ||
+                    (c.name && c.name.toLowerCase() === custName) ||
+                    (c.full_name && c.full_name.toLowerCase() === custName)
+                );
+
+                if (acqStageFilter === 'lost') {
+                    if (!matchedCust?.is_lost) return false;
+                } else if (acqStageFilter === 'prospect') {
+                    if (matchedCust?.is_lost || matchedCust?.type !== 'prospect') return false;
+                } else if (acqStageFilter === 'customer') {
+                    if (matchedCust?.is_lost || (matchedCust?.type !== 'customer' && matchedCust?.type !== 'client')) return false;
+                }
+            }
+
             return true;
         });
-    }, [bookings, acqShowArchived, acqDateFilter]);
+    }, [bookings, acqShowArchived, acqDateFilter, acqStageFilter, customers]);
 
     const acquisitionData = useMemo(() => {
         const totalCount = filteredAcquisitionBookings.length;
@@ -1050,8 +1101,38 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             }
 
             // How Found Us mapping
-            let foundVal = ((b as any).howFound || (b as any).booking_vehicle?.howFound || customers.find(c => c.name.toLowerCase() === custName.toLowerCase())?.howFound || '').trim();
-            if (!foundVal) foundVal = 'Unknown';
+            const matchedCust = customers.find(c => 
+                (b.customerId && c.id === b.customerId) ||
+                ((b as any).customer_id && c.id === (b as any).customer_id) ||
+                (c.name && c.name.toLowerCase() === custName.toLowerCase()) ||
+                (c.full_name && c.full_name.toLowerCase() === custName.toLowerCase())
+            );
+
+            let rawFound = ((b as any).howFound || (b as any).booking_vehicle?.howFound || matchedCust?.howFound || '').trim();
+            let otherFound = (matchedCust?.howFoundOther || (b as any).howFoundOther || '').trim();
+
+            let foundVal = rawFound;
+            if (!foundVal) {
+                foundVal = 'Unknown';
+            } else if (foundVal.toLowerCase() === 'other' && otherFound) {
+                foundVal = otherFound;
+            } else if (foundVal.toLowerCase() === 'friend-family') {
+                foundVal = 'Friend / Family';
+            } else if (foundVal.toLowerCase() === 'pool-league') {
+                foundVal = 'Pool League';
+            } else if (foundVal.toLowerCase() === 'google' || foundVal.toLowerCase() === 'googlesearch') {
+                foundVal = 'Google Search';
+            } else if (foundVal.toLowerCase() === 'facebook') {
+                foundVal = 'Facebook';
+            } else if (foundVal.toLowerCase() === 'instagram') {
+                foundVal = 'Instagram';
+            } else if (foundVal.toLowerCase() === 'drive_by') {
+                foundVal = 'Drive-by / Signage';
+            } else if (foundVal.toLowerCase() === 'referral') {
+                foundVal = 'Referral / Word of Mouth';
+            } else if (foundVal.toLowerCase() === 'returning') {
+                foundVal = 'Returning Customer';
+            }
 
             if (!howFoundMap[foundVal]) {
                 howFoundMap[foundVal] = { name: foundVal, count: 0, completedCount: 0, revenue: 0, customers: new Set() };
@@ -1232,8 +1313,41 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     };
 
     const filteredQuotes = useMemo(() => getFiltered(estimates.map((e: any) => ({...e, status: sanitizeStatus(e.status)})), quotesShowArchived, quotesDateFilter, 'estimateDate'), [estimates, quotesShowArchived, quotesDateFilter]);
+
+    const displayedQuotes = useMemo(() => {
+        if (quotesStatusFilter === 'all') return filteredQuotes;
+        return filteredQuotes.filter((q: any) => {
+            const s = (q.status || '').toLowerCase();
+            if (quotesStatusFilter === 'accepted') return s === 'accepted';
+            if (quotesStatusFilter === 'declined') return s === 'declined' || s === 'denied';
+            return true;
+        });
+    }, [filteredQuotes, quotesStatusFilter]);
+
     const filteredQualBookings = useMemo(() => getFiltered(bookings, qualShowArchived, qualDateFilter), [bookings, qualShowArchived, qualDateFilter]);
     const filteredInvoices = useMemo(() => getFiltered(invoices, invShowArchived, invDateFilter, 'createdAt'), [invoices, invShowArchived, invDateFilter]);
+
+    const displayedInvoices = useMemo(() => {
+        if (invStatusFilter === 'all') return filteredInvoices;
+        return filteredInvoices.filter((inv: any) => {
+            const status = (inv.paymentStatus || inv.status || 'unpaid').toLowerCase();
+            const isPaid = status === 'paid' || inv.total === 0 || (inv.paidAmount !== undefined && inv.total !== undefined && inv.paidAmount >= inv.total);
+            if (invStatusFilter === 'paid') return isPaid;
+            if (invStatusFilter === 'unpaid') return !isPaid;
+            if (invStatusFilter === 'overdue') {
+                if (isPaid) return false;
+                const dueStr = inv.dueDate || inv.date || inv.serviceDate || inv.createdAt;
+                if (!dueStr) return false;
+                try {
+                    const dueDate = parseISO(dueStr);
+                    return isPast(dueDate) && !isToday(dueDate);
+                } catch {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }, [filteredInvoices, invStatusFilter]);
 
     const invDeliveryPieData = useMemo(() => {
         let sent = 0;
@@ -1992,19 +2106,22 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }, [bookings, invoices, employees, snapshotDateFilter, snapshotShowArchived]);
     const clearAllFilters = () => {
         setSnapshotShowArchived(false);
-        setSnapshotDateFilter({ start: undefined, end: undefined });
+        setSnapshotDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) });
         setPerfShowArchived(false);
         setPerfDateFilter({ start: undefined, end: undefined });
         setInsShowArchived(false);
         setInsDateFilter({ start: undefined, end: undefined });
         setInvShowArchived(false);
         setInvDateFilter({ start: undefined, end: undefined });
+        setInvStatusFilter('all');
         setQuotesShowArchived(false);
         setQuotesDateFilter({ start: undefined, end: undefined });
+        setQuotesStatusFilter('all');
         setQualShowArchived(false);
         setQualDateFilter({ start: undefined, end: undefined });
         setAcqShowArchived(false);
         setAcqDateFilter({ start: undefined, end: undefined });
+        setAcqStageFilter('all');
         setSearchQuery("");
 
         const keysToRemove = [
@@ -2524,40 +2641,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 >
                     Quality Review
                 </Button>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className={cn(
-                        "h-6 px-2 text-[10px] transition-all duration-200",
-                        showProfitability
-                            ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
-                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
-                    )} 
-                    onClick={() => {
-                        setShowEmployeeAnalytics(false);
-                        setShowProfitability(true);
-                    }}
-                >
-                    Profitability
-                </Button>
-                {!isDemoMode && (
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className={cn(
-                            "h-6 px-2 text-[10px] transition-all duration-200",
-                            showEmployeeAnalytics
-                                ? "bg-purple-500/20 border-purple-500/60 text-purple-300 font-bold shadow-sm shadow-purple-950/50 ring-1 ring-purple-500/30"
-                                : "bg-purple-900/30 border-purple-500/50 text-purple-400 hover:border-purple-400 hover:text-purple-300"
-                        )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(true);
-                        }}
-                    >
-                        Compensation Calculator
-                    </Button>
-                )}
 
                 <div className="flex-1 min-w-[20px]"></div>
                 <div className="flex items-center gap-1.5 border-l border-zinc-800/50 pl-2">
@@ -3072,7 +3155,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             variant="ghost"
                                             size="sm"
                                             className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (!snapshotDateFilter.start && !snapshotDateFilter.end) && "bg-zinc-800 text-white")}
-                                            onClick={() => setSnapshotDateFilter({ start: undefined, end: undefined })}
+                                            onClick={() => setSnapshotDateFilter({ start: undefined, end: undefined, isAllTime: true } as any)}
                                         >
                                             All Time
                                         </Button>
@@ -3901,7 +3984,52 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardDescription>Track invoice statuses (Not Sent, Sent, Unpaid, Paid)</CardDescription>
                         </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Status Filter Buttons */}
+                        <div className="flex items-center bg-zinc-950/60 p-0.5 rounded-lg border border-zinc-800">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setInvStatusFilter(prev => prev === 'paid' ? 'all' : 'paid')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    invStatusFilter === 'paid'
+                                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Paid
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setInvStatusFilter(prev => prev === 'unpaid' ? 'all' : 'unpaid')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    invStatusFilter === 'unpaid'
+                                        ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Unpaid
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setInvStatusFilter(prev => prev === 'overdue' ? 'all' : 'overdue')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    invStatusFilter === 'overdue'
+                                        ? "bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Overdue
+                            </Button>
+                        </div>
                     <Popover open={invFilterOpen} onOpenChange={setInvFilterOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (invDateFilter.start || invDateFilter.end) && "bg-zinc-800 text-white")}>
@@ -3998,10 +4126,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     <div className="flex flex-col">
                         {/* Mobile card layout */}
                         <div className="md:hidden divide-y divide-zinc-800/60">
-                            {filteredInvoices.length === 0 ? (
+                            {displayedInvoices.length === 0 ? (
                                 <div className="text-center text-zinc-500 py-12 italic text-sm">No invoices found for the selected period.</div>
                             ) : (
-                                filteredInvoices.map((inv) => {
+                                displayedInvoices.map((inv) => {
                                     const isSent = inv.isSent;
                                     const status = (inv.paymentStatus || 'unpaid').toLowerCase();
                                     
@@ -4065,14 +4193,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredInvoices.length === 0 ? (
+                                    {displayedInvoices.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={6} className="text-center text-zinc-500 py-12 italic">
                                                 No invoices found for the selected period.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredInvoices.map((inv) => {
+                                        displayedInvoices.map((inv) => {
                                             const isSent = inv.isSent;
                                             const status = (inv.paymentStatus || 'unpaid').toLowerCase();
                                             
@@ -4186,6 +4314,38 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardDescription>Track estimates statuses (Not Received, Sent, Accepted, Denied)</CardDescription>
                         </div>
                     </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Status Filter Buttons */}
+                        <div className="flex items-center bg-zinc-950/60 p-0.5 rounded-lg border border-zinc-800">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setQuotesStatusFilter(prev => prev === 'accepted' ? 'all' : 'accepted')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    quotesStatusFilter === 'accepted'
+                                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Accepted
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setQuotesStatusFilter(prev => prev === 'declined' ? 'all' : 'declined')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    quotesStatusFilter === 'declined'
+                                        ? "bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Declined
+                            </Button>
+                        </div>
                     <Popover open={quotesFilterOpen} onOpenChange={setQuotesFilterOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (quotesDateFilter.start || quotesDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
@@ -4275,15 +4435,16 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <X className="h-4 w-4" />
                         </Button>
                     )}
+                    </div>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="flex flex-col">
                         {/* Mobile card layout */}
                         <div className="md:hidden divide-y divide-zinc-800/60">
-                            {filteredQuotes.length === 0 ? (
+                            {displayedQuotes.length === 0 ? (
                                 <div className="text-center text-zinc-500 py-12 italic text-sm">No estimates found for the selected period.</div>
                             ) : (
-                                filteredQuotes.map((q) => {
+                                displayedQuotes.map((q) => {
                                     let s = (q.status || '').toLowerCase();
                                     const isSent = q.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
                                     
@@ -4364,14 +4525,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredQuotes.length === 0 ? (
+                                    {displayedQuotes.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={6} className="text-center text-zinc-500 py-12 italic">
                                                 No estimates found for the selected period.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredQuotes.map((q) => {
+                                        displayedQuotes.map((q) => {
                                             let s = (q.status || '').toLowerCase();
                                             const isSent = q.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
                                             
@@ -5167,7 +5328,52 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* Lead Stage Filter Buttons */}
+                        <div className="flex items-center bg-zinc-950/60 p-0.5 rounded-lg border border-zinc-800">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setAcqStageFilter(prev => prev === 'prospect' ? 'all' : 'prospect')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    acqStageFilter === 'prospect'
+                                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Prospects
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setAcqStageFilter(prev => prev === 'customer' ? 'all' : 'customer')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    acqStageFilter === 'customer'
+                                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Customers
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setAcqStageFilter(prev => prev === 'lost' ? 'all' : 'lost')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    acqStageFilter === 'lost'
+                                        ? "bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Lost
+                            </Button>
+                        </div>
                     <Popover open={acqFilterOpen} onOpenChange={setAcqFilterOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold text-xs", (acqDateFilter.start || acqDateFilter.end) && "bg-zinc-800 text-white")}>

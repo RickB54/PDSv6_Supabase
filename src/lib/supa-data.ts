@@ -568,11 +568,14 @@ export interface CustomerLight {
     phone?: string;
     email?: string;
     type?: string;
+    howFound?: string;
+    howFoundOther?: string;
+    is_lost?: boolean;
 }
 
 /**
  * Lightweight customer query for dropdowns, search bars, and selectors.
- * Only selects id, full_name, name, phone, email, and type (omits heavy vehicle/media trees).
+ * Selects id, full_name, name, phone, email, type, how_found, how_found_other, and is_lost (omits heavy vehicle/media trees).
  */
 export const getSupabaseCustomersLight = async (): Promise<CustomerLight[]> => {
     if (isDemoActive()) {
@@ -582,14 +585,17 @@ export const getSupabaseCustomersLight = async (): Promise<CustomerLight[]> => {
             name: c.name || '',
             phone: c.phone || '',
             email: c.email || '',
-            type: c.type || 'customer'
+            type: c.type || 'customer',
+            howFound: (c as any).howFound || '',
+            howFoundOther: (c as any).howFoundOther || '',
+            is_lost: false
         }));
     }
     return appCache.fetchWithCache('customers', 'customers_light', async () => {
         try {
             const { data, error } = await supabase
                 .from('customers')
-                .select('id, full_name, name, phone, email, type')
+                .select('id, full_name, name, phone, email, type, how_found, how_found_other, is_lost')
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -609,7 +615,10 @@ export const getSupabaseCustomersLight = async (): Promise<CustomerLight[]> => {
                         name,
                         phone: c.phone || '',
                         email: c.email || '',
-                        type: c.type || 'customer'
+                        type: c.type || 'customer',
+                        howFound: c.how_found || '',
+                        howFoundOther: c.how_found_other || '',
+                        is_lost: Boolean(c.is_lost)
                     });
                 }
             });

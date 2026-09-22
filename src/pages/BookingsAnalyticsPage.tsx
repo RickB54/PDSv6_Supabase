@@ -7,11 +7,13 @@ import { getSupabaseCustomersLight } from "@/lib/supa-data";
 import ReviewIntelligence from "@/components/analytics/ReviewIntelligence";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { HelpCircle, RotateCcw, Loader2, Target, Users, FileBarChart, Star } from "lucide-react";
+import { HelpCircle, RotateCcw, Loader2, Target, Users, FileBarChart, Star, TrendingUp, Calculator } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useDemoMode } from "@/contexts/DemoContext";
+
+export type AnalyticsTab = 'crm' | 'bi' | 'reviews' | 'employees' | 'profitability' | 'compensation';
 
 export default function BookingsAnalyticsPage() {
     const { items, refresh } = useBookingsStore();
@@ -21,18 +23,20 @@ export default function BookingsAnalyticsPage() {
     const [invoices, setInvoices] = useState<any[]>([]);
     const [estimates, setEstimates] = useState<any[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [activeTab, setActiveTab] = useState<'crm' | 'bi' | 'employees' | 'reviews'>(() => {
+    const [activeTab, setActiveTab] = useState<AnalyticsTab>(() => {
         const tab = new URLSearchParams(window.location.search).get('tab');
         if (tab === 'employees') return 'employees';
         if (tab === 'bi' && localStorage.getItem("demo_mode_active") !== "true") return 'bi';
         if (tab === 'reviews') return 'reviews';
+        if (tab === 'profitability') return 'profitability';
+        if (tab === 'compensation' || tab === 'employee-analytics') return 'compensation';
         return 'crm';
     });
     
     const { isDemoMode } = useDemoMode();
     const loadedTabsRef = useRef<Set<string>>(new Set());
 
-    const loadTabData = useCallback(async (tab: 'crm' | 'bi' | 'employees' | 'reviews', force = false) => {
+    const loadTabData = useCallback(async (tab: AnalyticsTab, force = false) => {
         if (!force && loadedTabsRef.current.has(tab)) return;
         setIsRefreshing(true);
         try {
@@ -49,7 +53,7 @@ export default function BookingsAnalyticsPage() {
                 promises.push(getSupabaseCustomersLight().then(c => setCustomers(c || [])));
             }
 
-            if (tab === 'crm' || tab === 'bi') {
+            if (tab === 'crm' || tab === 'bi' || tab === 'profitability') {
                 if (invoices.length === 0 || force) {
                     promises.push(import("@/lib/supa-data").then(m => m.getSupabaseInvoices()).then(invs => setInvoices(invs || [])));
                 }
@@ -104,6 +108,17 @@ export default function BookingsAnalyticsPage() {
         };
     }, [activeTab, handleFullRefresh, loadTabData]);
 
+    const handleTabChange = (tab: AnalyticsTab) => {
+        setActiveTab(tab);
+        const url = new URL(window.location.href);
+        if (tab === 'crm') {
+            url.searchParams.delete('tab');
+        } else {
+            url.searchParams.set('tab', tab);
+        }
+        window.history.replaceState({}, '', url.toString());
+    };
+
     return (
         <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw]">
             <PageHeader title="Analytics & CRM" subtitle="Booking insights and customer follow-up tracking" />
@@ -112,19 +127,18 @@ export default function BookingsAnalyticsPage() {
                 {/* Tab Switcher */}
                 <div className="px-2 sm:px-6 flex gap-1 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth">
                     <button
-                        onClick={() => setActiveTab('crm')}
+                        onClick={() => handleTabChange('crm')}
                         className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
                             activeTab === 'crm'
                                 ? 'border-indigo-500 text-white font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
-                        <span className="hidden sm:inline">CRM &amp; Analytics</span>
-                        <span className="sm:hidden">CRM &amp; Analytics</span>
+                        <span>CRM &amp; Analytics</span>
                     </button>
                     {!isDemoMode && (
                         <button
-                            onClick={() => setActiveTab('bi')}
+                            onClick={() => handleTabChange('bi')}
                             className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                                 activeTab === 'bi'
                                     ? 'border-emerald-500 text-emerald-400 font-bold'
@@ -137,7 +151,7 @@ export default function BookingsAnalyticsPage() {
                         </button>
                     )}
                     <button
-                        onClick={() => setActiveTab('reviews')}
+                        onClick={() => handleTabChange('reviews')}
                         className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'reviews'
                                 ? 'border-amber-500 text-amber-400 font-bold'
@@ -149,7 +163,7 @@ export default function BookingsAnalyticsPage() {
                         <span className="sm:hidden">Reviews</span>
                     </button>
                     <button
-                        onClick={() => setActiveTab('employees')}
+                        onClick={() => handleTabChange('employees')}
                         className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'employees'
                                 ? 'border-indigo-500 text-white font-bold'
@@ -159,6 +173,31 @@ export default function BookingsAnalyticsPage() {
                         <Users className="h-3.5 w-3.5" />
                         <span>Employees</span>
                     </button>
+                    <button
+                        onClick={() => handleTabChange('profitability')}
+                        className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                            activeTab === 'profitability'
+                                ? 'border-emerald-500 text-emerald-400 font-bold'
+                                : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                        }`}
+                    >
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        <span>Profitability</span>
+                    </button>
+                    {!isDemoMode && (
+                        <button
+                            onClick={() => handleTabChange('compensation')}
+                            className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                                activeTab === 'compensation'
+                                    ? 'border-purple-500 text-purple-400 font-bold'
+                                    : 'border-transparent text-zinc-500 hover:text-zinc-300'
+                            }`}
+                        >
+                            <Calculator className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Compensation Calculator</span>
+                            <span className="sm:hidden">Compensation</span>
+                        </button>
+                    )}
                 </div>
                 
                 {/* PORTAL TARGET FOR BUSINESS INTELLIGENCE STICKY HEADER */}
@@ -168,7 +207,15 @@ export default function BookingsAnalyticsPage() {
 
             <div className="p-4 sm:p-6 space-y-6">
                 {activeTab === 'crm' && (
-                    <BookingsAnalytics bookings={items} customers={customers} invoices={invoices} estimates={estimates} onRefresh={() => fetchData(true)} isRefreshing={isRefreshing} />
+                    <BookingsAnalytics 
+                        bookings={items} 
+                        customers={customers} 
+                        invoices={invoices} 
+                        estimates={estimates} 
+                        onRefresh={handleFullRefresh} 
+                        isRefreshing={isRefreshing}
+                        view="crm"
+                    />
                 )}
                 {activeTab === 'bi' && !isDemoMode && (
                     <BusinessIntelligencePanel bookings={items} customers={customers} invoices={invoices} estimates={estimates} />
@@ -178,6 +225,28 @@ export default function BookingsAnalyticsPage() {
                 )}
                 {activeTab === 'employees' && (
                     <EmployeeAnalyticsPanel />
+                )}
+                {activeTab === 'profitability' && (
+                    <BookingsAnalytics 
+                        bookings={items} 
+                        customers={customers} 
+                        invoices={invoices} 
+                        estimates={estimates} 
+                        onRefresh={handleFullRefresh} 
+                        isRefreshing={isRefreshing}
+                        view="profitability"
+                    />
+                )}
+                {activeTab === 'compensation' && !isDemoMode && (
+                    <BookingsAnalytics 
+                        bookings={items} 
+                        customers={customers} 
+                        invoices={invoices} 
+                        estimates={estimates} 
+                        onRefresh={handleFullRefresh} 
+                        isRefreshing={isRefreshing}
+                        view="compensation"
+                    />
                 )}
             </div>
         </div>

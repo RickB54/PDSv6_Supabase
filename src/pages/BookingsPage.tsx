@@ -1500,6 +1500,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         phone: formData.phone,
         address: formData.address,
         type: (selectedCustomer?.type === 'customer' || formData.status === 'confirmed' || triggerEmailSend || formData.status === 'done' || formData.status === 'in_progress') ? 'customer' : 'prospect',
+        howFound: formData.howFound || selectedCustomer?.howFound || undefined,
         updatedAt: new Date().toISOString(),
         vehicles: [{
           make: formData.vehicleMake,
@@ -1617,8 +1618,10 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           probonoReason: formData.probonoReason || "",
           probonoReasons: formData.probonoReasons || [],
           probonoPrimaryReason: formData.probonoPrimaryReason || "",
+          howFound: formData.howFound || (selectedBooking as any)?.howFound || undefined,
           booking_vehicle: {
             ...((selectedBooking as any)?.booking_vehicle || {}),
+            howFound: formData.howFound || (selectedBooking as any)?.booking_vehicle?.howFound || undefined,
             placeOfService: normPlace,
             place_of_service: normPlace,
             destinationFee: activeDestFee,
@@ -1724,7 +1727,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
           probonoReason: formData.probonoReason || "",
           probonoReasons: formData.probonoReasons || [],
           probonoPrimaryReason: formData.probonoPrimaryReason || "",
+          howFound: formData.howFound || undefined,
           booking_vehicle: {
+            howFound: formData.howFound || undefined,
             placeOfService: normPlace,
             place_of_service: normPlace,
             destinationFee: activeDestFee,

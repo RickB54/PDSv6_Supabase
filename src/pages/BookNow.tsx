@@ -786,7 +786,8 @@ const BookNow = () => {
             notes: finalNotes,
             price_total: discountedTotal,
             status: 'tentative',
-            booked_by: 'Public Website'
+            booked_by: 'Public Website',
+            how_found: formData.howFound || undefined
           });
 
           if (!createdBooking) {
@@ -842,7 +843,8 @@ const BookNow = () => {
         price: discountedTotal,
         notes: finalNotes,
         source: 'Public Website',
-        customerId: createdBooking?.customer_id
+        customerId: createdBooking?.customer_id,
+        howFound: formData.howFound || undefined
       };
 
       // Generate and save PDF to File Manager (this creates ONE alert)
