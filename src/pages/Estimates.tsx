@@ -121,7 +121,7 @@ export interface EstimateSectionData {
     subtotal: number;
 }
 
-const getEstimateSections = (servicesList: { name: string; price: number }[]): EstimateSectionData[] => {
+export const getEstimateSections = (servicesList: { name: string; price: number }[]): EstimateSectionData[] => {
     const sections: EstimateSectionData[] = [];
     let currentSection: EstimateSectionData | null = null;
 

@@ -19,6 +19,7 @@ import { PaymentWorkflowHelp } from "@/components/help/PaymentWorkflowHelp";
 import { formatDisplayDate, getValidUntilDate } from '@/lib/utils';
 import servicesQrCode from "@/assets/services-qr.png";
 import { DistanceMapWidget } from '@/components/distance/DistanceMapWidget';
+import { getEstimateSections, calculateSectionPricing } from '@/pages/Estimates';
 
 export default function CustomerEstimatePage() {
     const { id } = useParams<{ id: string }>();
@@ -538,26 +539,90 @@ export default function CustomerEstimatePage() {
 
                         <div className="p-6">
                             <p className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-4">Proposed Services</p>
-                            <div className="space-y-3">
-                                {displayServices.map((svc, i) => {
-                                    // Skip virtual internal services
-                                    if (svc.name.startsWith('VIRTUAL_')) return null;
-                                    const isHeader = svc.name.startsWith('---') && svc.price === 0;
-                                    if (isHeader) {
-                                        return (
-                                            <div key={i} className="pt-4 pb-1">
-                                                <span className="text-emerald-400 font-bold uppercase tracking-wider text-xs">{svc.name.replace(/-/g, '').trim()}</span>
-                                            </div>
-                                        );
-                                    }
+
+                            {(() => {
+                                const scenarioSections = getEstimateSections(displayServices);
+                                const isCompareScenarios = scenarioSections.length >= 2;
+
+                                if (isCompareScenarios) {
                                     return (
-                                        <div key={i} className="flex justify-between items-center text-sm">
-                                            <span className="text-zinc-300 font-medium">{svc.name}</span>
-                                            <span className="text-zinc-100 font-mono">${Number(svc.price).toFixed(2)}</span>
+                                        <div className="space-y-6">
+                                            {scenarioSections.map((sec, idx) => {
+                                                const secPricing = calculateSectionPricing(sec.items, estimate.discount || 0, estimate.discountType || 'percent');
+                                                return (
+                                                    <div key={idx} className="p-4 bg-zinc-950/60 rounded-xl border border-zinc-800 space-y-3">
+                                                        <div className="text-xs font-bold uppercase tracking-wider text-emerald-400 border-b border-zinc-800/80 pb-2">
+                                                            {sec.title}
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            {sec.items.map((item, itemIdx) => (
+                                                                <div key={itemIdx} className="flex justify-between items-center text-sm">
+                                                                    <span className="text-zinc-300 font-medium">{item.name}</span>
+                                                                    <span className="text-zinc-100 font-mono">${Number(item.price).toFixed(2)}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="pt-3 border-t border-zinc-800/80 space-y-1.5">
+                                                            {secPricing.discountAmount > 0 && (
+                                                                <div className="flex justify-between items-center text-sm text-emerald-400">
+                                                                    <span>Discount {estimate.discountType === 'percent' ? `(${estimate.discount}%)` : ''}</span>
+                                                                    <span className="font-mono">-${secPricing.discountAmount.toFixed(2)}</span>
+                                                                </div>
+                                                            )}
+                                                            <div className="flex justify-between items-center text-base font-bold pt-1">
+                                                                <span className="text-white uppercase tracking-wider">{sec.title} Total</span>
+                                                                <span className="text-amber-400 font-mono text-xl">${secPricing.total.toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {scenarioSections.length === 2 && (() => {
+                                                const secA = scenarioSections[0];
+                                                const secB = scenarioSections[1];
+                                                const pricingA = calculateSectionPricing(secA.items, estimate.discount || 0, estimate.discountType || 'percent');
+                                                const pricingB = calculateSectionPricing(secB.items, estimate.discount || 0, estimate.discountType || 'percent');
+                                                const delta = pricingB.total - pricingA.total;
+                                                const isHigher = delta > 0;
+                                                const isLower = delta < 0;
+
+                                                return (
+                                                    <div className="p-4 rounded-xl bg-blue-950/20 border border-blue-500/30 text-xs font-bold text-zinc-200 flex justify-between items-center">
+                                                        <span>Price Difference ({secB.title} − {secA.title}):</span>
+                                                        <span className="text-blue-400 font-mono text-sm">
+                                                            {delta >= 0 ? `+ $${delta.toFixed(2)}` : `- $${Math.abs(delta).toFixed(2)}`} ({isHigher ? `${secB.title} is $${delta.toFixed(2)} higher` : isLower ? `${secB.title} is $${Math.abs(delta).toFixed(2)} lower` : 'Identical'})
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     );
-                                })}
-                            </div>
+                                }
+
+                                return (
+                                    <div className="space-y-3">
+                                        {displayServices.map((svc, i) => {
+                                            // Skip virtual internal services
+                                            if (svc.name.startsWith('VIRTUAL_')) return null;
+                                            const isHeader = svc.name.startsWith('---') && svc.price === 0;
+                                            if (isHeader) {
+                                                return (
+                                                    <div key={i} className="pt-4 pb-1">
+                                                        <span className="text-emerald-400 font-bold uppercase tracking-wider text-xs">{svc.name.replace(/-/g, '').trim()}</span>
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <div key={i} className="flex justify-between items-center text-sm">
+                                                    <span className="text-zinc-300 font-medium">{svc.name}</span>
+                                                    <span className="text-zinc-100 font-mono">${Number(svc.price).toFixed(2)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
 
                             {(() => {
                                 if (!(estimate.notes || '').includes('[SHOW_CATEGORY_SUBTOTALS]')) return null;
@@ -592,7 +657,7 @@ export default function CustomerEstimatePage() {
                                 );
                             })()}
 
-                            {(!(estimate.notes || '').includes('[MENU_MODE]') || isAcceptedMenuMode) && (
+                            {getEstimateSections(displayServices).length < 2 && (!(estimate.notes || '').includes('[MENU_MODE]') || isAcceptedMenuMode) && (
                                 <div className="mt-8 pt-4 border-t border-zinc-800 space-y-2">
                                     <div className="flex justify-between items-center text-sm text-zinc-400">
                                         <span>Subtotal</span>
