@@ -1728,8 +1728,10 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
         discount: p.discount || 0,
         estimate_number: p.estimateNumber,
         estimate_date: validEstimateDate,
-        discount_type: p.discountType,
-        place_of_service: p.placeOfService
+        discount_type: p.discountType
+        // NOTE: place_of_service is NOT a DB column — it is stored as
+        // VIRTUAL_PLACE_OF_SERVICE:<value> inside the services JSONB array above.
+        // DO NOT add place_of_service here; it will cause a PostgREST schema-cache error.
     };
 
     // HANDLE LOCAL MOCK ESTIMATES
