@@ -571,11 +571,12 @@ export interface CustomerLight {
     howFound?: string;
     howFoundOther?: string;
     is_lost?: boolean;
+    is_archived?: boolean;
 }
 
 /**
  * Lightweight customer query for dropdowns, search bars, and selectors.
- * Selects id, full_name, name, phone, email, type, how_found, how_found_other, and is_lost (omits heavy vehicle/media trees).
+ * Selects id, full_name, phone, email, type, how_found, how_found_other, is_lost, is_archived (omits heavy vehicle/media trees).
  */
 export const getSupabaseCustomersLight = async (): Promise<CustomerLight[]> => {
     if (isDemoActive()) {
@@ -588,14 +589,15 @@ export const getSupabaseCustomersLight = async (): Promise<CustomerLight[]> => {
             type: c.type || 'customer',
             howFound: (c as any).howFound || '',
             howFoundOther: (c as any).howFoundOther || '',
-            is_lost: false
+            is_lost: false,
+            is_archived: false
         }));
     }
-    return appCache.fetchWithCache('customers', 'customers_light', async () => {
+    return appCache.fetchWithCache('customers:customers_light', async () => {
         try {
             const { data, error } = await supabase
                 .from('customers')
-                .select('id, full_name, name, phone, email, type, how_found, how_found_other, is_lost')
+                .select('id, full_name, phone, email, type, how_found, how_found_other, is_lost, is_archived')
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -605,7 +607,7 @@ export const getSupabaseCustomersLight = async (): Promise<CustomerLight[]> => {
 
             const map = new Map<string, CustomerLight>();
             (data || []).forEach((c: any) => {
-                const name = c.full_name || c.name || 'Unknown';
+                const name = c.full_name || 'Unknown';
                 const email = (c.email || '').toLowerCase().trim();
                 const phone = (c.phone || '').replace(/\D/g, '');
                 const key = email || `name:${name.toLowerCase()}_phone:${phone || c.id}`;
@@ -618,7 +620,8 @@ export const getSupabaseCustomersLight = async (): Promise<CustomerLight[]> => {
                         type: c.type || 'customer',
                         howFound: c.how_found || '',
                         howFoundOther: c.how_found_other || '',
-                        is_lost: Boolean(c.is_lost)
+                        is_lost: Boolean(c.is_lost),
+                        is_archived: Boolean(c.is_archived)
                     });
                 }
             });
@@ -3403,7 +3406,7 @@ export interface AuditSnapshot {
 const AUDIT_FALLBACK_KEY = 'pds_inventory_audit_history_fallback';
 
 export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
-    return appCache.fetchWithCache('auditHistory', 'audit_history_list', async () => {
+    return appCache.fetchWithCache('auditHistory:audit_history_list', async () => {
         try {
             const { data, error } = await supabase
                 .from('inventory_audit_history')
@@ -3441,7 +3444,7 @@ export const getInventoryAuditHistory = async (): Promise<AuditSnapshot[]> => {
  * for a specific audit when explicitly opened or exported.
  */
 export const getInventoryAuditById = async (id: string): Promise<AuditSnapshot | null> => {
-    return appCache.fetchWithCache('auditHistory', `audit_detail_${id}`, async () => {
+    return appCache.fetchWithCache(`auditHistory:audit_detail_${id}`, async () => {
         try {
             const { data, error } = await supabase
                 .from('inventory_audit_history')

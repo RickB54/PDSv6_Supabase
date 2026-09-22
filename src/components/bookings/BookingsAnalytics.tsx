@@ -92,9 +92,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         }
     }, [view]);
 
-    const [quotesStatusFilter, setQuotesStatusFilter] = useState<'all' | 'accepted' | 'declined'>('all');
+    const [quotesStatusFilter, setQuotesStatusFilter] = useState<'all' | 'not_received' | 'sent' | 'accepted' | 'declined'>('all');
     const [invStatusFilter, setInvStatusFilter] = useState<'all' | 'paid' | 'unpaid' | 'overdue'>('all');
     const [acqStageFilter, setAcqStageFilter] = useState<'all' | 'prospect' | 'customer' | 'lost'>('all');
+    const [qualReviewFilter, setQualReviewFilter] = useState<'all' | 'status' | 'five_star' | 'under_five'>('all');
     const [consumptionData, setConsumptionData] = useState<ConsumptionRecord[]>([]);
     const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
     const [perfFilterOpen, setPerfFilterOpen] = useState(false);
@@ -1038,7 +1039,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const filteredAcquisitionBookings = useMemo(() => {
         return bookings.filter(b => {
             const isArchived = Boolean(b.isArchived || (b as any).is_archived);
-            if (!acqShowArchived && isArchived) return false;
+            if (!acqShowArchived && isArchived && acqStageFilter !== 'lost') return false;
 
             if (acqDateFilter.start) {
                 const bDate = parseISO(b.date);
@@ -1056,12 +1057,22 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     (c.full_name && c.full_name.toLowerCase() === custName)
                 );
 
+                const isLost = Boolean(
+                    matchedCust?.is_lost ||
+                    matchedCust?.type === 'lost_prospect' ||
+                    matchedCust?.type === 'lost' ||
+                    (matchedCust as any)?.status === 'lost' ||
+                    (matchedCust?.type === 'prospect' && matchedCust?.is_archived) ||
+                    (b.status || '').toLowerCase() === 'lost' ||
+                    ((b.status || '').toLowerCase() === 'cancelled' && matchedCust?.type === 'prospect')
+                );
+
                 if (acqStageFilter === 'lost') {
-                    if (!matchedCust?.is_lost) return false;
+                    if (!isLost) return false;
                 } else if (acqStageFilter === 'prospect') {
-                    if (matchedCust?.is_lost || matchedCust?.type !== 'prospect') return false;
+                    if (isLost || matchedCust?.type !== 'prospect') return false;
                 } else if (acqStageFilter === 'customer') {
-                    if (matchedCust?.is_lost || (matchedCust?.type !== 'customer' && matchedCust?.type !== 'client')) return false;
+                    if (isLost || (matchedCust?.type !== 'customer' && matchedCust?.type !== 'client')) return false;
                 }
             }
 
@@ -1318,6 +1329,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         if (quotesStatusFilter === 'all') return filteredQuotes;
         return filteredQuotes.filter((q: any) => {
             const s = (q.status || '').toLowerCase();
+            const isSent = q.isSent || s === 'sent' || s === 'accepted' || s === 'declined' || s === 'denied';
+            if (quotesStatusFilter === 'not_received') return !isSent || s === 'open';
+            if (quotesStatusFilter === 'sent') return (s === 'sent') || (isSent && s !== 'accepted' && s !== 'declined' && s !== 'denied');
             if (quotesStatusFilter === 'accepted') return s === 'accepted';
             if (quotesStatusFilter === 'declined') return s === 'declined' || s === 'denied';
             return true;
@@ -1651,8 +1665,35 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }, [doneServices, filteredPerfBookings, invoices]);
 
     const qualDoneServices = useMemo(() => {
-        return qualServiceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed'));
-    }, [qualServiceDetailsData]);
+        const base = qualServiceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed'));
+        if (qualReviewFilter === 'all') return base;
+        if (qualReviewFilter === 'five_star') {
+            return base.filter(s => {
+                const rev = bookingReviews[s.id];
+                return rev && rev.googleReview && Number(rev.googleStars) >= 5;
+            });
+        }
+        if (qualReviewFilter === 'under_five') {
+            return base.filter(s => {
+                const rev = bookingReviews[s.id];
+                if (!rev) return false;
+                if (rev.googleReview) {
+                    return Number(rev.googleStars) < 5;
+                }
+                return true;
+            });
+        }
+        if (qualReviewFilter === 'status') {
+            return [...base].sort((a, b) => {
+                const revA = bookingReviews[a.id];
+                const revB = bookingReviews[b.id];
+                const scoreA = revA ? (revA.googleReview ? 2 : 1) : 0;
+                const scoreB = revB ? (revB.googleReview ? 2 : 1) : 0;
+                return scoreB - scoreA;
+            });
+        }
+        return base;
+    }, [qualServiceDetailsData, qualReviewFilter, bookingReviews]);
 
     const probonoJobs = useMemo(() => {
         return qualServiceDetailsData
@@ -2122,6 +2163,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         setAcqShowArchived(false);
         setAcqDateFilter({ start: undefined, end: undefined });
         setAcqStageFilter('all');
+        setQualReviewFilter('all');
         setSearchQuery("");
 
         const keysToRemove = [
@@ -2489,6 +2531,18 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
 
 
+    const scrollToSection = (id: string) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const stickyBar = (document.getElementById('crm-sticky-header-portal')?.parentElement || document.querySelector('.sticky')) as HTMLElement | null;
+        const headerOffset = (stickyBar?.getBoundingClientRect().height || 110) + 76;
+        const elementPosition = el.getBoundingClientRect().top + window.pageYOffset;
+        window.scrollTo({
+            top: Math.max(0, elementPosition - headerOffset),
+            behavior: 'smooth'
+        });
+    };
+
     const portalTarget = document.getElementById('crm-sticky-header-portal');
     const businessIntelligenceHeader = (
         <div className="flex flex-col gap-2 p-3 bg-zinc-950/40 transition-all duration-300">
@@ -2510,7 +2564,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         setShowProfitability(false);
                         setShowEmployeeAnalytics(false);
                         setActiveSection('revenue-performance');
-                        document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' });
+                        scrollToSection('revenue-performance');
                     }}
                 >
                     Revenue & Pipeline
@@ -2528,7 +2582,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         setShowProfitability(false);
                         setShowEmployeeAnalytics(false);
                         setActiveSection('service-detail');
-                        document.getElementById('service-detail')?.scrollIntoView({ behavior: 'smooth' });
+                        scrollToSection('service-detail');
                     }}
                 >
                     Service Logs
@@ -2546,7 +2600,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         setShowProfitability(false);
                         setShowEmployeeAnalytics(false);
                         setActiveSection('invoices-tracker');
-                        document.getElementById('invoices-tracker')?.scrollIntoView({ behavior: 'smooth' });
+                        scrollToSection('invoices-tracker');
                     }}
                 >
                     Invoices
@@ -2564,7 +2618,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         setShowProfitability(false);
                         setShowEmployeeAnalytics(false);
                         setActiveSection('estimates-tracker');
-                        document.getElementById('estimates-tracker')?.scrollIntoView({ behavior: 'smooth' });
+                        scrollToSection('estimates-tracker');
                     }}
                 >
                     Estimates & Quotes
@@ -2582,7 +2636,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         setShowProfitability(false);
                         setShowEmployeeAnalytics(false);
                         setActiveSection('probono-tracker');
-                        document.getElementById('probono-tracker')?.scrollIntoView({ behavior: 'smooth' });
+                        scrollToSection('probono-tracker');
                     }}
                 >
                     Probono Jobs
@@ -2600,7 +2654,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         setShowProfitability(false);
                         setShowEmployeeAnalytics(false);
                         setActiveSection('customer-insights');
-                        document.getElementById('customer-insights')?.scrollIntoView({ behavior: 'smooth' });
+                        scrollToSection('customer-insights');
                     }}
                 >
                     Customer Insights
@@ -2618,7 +2672,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         setShowProfitability(false);
                         setShowEmployeeAnalytics(false);
                         setActiveSection('acquisition-intake');
-                        document.getElementById('acquisition-intake')?.scrollIntoView({ behavior: 'smooth' });
+                        scrollToSection('acquisition-intake');
                     }}
                 >
                     Acquisition & Intake
@@ -2636,7 +2690,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         setShowProfitability(false);
                         setShowEmployeeAnalytics(false);
                         setActiveSection('operational-quality');
-                        document.getElementById('operational-quality')?.scrollIntoView({ behavior: 'smooth' });
+                        scrollToSection('operational-quality');
                     }}
                 >
                     Quality Review
@@ -3408,7 +3462,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-widest mt-8 mb-4 border-b border-zinc-800 pb-2">Performance Graphs</h3>
 
             {/* Charts Row */}
-            <div id="revenue-performance" className="grid grid-cols-1 xl:grid-cols-3 gap-6 scroll-mt-24">
+            <div id="revenue-performance" className="grid grid-cols-1 xl:grid-cols-3 gap-6 scroll-mt-48">
                 {/* Booking Volume Chart */}
                 <Card ref={volumeChartRef} className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
                     <CardHeader>
@@ -3520,7 +3574,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
             {/* Business Health / Trends */}
             <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-widest mt-8 mb-4 border-b border-zinc-800 pb-2">Business Health / Trends</h3>
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-8 scroll-mt-24">
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-8 scroll-mt-48">
                 {/* Revenue Trend */}
                 <Card className="bg-zinc-900/50 border-zinc-800 xl:col-span-2 overflow-hidden shadow-xl">
                     <CardHeader>
@@ -3750,7 +3804,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
 
             {/* Service Performance Detail Log - COMPLETED ONLY */}
-            <Card id="service-detail" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl scroll-mt-24">
+            <Card id="service-detail" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-2xl scroll-mt-48">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-emerald-400" />
@@ -3975,7 +4029,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 </CardContent>
             </Card>
             {/* Invoices Tracker */}
-            <Card id="invoices-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-indigo-500/30 mt-6 scroll-mt-24">
+            <Card id="invoices-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-indigo-500/30 mt-6 scroll-mt-48">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Send className="w-5 h-5 text-indigo-400" />
@@ -4305,7 +4359,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </Card>
 
             {/* Estimates Tracker */}
-            <Card id="estimates-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-emerald-500/30 mt-6 scroll-mt-24">
+            <Card id="estimates-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-emerald-500/30 mt-6 scroll-mt-48">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
                         <FileBarChart className="w-5 h-5 text-emerald-400" />
@@ -4317,6 +4371,48 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     <div className="flex items-center gap-1.5 flex-wrap">
                         {/* Status Filter Buttons */}
                         <div className="flex items-center bg-zinc-950/60 p-0.5 rounded-lg border border-zinc-800">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setQuotesStatusFilter('all')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    quotesStatusFilter === 'all'
+                                        ? "bg-zinc-800 text-white border border-zinc-700 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                All
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setQuotesStatusFilter(prev => prev === 'not_received' ? 'all' : 'not_received')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    quotesStatusFilter === 'not_received'
+                                        ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Not Received
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setQuotesStatusFilter(prev => prev === 'sent' ? 'all' : 'sent')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    quotesStatusFilter === 'sent'
+                                        ? "bg-blue-500/20 text-blue-400 border border-blue-500/40 shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                Sent
+                            </Button>
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -4804,7 +4900,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
 
             {/* Probono Jobs Tracker */}
-            <Card id="probono-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-pink-500/30 mt-6 scroll-mt-24">
+            <Card id="probono-tracker" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-pink-500/30 mt-6 scroll-mt-48">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Gift className="w-5 h-5 text-pink-400" />
@@ -5081,7 +5177,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
 
             {/* CRM Customer List */}
-            <Card id="customer-insights" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden scroll-mt-24">
+            <Card id="customer-insights" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden scroll-mt-48">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
                         <CardTitle>Customer Insights & Follow-up</CardTitle>
@@ -5308,7 +5404,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </Card>
 
             {/* Customer Acquisition & Intake Analytics Section */}
-            <Card id="acquisition-intake" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-cyan-500/30 mt-8 relative group scroll-mt-24">
+            <Card id="acquisition-intake" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-cyan-500/30 mt-8 relative group scroll-mt-48">
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
                 <CardHeader className="bg-zinc-950/20 relative flex flex-row items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -5331,6 +5427,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     <div className="flex items-center gap-1.5 flex-wrap">
                         {/* Lead Stage Filter Buttons */}
                         <div className="flex items-center bg-zinc-950/60 p-0.5 rounded-lg border border-zinc-800">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setAcqStageFilter('all')}
+                                className={cn(
+                                    "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                    acqStageFilter === 'all'
+                                        ? "bg-zinc-800 text-white shadow-sm"
+                                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                )}
+                            >
+                                All
+                            </Button>
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -5585,7 +5695,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </Card>
 
             {/* Post-Service Performance Review Section - NEW AT BOTTOM */}
-            <Card id="operational-quality" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-violet-500/30 mt-8 relative group scroll-mt-24">
+            <Card id="operational-quality" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-violet-500/30 mt-8 relative group scroll-mt-48">
                 <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
                 <CardHeader className="bg-zinc-950/20 relative">
                     <div className="flex items-center justify-between">
@@ -5598,7 +5708,67 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 <CardDescription className="text-zinc-400">Log internal notes, mistakes, and customer sentiment for continuous improvement</CardDescription>
                             </div>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {/* Review Filters & Sort Buttons */}
+                            <div className="flex items-center bg-zinc-950/60 p-0.5 rounded-lg border border-zinc-800">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setQualReviewFilter('all')}
+                                    className={cn(
+                                        "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                        qualReviewFilter === 'all'
+                                            ? "bg-zinc-800 text-white shadow-sm"
+                                            : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                    )}
+                                >
+                                    All
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setQualReviewFilter(prev => prev === 'status' ? 'all' : 'status')}
+                                    className={cn(
+                                        "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                        qualReviewFilter === 'status'
+                                            ? "bg-violet-500/20 text-violet-300 border border-violet-500/40 shadow-sm"
+                                            : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                    )}
+                                >
+                                    Review Status
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setQualReviewFilter(prev => prev === 'five_star' ? 'all' : 'five_star')}
+                                    className={cn(
+                                        "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                        qualReviewFilter === 'five_star'
+                                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm"
+                                            : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                    )}
+                                >
+                                    5 Star Reviews
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setQualReviewFilter(prev => prev === 'under_five' ? 'all' : 'under_five')}
+                                    className={cn(
+                                        "h-7 px-2.5 text-xs font-bold transition-all rounded-md",
+                                        qualReviewFilter === 'under_five'
+                                            ? "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-sm"
+                                            : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                                    )}
+                                >
+                                    Under 5 Stars
+                                </Button>
+                            </div>
+
                         <Popover open={qualFilterOpen} onOpenChange={setQualFilterOpen}>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (qualDateFilter.start || qualDateFilter.end) && "bg-zinc-800 text-white")}>
@@ -5663,6 +5833,15 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             </div>
                                             <div className="text-right shrink-0 flex flex-col items-end gap-1">
                                                 {review ? (
+                                                    review.googleReview ? (
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-black bg-amber-500/10 text-amber-400 border-amber-500/30">Google Review</Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-black bg-violet-500/10 text-violet-400 border-violet-500/30">Internal Log</Badge>
+                                                    )
+                                                ) : (
+                                                    <span className="text-[10px] text-zinc-600 italic">Pending</span>
+                                                )}
+                                                {review ? (
                                                     <Badge variant="outline" className={cn(
                                                         "text-[10px] px-1.5 py-0 h-4 font-black",
                                                         review.sentiment === 'loved' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
@@ -5670,9 +5849,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                         review.sentiment === 'no_response' ? "bg-zinc-500/10 text-zinc-400 border-zinc-500/20" :
                                                         "bg-red-500/10 text-red-400 border-red-500/20"
                                                     )}>{review.sentiment.replace("_", " ").toUpperCase()}</Badge>
-                                                ) : (
-                                                    <span className="text-[10px] text-zinc-600 italic">Pending</span>
-                                                )}
+                                                ) : null}
                                                 {review?.googleReview && <span className="text-amber-400 text-xs">{review.googleStars}/5 ★</span>}
                                             </div>
                                         </div>
@@ -5696,13 +5873,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                     <TableHead>Customer</TableHead>
                                     <TableHead>Sentiment</TableHead>
                                     <TableHead>Google Star</TableHead>
-                                    <TableHead className="text-right">Review Status</TableHead>
+                                    <TableHead>Review Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {qualDoneServices.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-zinc-500 py-12 italic">
+                                        <TableCell colSpan={6} className="text-center text-zinc-500 py-12 italic">
                                             No completed jobs available for review yet.
                                         </TableCell>
                                     </TableRow>
@@ -5726,7 +5904,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                         )}>
                                                             {review.sentiment.replace("_", " ").toUpperCase()}
                                                         </Badge>
-                                                    ) : <span className="text-[10px] text-zinc-600 italic uppercase font-bold tracking-widest opacity-40">Pending Review</span>}
+                                                    ) : <span className="text-[10px] text-zinc-600 italic uppercase font-bold tracking-widest opacity-40">—</span>}
                                                 </TableCell>
                                                 <TableCell>
                                                     {review?.googleReview ? (
@@ -5736,6 +5914,23 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                         </div>
                                                     ) : <span className="text-xs text-zinc-700">—</span>}
                                                 </TableCell>
+                                                <TableCell>
+                                                    {review ? (
+                                                        review.googleReview ? (
+                                                            <Badge variant="outline" className="text-[10px] h-5 px-2 font-black bg-amber-500/10 text-amber-400 border-amber-500/30">
+                                                                Google Review
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="outline" className="text-[10px] h-5 px-2 font-black bg-violet-500/10 text-violet-400 border-violet-500/30">
+                                                                Internal Log
+                                                            </Badge>
+                                                        )
+                                                    ) : (
+                                                        <Badge variant="outline" className="text-[10px] h-5 px-2 font-medium bg-zinc-800/40 text-zinc-500 border-zinc-700/50">
+                                                            Pending Review
+                                                        </Badge>
+                                                    )}
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-1">
                                                         <Button 
@@ -5744,7 +5939,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                                             className={cn(
                                                                 "text-[10px] h-7 px-3 font-bold transition-all",
                                                                 review 
-                                                                    ? "text-zinc-500 hover:text-white" 
+                                                                    ? "text-zinc-400 hover:text-white" 
                                                                     : "text-violet-400 hover:text-white bg-violet-500/5 hover:bg-violet-500/20 border border-violet-500/10"
                                                             )}
                                                             onClick={() => openReview(svc)}
