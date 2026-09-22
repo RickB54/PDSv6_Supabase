@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
-import { compileManualContent } from '../src/lib/manual-content.js';
+import { compileManualContent, getGlossaryTerms, getIndexGroups } from '../src/lib/manual-content.ts';
 
 function countPdfPages(pdfPath) {
   try {
@@ -55,6 +55,9 @@ function formatMarkdownLine(line) {
 function buildHtmlBook(parts, isSample = false) {
   const allParts = compileManualContent();
   const totalChapters = allParts.reduce((acc, p) => acc + p.chapters.length, 0);
+
+  const glossaryTerms = isSample ? getGlossaryTerms().slice(0, 6) : getGlossaryTerms();
+  const indexGroups = getIndexGroups(parts);
 
   let tocHtml = '';
   for (const part of allParts) {
@@ -250,69 +253,68 @@ function buildHtmlBook(parts, isSample = false) {
       border-radius: 999px;
       color: #6ee7b7;
       font-size: 8pt;
-      font-weight: 800;
+      font-weight: 900;
       letter-spacing: 0.2em;
       text-transform: uppercase;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     .cover-main-title {
       font-size: 38pt;
       font-weight: 900;
-      line-height: 1.05;
-      text-transform: uppercase;
+      line-height: 1.1;
       letter-spacing: -0.02em;
-      color: #ffffff;
+      text-transform: uppercase;
       margin: 0 0 16px 0;
+      color: #ffffff;
     }
     .cover-subtitle {
       font-size: 13pt;
       font-weight: 300;
-      line-height: 1.4;
+      line-height: 1.6;
       color: #cbd5e1;
-      max-width: 500px;
-      margin: 0 0 28px 0;
+      max-width: 600px;
+      margin: 0 0 24px 0;
     }
     .cover-specs {
       display: flex;
       gap: 8px;
+    }
+    .cover-spec-badge {
+      padding: 4px 8px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #334155;
+      border-radius: 4px;
       font-family: monospace;
       font-size: 8pt;
       color: #94a3b8;
     }
-    .cover-spec-badge {
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid #334155;
-      padding: 4px 10px;
-      border-radius: 4px;
-    }
     .cover-footer {
       border-top: 1px solid #1e293b;
-      padding-top: 20px;
+      padding-top: 16px;
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
     }
     .author-role {
-      font-size: 7pt;
+      font-size: 7.5pt;
       font-weight: 800;
-      letter-spacing: 0.2em;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
       color: #64748b;
     }
     .author-name {
-      font-size: 11pt;
-      font-weight: 700;
+      font-size: 12pt;
+      font-weight: 800;
       color: #ffffff;
-      margin: 2px 0;
     }
     .author-title {
       font-size: 8pt;
       color: #94a3b8;
     }
     .cover-company {
+      font-family: monospace;
       font-size: 8pt;
-      font-weight: 600;
-      color: #cbd5e1;
+      color: #94a3b8;
       text-align: right;
     }
     .cover-location {
@@ -353,6 +355,42 @@ function buildHtmlBook(parts, isSample = false) {
       color: #64748b;
     }
 
+    /* HOW TO USE THIS MANUAL */
+    .intro-page {
+      min-height: 100vh;
+      page-break-after: always;
+      break-after: page;
+      padding: 20mm 15mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .intro-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .intro-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .intro-card-title {
+      font-weight: 800;
+      font-size: 9.5pt;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+    .intro-card-text {
+      font-size: 8pt;
+      color: #475569;
+      line-height: 1.5;
+    }
+
     /* TABLE OF CONTENTS */
     .toc-page {
       page-break-after: always;
@@ -389,7 +427,6 @@ function buildHtmlBook(parts, isSample = false) {
     .toc-part-header {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
       border-bottom: 1px solid #cbd5e1;
       padding-bottom: 4px;
       margin-bottom: 4px;
@@ -397,14 +434,14 @@ function buildHtmlBook(parts, isSample = false) {
     .toc-part-title {
       font-size: 9.5pt;
       font-weight: 800;
-      letter-spacing: 0.05em;
       color: #0f172a;
+      letter-spacing: 0.05em;
     }
     .toc-part-count {
       font-size: 8pt;
-      font-weight: 700;
-      font-family: monospace;
+      font-weight: 800;
       color: #059669;
+      font-family: monospace;
     }
     .toc-part-sub {
       font-size: 7.5pt;
@@ -415,33 +452,29 @@ function buildHtmlBook(parts, isSample = false) {
     .toc-chapters-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      column-gap: 24px;
-      row-gap: 2px;
+      gap: 2px 16px;
     }
     .toc-chapter-row {
       display: flex;
       justify-content: space-between;
       font-size: 8pt;
-      padding: 1.5px 0;
-      border-bottom: 1px dotted #e2e8f0;
+      padding: 1px 0;
     }
     .toc-ch-title {
-      white-space: nowrap;
+      color: #334155;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: #1e293b;
+      white-space: nowrap;
+      margin-right: 8px;
     }
     .toc-ch-num {
       font-family: monospace;
       color: #94a3b8;
-      font-size: 7pt;
-      margin-right: 4px;
     }
     .toc-ch-target {
       font-family: monospace;
-      font-size: 7pt;
       color: #64748b;
-      margin-left: 8px;
+      font-size: 7.5pt;
       flex-shrink: 0;
     }
 
@@ -452,234 +485,327 @@ function buildHtmlBook(parts, isSample = false) {
       break-before: page;
       page-break-after: always;
       break-after: page;
-      background-color: #090d16;
+      background-color: #0f172a;
       color: #ffffff;
-      padding: 40mm 20mm;
+      padding: 30mm 20mm;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      justify-content: space-between;
     }
     .part-badge {
       display: inline-block;
-      padding: 4px 10px;
-      background: rgba(16, 185, 129, 0.2);
-      border: 1px solid rgba(16, 185, 129, 0.5);
-      border-radius: 4px;
-      color: #34d399;
-      font-size: 7.5pt;
-      font-weight: 800;
-      letter-spacing: 0.2em;
+      border-top: 3px solid #10b981;
+      padding-top: 12px;
+      font-size: 8pt;
+      font-weight: 900;
+      letter-spacing: 0.3em;
       text-transform: uppercase;
-      margin-bottom: 16px;
-      width: fit-content;
+      color: #34d399;
+      margin-bottom: 12px;
     }
     .part-title {
-      font-size: 28pt;
+      font-size: 32pt;
       font-weight: 900;
+      letter-spacing: -0.02em;
       text-transform: uppercase;
-      line-height: 1.1;
-      margin: 0 0 8px 0;
+      margin: 0 0 10px 0;
       color: #ffffff;
+      line-height: 1.1;
     }
     .part-subtitle {
       font-size: 13pt;
-      font-weight: 500;
-      color: #6ee7b7;
-      margin: 0 0 20px 0;
+      font-weight: 300;
+      color: #cbd5e1;
+      margin: 0 0 24px 0;
     }
     .part-accent-line {
-      width: 48px;
+      width: 60px;
       height: 3px;
-      background-color: #10b981;
-      margin-bottom: 20px;
+      background: #10b981;
+      margin-bottom: 24px;
     }
     .part-desc {
-      font-size: 10pt;
-      color: #cbd5e1;
-      line-height: 1.6;
-      max-width: 520px;
-      margin: 0 0 24px 0;
+      font-size: 11pt;
+      color: #94a3b8;
+      line-height: 1.7;
+      max-width: 600px;
+      margin-bottom: 24px;
     }
     .part-meta {
       font-family: monospace;
-      font-size: 8pt;
-      color: #64748b;
-      margin: 0;
+      font-size: 8.5pt;
+      color: #34d399;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid #1e293b;
+      padding: 8px 12px;
+      border-radius: 6px;
+      display: inline-block;
     }
 
     /* CHAPTER PAGE */
     .chapter-page {
+      min-height: 100vh;
       page-break-before: always;
       break-before: page;
-      padding: 10mm 5mm 15mm 5mm;
-      min-height: 100vh;
+      padding: 20mm 15mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      position: relative;
     }
     .running-header {
       display: flex;
       justify-content: space-between;
+      font-family: monospace;
       font-size: 7pt;
-      font-weight: 700;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
-      color: #94a3b8;
+      color: #64748b;
       border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 4px;
-      margin-bottom: 16px;
+      padding-bottom: 6px;
+      margin-bottom: 20px;
     }
     .running-footer {
       display: flex;
       justify-content: space-between;
+      font-family: monospace;
       font-size: 7pt;
-      font-weight: 700;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.2em;
       text-transform: uppercase;
       color: #94a3b8;
       border-top: 1px solid #e2e8f0;
-      padding-top: 4px;
+      padding-top: 6px;
       margin-top: 24px;
     }
     .chapter-header {
       margin-bottom: 14px;
     }
     .chapter-badge {
-      font-size: 7.5pt;
-      font-weight: 900;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      color: #059669;
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      padding: 2px 6px;
-      border-radius: 4px;
       display: inline-block;
+      padding: 2px 8px;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 7pt;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
       margin-bottom: 6px;
     }
     .chapter-title {
-      font-size: 18pt;
+      font-size: 20pt;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
       color: #0f172a;
       margin: 0;
       line-height: 1.2;
     }
     .chapter-summary {
       background: #f8fafc;
-      border-left: 4px solid #059669;
+      border-left: 3px solid #10b981;
       padding: 8px 12px;
-      margin-bottom: 14px;
-      border-radius: 0 4px 4px 0;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      margin: 12px 0 16px 0;
+      border-radius: 0 6px 6px 0;
     }
     .summary-label {
-      font-size: 7pt;
-      font-weight: 900;
+      font-family: monospace;
+      font-size: 6.5pt;
+      font-weight: 800;
       letter-spacing: 0.15em;
       text-transform: uppercase;
-      color: #0f172a;
+      color: #059669;
       display: block;
       margin-bottom: 2px;
     }
     .summary-text {
       font-size: 8.5pt;
+      color: #475569;
       font-style: italic;
-      color: #334155;
       margin: 0;
       line-height: 1.4;
     }
-
-    /* Structured Tables */
-    .table-container {
-      margin: 14px 0;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-    .table-title {
-      font-size: 8pt;
-      font-weight: 800;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #0f172a;
-      margin: 0 0 2px 0;
-    }
-    .table-desc {
-      font-size: 7.5pt;
-      color: #64748b;
-      margin: 0 0 6px 0;
-    }
-    .manual-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 7.5pt;
-      line-height: 1.3;
-      border: 1px solid #cbd5e1;
-    }
-    .manual-table thead {
-      display: table-header-group;
-    }
-    .manual-table th {
-      background-color: #0f172a;
-      color: #ffffff;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 5px 6px;
-      border: 1px solid #1e293b;
-      text-align: left;
-    }
-    .manual-table td {
-      padding: 4px 6px;
-      border: 1px solid #e2e8f0;
-      color: #1e293b;
-    }
-    .row-even {
-      background-color: #ffffff;
-    }
-    .row-odd {
-      background-color: #f8fafc;
-    }
-
-    /* Typography inside Chapter Content */
     .chapter-content {
-      flex: 1;
+      font-size: 9pt;
+      color: #334155;
+      line-height: 1.55;
     }
     .paragraph {
-      margin: 0 0 6px 0;
-      font-size: 9pt;
-      line-height: 1.45;
-      color: #334155;
+      margin: 0 0 8px 0;
     }
     .bullet-item {
-      margin: 2px 0 2px 16px;
-      font-size: 9pt;
-      line-height: 1.45;
-      color: #334155;
+      margin: 3px 0 3px 18px;
+      list-style-type: disc;
     }
     .numbered-item {
-      margin: 3px 0 3px 8px;
-      font-size: 9pt;
-      font-weight: 500;
-      line-height: 1.45;
-      color: #0f172a;
+      margin: 4px 0 4px 8px;
+      font-weight: 600;
     }
     .callout-box {
-      margin: 8px 0;
-      padding: 6px 10px;
-      background-color: #fffbeb;
+      background: #fffbeb;
       border-left: 3px solid #f59e0b;
-      border-radius: 0 4px 4px 0;
+      padding: 8px 12px;
+      margin: 12px 0;
+      border-radius: 0 6px 6px 0;
       font-size: 8.5pt;
       color: #78350f;
       page-break-inside: avoid;
       break-inside: avoid;
-      line-height: 1.4;
+    }
+
+    /* STRUCTURED TABLES */
+    .table-container {
+      margin: 16px 0 20px 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .table-title {
+      font-size: 9pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #0f172a;
+      margin: 0 0 4px 0;
+    }
+    .table-desc {
+      font-size: 7.5pt;
+      color: #64748b;
+      margin: 0 0 8px 0;
+    }
+    .manual-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+    }
+    .manual-table th {
+      background: #e2e8f0;
+      color: #0f172a;
+      font-weight: 800;
+      font-size: 7.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 6px 8px;
+      border-bottom: 2px solid #0f172a;
+      text-align: left;
+    }
+    .manual-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+    .row-even {
+      background: #ffffff;
+    }
+    .row-odd {
+      background: #f8fafc;
     }
     .spacer {
       height: 6px;
+    }
+
+    /* GLOSSARY */
+    .glossary-page {
+      min-height: 100vh;
+      page-break-before: always;
+      break-before: page;
+      page-break-after: always;
+      break-after: page;
+      padding: 20mm 15mm;
+    }
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .glossary-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .glossary-term-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+    .glossary-term {
+      font-weight: 800;
+      font-size: 9pt;
+      color: #0f172a;
+    }
+    .glossary-cat {
+      font-family: monospace;
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      background: #dcfce7;
+      color: #166534;
+      border-radius: 4px;
+    }
+    .glossary-def {
+      font-size: 8pt;
+      color: #475569;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    /* INDEX */
+    .index-page {
+      min-height: 100vh;
+      page-break-before: always;
+      break-before: page;
+      padding: 20mm 15mm;
+    }
+    .index-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .index-letter-block {
+      page-break-inside: avoid;
+      break-inside: avoid;
+      margin-bottom: 16px;
+    }
+    .index-letter-title {
+      font-size: 14pt;
+      font-weight: 900;
+      font-family: monospace;
+      color: #0f172a;
+      border-bottom: 2px solid #059669;
+      padding-bottom: 2px;
+      margin-bottom: 6px;
+    }
+    .index-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 7.5pt;
+      padding: 2px 0;
+      color: #334155;
+    }
+    .index-item-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: 8px;
+    }
+    .index-item-meta {
+      font-family: monospace;
+      font-size: 7pt;
+      color: #94a3b8;
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -696,16 +822,16 @@ function buildHtmlBook(parts, isSample = false) {
     </div>
 
     <div class="cover-title-block">
-      <div class="cover-edition-tag">Commercial Edition &bull; 2026</div>
+      <div class="cover-edition-tag">Internal Operations Edition &bull; 2026</div>
       <h1 class="cover-main-title">Application &amp; Operations Manual</h1>
       <p class="cover-subtitle">
-        The Definitive Standard Operating Procedures, Chemical Dilution Masterclass, CRM Architecture, and Business Intelligence Guide.
+        The Comprehensive Standard Operating Procedures, Chemical Dilution Masterclass, CRM Architecture, Rig Logistics, and Business Intelligence Manual.
       </p>
       <div class="cover-specs">
-        <span class="cover-spec-badge">Version 6.0</span>
+        <span class="cover-spec-badge">Version 6.4</span>
         <span class="cover-spec-badge">8 Parts</span>
         <span class="cover-spec-badge">${totalChapters} Chapters</span>
-        <span class="cover-spec-badge">Amazon KDP Ready</span>
+        <span class="cover-spec-badge">Glossary &amp; Index</span>
       </div>
     </div>
 
@@ -752,6 +878,59 @@ function buildHtmlBook(parts, isSample = false) {
     </div>
   </section>
 
+  <!-- HOW TO USE THIS MANUAL -->
+  <section class="intro-page">
+    <div>
+      <div class="toc-header-bar">
+        <span class="toc-eyebrow">Operational Framework</span>
+        <h2 class="toc-title">How to Use This Manual</h2>
+      </div>
+
+      <p style="font-size: 9pt; color: #334155; line-height: 1.6; margin-bottom: 16px;">
+        Welcome to the <strong>Prime Auto Detail Application &amp; Operations Manual</strong>. This document serves as the single source of truth for all operational, technical, financial, and chemical standards within the business. Whether you are an experienced shop manager, an intake specialist, or a field detailing technician, this manual provides clear guidelines for every situation you encounter.
+      </p>
+
+      <div class="intro-grid">
+        <div class="intro-card">
+          <div class="intro-card-title">&#128214; 8 Core Operational Parts</div>
+          <div class="intro-card-text">
+            Topics are grouped into 8 parts reflecting the natural flow of business operations: from initial customer lead generation through chemical dilution, mobile rig logistics, financial accounting, and platform security.
+          </div>
+        </div>
+
+        <div class="intro-card">
+          <div class="intro-card-title">&#10024; Structured Reference Tables</div>
+          <div class="intro-card-text">
+            Key chapters feature standardized matrices—such as the Master Chemical Dilution Chart, Package Pricing Tiers, and Vehicle Classifications—designed for fast lookup on the shop floor or in mobile rigs.
+          </div>
+        </div>
+
+        <div class="intro-card">
+          <div class="intro-card-title">&#128640; Interactive In-App Route Badges</div>
+          <div class="intro-card-text">
+            Every chapter identifies the exact application route (e.g., <code>/availability-manager</code>) where the feature lives in the web app, allowing immediate hands-on practice.
+          </div>
+        </div>
+
+        <div class="intro-card">
+          <div class="intro-card-title">&#128737; Glossary &amp; Subject Index</div>
+          <div class="intro-card-text">
+            Refer to the Glossary at the back of the manual for precise definitions of app-specific acronyms (IAC, RB Test, Smart Sync, F150 Command Center) and consult the Alphabetical Index for quick topic location.
+          </div>
+        </div>
+      </div>
+
+      <div class="callout-box" style="margin-top: 20px;">
+        <strong>💡 Best Practice for Daily Operations:</strong> Keep a printed copy of this manual bound in the shop office and a synchronized PDF on every mobile rig tablet. When onboarding new team members, assign Chapters 1–13 (Operations &amp; Customer Journey) and Chapters 45–68 (Chemical Mastery) as mandatory week-one reading before unsupervised field dispatches.
+      </div>
+    </div>
+
+    <div class="running-footer" style="margin-top: 16px;">
+      <span>PRIME AUTO DETAIL OPERATIONS MANUAL</span>
+      <span>INTRODUCTION &bull; GUIDE</span>
+    </div>
+  </section>
+
   <!-- TABLE OF CONTENTS -->
   <section class="toc-page">
     <div class="toc-header-bar">
@@ -763,6 +942,64 @@ function buildHtmlBook(parts, isSample = false) {
 
   <!-- BODY CONTENT (PARTS & CHAPTERS) -->
   ${bodyHtml}
+
+  <!-- GLOSSARY OF TERMS -->
+  <section class="glossary-page">
+    <div class="toc-header-bar">
+      <span class="toc-eyebrow">Reference &amp; Vocabulary</span>
+      <h2 class="toc-title">Glossary of Key Terms</h2>
+      <p style="font-size: 8pt; color: #64748b; margin-top: 4px;">
+        Definitions of proprietary systems, workflows, formulas, and acronyms used throughout the Prime Auto Detail platform.
+      </p>
+    </div>
+
+    <div class="glossary-grid">
+      ${glossaryTerms.map(g => `
+        <div class="glossary-card">
+          <div class="glossary-term-row">
+            <span class="glossary-term">${escapeHtml(g.term)}</span>
+            <span class="glossary-cat">${escapeHtml(g.category)}</span>
+          </div>
+          <p class="glossary-def">${escapeHtml(g.definition)}</p>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="running-footer" style="margin-top: 24px;">
+      <span>PRIME AUTO DETAIL OPERATIONS MANUAL</span>
+      <span>GLOSSARY</span>
+    </div>
+  </section>
+
+  <!-- SUBJECT & TOPIC INDEX -->
+  <section class="index-page">
+    <div class="toc-header-bar">
+      <span class="toc-eyebrow">Alphabetical Reference</span>
+      <h2 class="toc-title">Subject &amp; Topic Index</h2>
+      <p style="font-size: 8pt; color: #64748b; margin-top: 4px;">
+        Complete alphabetical directory of operational chapters and reference topics.
+      </p>
+    </div>
+
+    <div class="index-grid">
+      ${indexGroups.map(group => `
+        <div class="index-letter-block">
+          <div class="index-letter-title">${escapeHtml(group.letter)}</div>
+          ${group.items.map(item => `
+            <div class="index-item-row">
+              <span class="index-item-title">${escapeHtml(item.title)}</span>
+              <span class="index-item-meta">Ch. ${item.chapterNumber} (P.${item.partNumber})</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="running-footer" style="margin-top: 24px;">
+      <span>PRIME AUTO DETAIL OPERATIONS MANUAL</span>
+      <span>INDEX</span>
+    </div>
+  </section>
 
 </body>
 </html>`;
@@ -789,7 +1026,7 @@ async function run() {
     fs.mkdirSync(manualsDir, { recursive: true });
   }
 
-  // 1. GENERATE SAMPLE VERIFICATION PDF (Cover + Copyright + TOC + 3 Chapters with tables)
+  // 1. GENERATE SAMPLE VERIFICATION PDF (Cover + Copyright + How-To + TOC + 3 Chapters with tables + Glossary + Index)
   console.log('\n--- 1. Generating Sample Verification PDF ---');
   const sampleParts = [
     {
@@ -824,7 +1061,7 @@ async function run() {
   }
   if (fs.existsSync(sampleHtmlPath)) fs.unlinkSync(sampleHtmlPath);
 
-  // 2. GENERATE FULL PUBLICATION PDF (All 8 Parts, 137 Chapters, All Tables)
+  // 2. GENERATE FULL PUBLICATION PDF (All 8 Parts, 137 Chapters, How-To, All Tables, Glossary, Index)
   console.log('\n--- 2. Generating Complete Publication Manual PDF ---');
   const fullHtml = buildHtmlBook(allParts, false);
   const fullHtmlPath = path.resolve('scratch/full_manual_temp.html');

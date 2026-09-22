@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react';
-import { compileManualContent, ManualPart } from '@/lib/manual-content';
+import { compileManualContent, getGlossaryTerms, getIndexGroups, ManualPart } from '@/lib/manual-content';
 import { Button } from '@/components/ui/button';
-import { Printer, ArrowLeft, Download, BookOpen, Layers, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import { Printer, ArrowLeft, Download, BookOpen, Layers, CheckCircle2, ShieldCheck, Sparkles, Bookmark, Shield, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface AppManualPrintViewProps {
-  sampleMode?: boolean; // If true, only renders Cover, Copyright, TOC, and 3 sample chapters
+  sampleMode?: boolean; // If true, only renders Cover, Copyright, How-To, TOC, and 3 sample chapters
 }
 
 export const AppManualPrintView: React.FC<AppManualPrintViewProps> = ({ sampleMode = false }) => {
@@ -34,6 +34,15 @@ export const AppManualPrintView: React.FC<AppManualPrintViewProps> = ({ sampleMo
   const totalChapters = useMemo(() => {
     return allParts.reduce((acc, p) => acc + p.chapters.length, 0);
   }, [allParts]);
+
+  const glossaryTerms = useMemo(() => {
+    const all = getGlossaryTerms();
+    return sampleMode ? all.slice(0, 6) : all;
+  }, [sampleMode]);
+
+  const indexGroups = useMemo(() => {
+    return getIndexGroups(sampleMode ? parts : allParts);
+  }, [parts, allParts, sampleMode]);
 
   const handlePrint = () => {
     window.print();
@@ -117,10 +126,10 @@ export const AppManualPrintView: React.FC<AppManualPrintViewProps> = ({ sampleMo
               <BookOpen className="w-5 h-5 text-emerald-400" />
               <div>
                 <h1 className="text-sm font-bold tracking-wide text-white">
-                  Prime Auto Detail — Complete App Manual
+                  Prime Auto Detail — Operations &amp; Application Manual
                 </h1>
                 <p className="text-[11px] text-zinc-400">
-                  {sampleMode ? 'Sample Preview Mode' : `Complete Edition: 8 Parts • ${totalChapters} Chapters`}
+                  {sampleMode ? 'Verification Sample View' : `Complete Internal Edition • 8 Parts • ${totalChapters} Chapters • Glossary & Index`}
                 </p>
               </div>
             </div>
@@ -169,7 +178,7 @@ export const AppManualPrintView: React.FC<AppManualPrintViewProps> = ({ sampleMo
                   Prime Auto Detail LLC
                 </span>
                 <p className="text-[10px] uppercase font-bold tracking-widest text-zinc-500">
-                  Professional Detailing & Operations System
+                  Professional Detailing &amp; Operations System
                 </p>
               </div>
             </div>
@@ -179,19 +188,19 @@ export const AppManualPrintView: React.FC<AppManualPrintViewProps> = ({ sampleMo
           {/* Book Title & Subtitle */}
           <div className="my-auto relative z-10 py-16">
             <span className="inline-block px-3 py-1 mb-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[11px] font-black uppercase tracking-widest text-emerald-300">
-              Commercial Edition • 2026
+              Internal Operations Manual • 2026 Edition
             </span>
             <h1 className="text-5xl font-black tracking-tight text-white mb-6 uppercase leading-[1.1]">
               Application &amp; Operations Manual
             </h1>
             <p className="text-lg font-light text-zinc-300 max-w-xl leading-relaxed mb-8">
-              The Definitive Standard Operating Procedures, Chemical Dilution Masterclass, CRM Architecture, and Business Intelligence Guide.
+              The Comprehensive Standard Operating Procedures, Chemical Dilution Masterclass, CRM Architecture, Rig Logistics, and Business Intelligence Manual.
             </p>
             <div className="flex flex-wrap gap-2 text-[11px] font-mono text-zinc-400">
-              <span className="px-2.5 py-1 bg-zinc-900/80 border border-zinc-800 rounded">Version 6.0</span>
+              <span className="px-2.5 py-1 bg-zinc-900/80 border border-zinc-800 rounded">Version 6.4</span>
               <span className="px-2.5 py-1 bg-zinc-900/80 border border-zinc-800 rounded">8 Parts</span>
               <span className="px-2.5 py-1 bg-zinc-900/80 border border-zinc-800 rounded">{totalChapters} Chapters</span>
-              <span className="px-2.5 py-1 bg-zinc-900/80 border border-zinc-800 rounded">Amazon KDP Ready</span>
+              <span className="px-2.5 py-1 bg-zinc-900/80 border border-zinc-800 rounded">Glossary &amp; Index</span>
             </div>
           </div>
 
@@ -245,7 +254,78 @@ export const AppManualPrintView: React.FC<AppManualPrintViewProps> = ({ sampleMo
         </section>
 
         {/* ========================================================================= */}
-        {/* PAGE 3: TABLE OF CONTENTS                                                  */}
+        {/* PAGE 3: HOW TO USE THIS MANUAL                                            */}
+        {/* ========================================================================= */}
+        <section className="page-intro min-h-[1050px] p-16 flex flex-col justify-between break-after-page border-b print:border-none">
+          <div>
+            <div className="border-b-2 border-slate-900 pb-4 mb-8">
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600">
+                Operational Framework
+              </span>
+              <h2 className="text-3xl font-black text-slate-950 uppercase tracking-tight">
+                How to Use This Manual
+              </h2>
+            </div>
+            
+            <p className="text-sm text-zinc-700 leading-relaxed mb-6">
+              Welcome to the <strong>Prime Auto Detail Application &amp; Operations Manual</strong>. This document serves as the single source of truth for all operational, technical, financial, and chemical standards within the business. Whether you are an experienced shop manager, an intake specialist, or a field detailing technician, this manual provides clear, actionable instructions for every situation you encounter.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-6">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="flex items-center gap-2 font-bold text-slate-950 text-sm mb-2">
+                  <Bookmark className="w-4 h-4 text-emerald-600" />
+                  <span>8 Core Operational Parts</span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Topics are grouped into 8 logical parts reflecting the natural flow of business operations: from initial customer lead generation through chemical dilution, mobile rig logistics, financial accounting, and platform security.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="flex items-center gap-2 font-bold text-slate-950 text-sm mb-2">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <span>Structured Reference Tables</span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Key chapters feature standardized matrices—such as the Master Chemical Dilution Chart, Package Pricing Tiers, and Vehicle Classifications—designed for fast lookup on the shop floor or inside mobile rigs.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="flex items-center gap-2 font-bold text-slate-950 text-sm mb-2">
+                  <ArrowRight className="w-4 h-4 text-emerald-600" />
+                  <span>Interactive In-App Route Badges</span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Every chapter identifies the exact application route (e.g. <code className="bg-zinc-200 px-1 py-0.5 rounded text-[10px] font-mono">/availability-manager</code>) where the feature lives in the web app, allowing immediate hands-on practice.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="flex items-center gap-2 font-bold text-slate-950 text-sm mb-2">
+                  <Shield className="w-4 h-4 text-emerald-600" />
+                  <span>Glossary &amp; Subject Index</span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  Refer to the Glossary at the back of the manual for precise definitions of app-specific acronyms (IAC, RB Test, Smart Sync, F150 Command Center) and consult the Alphabetical Index for quick topic location.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-lg text-xs text-amber-950 leading-relaxed my-4">
+              <strong>💡 Best Practice for Daily Operations:</strong> Keep a printed copy of this manual bound in the shop office and a synchronized PDF on every mobile rig tablet. When onboarding new team members, assign Chapters 1–13 (Operations &amp; Customer Journey) and Chapters 45–68 (Chemical Mastery) as mandatory week-one reading before unsupervised field dispatches.
+            </div>
+          </div>
+
+          <div className="border-t border-zinc-200 pt-4 flex justify-between items-center text-[10px] uppercase font-mono text-zinc-400">
+            <span>Prime Auto Detail — Operations Standard</span>
+            <span>Introduction • Guide</span>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* PAGE 4: TABLE OF CONTENTS                                                  */}
         {/* ========================================================================= */}
         <section className="page-toc min-h-[1050px] p-16 break-after-page border-b print:border-none">
           <div className="border-b-2 border-slate-900 pb-4 mb-8">
@@ -278,123 +358,136 @@ export const AppManualPrintView: React.FC<AppManualPrintViewProps> = ({ sampleMo
                         <span className="font-mono text-zinc-400 text-[10px] mr-1.5">{ch.chapterNumber}.</span>
                         {ch.title}
                       </span>
-                      <span className="text-zinc-400 text-[10px] font-mono shrink-0">Ch. {ch.chapterNumber}</span>
+                      <span className="text-[10px] font-mono text-zinc-400 shrink-0">
+                        {ch.route || ch.section || '—'}
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
             ))}
           </div>
+
+          <div className="border-t border-zinc-200 pt-4 mt-8 flex justify-between items-center text-[10px] uppercase font-mono text-zinc-400">
+            <span>Prime Auto Detail — Operations Standard</span>
+            <span>Table of Contents</span>
+          </div>
         </section>
 
         {/* ========================================================================= */}
-        {/* BODY: PARTS & CHAPTERS                                                     */}
+        {/* DOCUMENT BODY: 8 PARTS & CHAPTERS                                          */}
         {/* ========================================================================= */}
         {parts.map((part) => (
           <React.Fragment key={part.partNumber}>
-            {/* PART TITLE DIVIDER PAGE */}
-            <section className="part-divider min-h-[800px] p-16 flex flex-col justify-center bg-slate-950 text-white break-before-page break-after-page relative overflow-hidden">
-              <div className="max-w-xl">
-                <div className="inline-block px-3 py-1 rounded bg-emerald-500/20 border border-emerald-500/40 text-[11px] font-bold tracking-widest text-emerald-400 uppercase mb-4">
-                  Part {part.partNumber} of 8
-                </div>
-                <h2 className="text-4xl font-black uppercase tracking-tight text-white mb-3">
+            {/* Part Title Divider Page */}
+            <section className="page-part-divider min-h-[900px] p-16 flex flex-col justify-between bg-slate-900 text-white break-before-page break-after-page">
+              <div className="border-t-4 border-emerald-500 pt-8">
+                <span className="text-xs font-mono uppercase tracking-[0.3em] text-emerald-400 font-bold">
+                  Section Division • Part {part.partNumber}
+                </span>
+                <h2 className="text-4xl font-black uppercase tracking-tight text-white mt-4 mb-2">
                   {part.title}
                 </h2>
-                <h3 className="text-lg font-medium text-emerald-300 mb-6">
+                <p className="text-lg text-zinc-300 font-light max-w-xl">
                   {part.subtitle}
-                </h3>
-                <div className="w-16 h-1 bg-emerald-500 mb-6" />
-                <p className="text-sm font-light text-zinc-300 leading-relaxed mb-8">
+                </p>
+              </div>
+
+              <div className="my-auto py-12 max-w-2xl">
+                <p className="text-base text-zinc-300 leading-relaxed">
                   {part.description}
                 </p>
-                <div className="text-xs font-mono text-zinc-500">
-                  Contains {part.chapters.length} structured operational chapters.
+                <div className="mt-8 flex items-center gap-4 text-xs font-mono text-emerald-400 bg-slate-800/80 border border-slate-700 p-4 rounded-lg">
+                  <Layers className="w-5 h-5 text-emerald-400" />
+                  <span>Contains {part.chapters.length} specialized operational chapters</span>
                 </div>
+              </div>
+
+              <div className="border-t border-slate-800 pt-4 flex justify-between items-center text-[10px] uppercase tracking-widest text-zinc-500">
+                <span>Prime Auto Detail Operations Standard</span>
+                <span>Part {part.partNumber} Overview</span>
               </div>
             </section>
 
-            {/* PART CHAPTERS */}
+            {/* Part Chapters */}
             {part.chapters.map((chapter) => (
               <article
                 key={chapter.id}
-                id={`chapter-${chapter.id}`}
-                className="chapter-page min-h-[900px] p-14 break-before-page border-b print:border-none relative"
+                className="page-chapter min-h-[1050px] p-16 flex flex-col justify-between break-before-page border-b print:border-none relative"
               >
-                {/* Running Top Header (Print Only) */}
-                <div className="hidden print:flex justify-between items-center text-[9px] uppercase tracking-widest text-zinc-400 border-b border-zinc-200 pb-2 mb-6">
-                  <span>Prime Auto Detail Operations Manual</span>
-                  <span>Part {part.partNumber} — {part.title}</span>
-                </div>
+                {/* Chapter Running Header */}
+                <div>
+                  <div className="flex items-center justify-between border-b border-zinc-200 pb-2 mb-6 text-[10px] uppercase font-mono tracking-widest text-zinc-500">
+                    <span>Part {part.partNumber}: {part.title}</span>
+                    <span className="font-bold text-emerald-700">Chapter {chapter.chapterNumber}</span>
+                  </div>
 
-                {/* Chapter Title & Number */}
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      Chapter {chapter.chapterNumber}
-                    </span>
-                    {chapter.section && (
-                      <span className="text-[10px] uppercase font-bold text-zinc-400">
-                        • {chapter.section}
+                  {/* Chapter Header */}
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold uppercase tracking-wider">
+                        Topic ID: {chapter.id}
                       </span>
-                    )}
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-950 uppercase tracking-tight">
-                    {chapter.title}
-                  </h3>
-                </div>
-
-                {/* Chapter Summary Block */}
-                {chapter.summary && (
-                  <div className="p-3.5 mb-6 bg-slate-50 border-l-4 border-emerald-600 rounded-r-md text-[12.5px] text-slate-700 italic break-inside-avoid shadow-sm">
-                    <strong className="not-italic text-slate-900 font-bold uppercase tracking-wider text-[10px] block mb-1">
-                      Chapter Scope &amp; Objective:
-                    </strong>
-                    {chapter.summary}
-                  </div>
-                )}
-
-                {/* Custom Structured Table if present */}
-                {chapter.customTable && (
-                  <div className="my-6 break-inside-avoid">
-                    <div className="mb-2">
-                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                        {chapter.customTable.title}
-                      </h4>
-                      {chapter.customTable.description && (
-                        <p className="text-[11px] text-zinc-500">{chapter.customTable.description}</p>
+                      {chapter.route && (
+                        <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-mono font-bold uppercase tracking-wider">
+                          Route: {chapter.route}
+                        </span>
                       )}
                     </div>
-                    <div className="border border-zinc-300 rounded overflow-hidden shadow-sm">
-                      <table className="w-full text-left border-collapse text-[11px]">
-                        <thead>
-                          <tr className="bg-slate-900 text-white font-bold uppercase tracking-wider text-[10px]">
-                            {chapter.customTable.headers.map((h, i) => (
-                              <th key={i} className="p-2.5 border-b border-slate-800">
-                                {h}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-200">
-                          {chapter.customTable.rows.map((row, rIdx) => (
-                            <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                              {row.map((cell, cIdx) => (
-                                <td key={cIdx} className="p-2 text-zinc-800 font-medium">
-                                  {cell}
-                                </td>
+                    <h2 className="text-2xl font-black text-slate-950 uppercase tracking-tight mb-2">
+                      {chapter.title}
+                    </h2>
+                    {chapter.summary && (
+                      <p className="text-xs font-medium text-zinc-600 italic bg-zinc-50 border-l-2 border-emerald-600 pl-3 py-1.5 my-3">
+                        {chapter.summary}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Built-in Custom Reference Table (If Present) */}
+                  {chapter.customTable && (
+                    <div className="my-6 p-4 bg-slate-50 border border-slate-300 rounded-lg break-inside-avoid">
+                      <div className="mb-3">
+                        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                          {chapter.customTable.title}
+                        </h4>
+                        {chapter.customTable.description && (
+                          <p className="text-[11px] text-zinc-500">
+                            {chapter.customTable.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b-2 border-slate-900 bg-slate-200/80">
+                              {chapter.customTable.headers.map((h, idx) => (
+                                <th key={idx} className="p-2 font-bold text-slate-950 uppercase tracking-wider text-[11px]">
+                                  {h}
+                                </th>
                               ))}
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-200 text-[11px]">
+                            {chapter.customTable.rows.map((row, rIdx) => (
+                              <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                                {row.map((cell, cIdx) => (
+                                  <td key={cIdx} className="p-2 text-zinc-800 font-medium">
+                                    {cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Chapter Body Content */}
-                <div className="space-y-1.5">
-                  {chapter.content.map((line, idx) => renderContentLine(line, idx))}
+                  {/* Chapter Body Content */}
+                  <div className="space-y-1.5">
+                    {chapter.content.map((line, idx) => renderContentLine(line, idx))}
+                  </div>
                 </div>
 
                 {/* Running Footer (Print Only) */}
@@ -406,6 +499,86 @@ export const AppManualPrintView: React.FC<AppManualPrintViewProps> = ({ sampleMo
             ))}
           </React.Fragment>
         ))}
+
+        {/* ========================================================================= */}
+        {/* GLOSSARY OF APP-SPECIFIC TERMS                                            */}
+        {/* ========================================================================= */}
+        <section className="page-glossary min-h-[1050px] p-16 break-before-page break-after-page border-b print:border-none">
+          <div className="border-b-2 border-slate-900 pb-4 mb-8">
+            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600">
+              Reference &amp; Vocabulary
+            </span>
+            <h2 className="text-3xl font-black text-slate-950 uppercase tracking-tight">
+              Glossary of Key Terms
+            </h2>
+            <p className="text-xs text-zinc-500 mt-1">
+              Definitions of proprietary systems, workflows, formulas, and acronyms used throughout the Prime Auto Detail platform.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {glossaryTerms.map((item, idx) => (
+              <div key={idx} className="p-4 bg-slate-50 border border-slate-200 rounded-lg break-inside-avoid">
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <h3 className="text-sm font-bold text-slate-950">{item.term}</h3>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded">
+                    {item.category}
+                  </span>
+                </div>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  {item.definition}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-zinc-200 pt-4 mt-8 flex justify-between items-center text-[10px] uppercase font-mono text-zinc-400">
+            <span>Prime Auto Detail — Operations Standard</span>
+            <span>Glossary</span>
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* COMPREHENSIVE TOPIC & SYSTEM INDEX                                        */}
+        {/* ========================================================================= */}
+        <section className="page-index min-h-[1050px] p-16 break-before-page border-b print:border-none">
+          <div className="border-b-2 border-slate-900 pb-4 mb-8">
+            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600">
+              Alphabetical Reference
+            </span>
+            <h2 className="text-3xl font-black text-slate-950 uppercase tracking-tight">
+              Subject &amp; Topic Index
+            </h2>
+            <p className="text-xs text-zinc-500 mt-1">
+              Complete alphabetical directory of operational chapters and reference topics.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {indexGroups.map((group) => (
+              <div key={group.letter} className="break-inside-avoid">
+                <div className="border-b-2 border-emerald-600 pb-0.5 mb-2">
+                  <span className="text-lg font-black text-slate-950 font-mono">{group.letter}</span>
+                </div>
+                <ul className="space-y-1 text-xs">
+                  {group.items.map((item, i) => (
+                    <li key={i} className="flex items-baseline justify-between text-zinc-700 hover:text-slate-950">
+                      <span className="truncate mr-2 font-medium">{item.title}</span>
+                      <span className="font-mono text-[10px] text-zinc-400 shrink-0">
+                        Ch. {item.chapterNumber} (P.{item.partNumber})
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-zinc-200 pt-4 mt-12 flex justify-between items-center text-[10px] uppercase font-mono text-zinc-400">
+            <span>Prime Auto Detail — Operations Standard</span>
+            <span>Index</span>
+          </div>
+        </section>
       </main>
 
       {/* Global Print Stylesheet */}
