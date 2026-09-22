@@ -2314,227 +2314,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         return { tableData, totalHours, revPerHour, avgShopCost, avgMobileCost, shopJobs, mobileJobs, hasMileageData };
     }, [serviceDetailsData, consumptionData, filteredPerfBookings, invoices]);
 
-    if (showEmployeeAnalytics) {
-        return (
-            <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
-                <div className="flex justify-between items-center mb-4">
-                    <Button variant="outline" onClick={() => setShowEmployeeAnalytics(false)} className="gap-2 bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white">
-                        <ArrowLeft className="w-4 h-4" /> Back to Analytics
-                    </Button>
-                </div>
-                <EmployeeCompensationAnalytics bookings={bookings} employees={employees} />
-            </div>
-        );
-    }
-
-    if (showProfitability) {
-        return (
-            <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
-                <div className="flex justify-between items-center mb-4">
-                    <Button variant="outline" onClick={() => setShowProfitability(false)} className="gap-2 bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300 hover:text-white">
-                        <ArrowLeft className="w-4 h-4" /> Back to Analytics
-                    </Button>
-                    <Popover open={isProfitabilityFilterOpen} onOpenChange={setIsProfitabilityFilterOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
-                                <Filter className="h-3.5 w-3.5" />
-                                {getFilterLabel(perfDateFilter, "Filter Data")}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80 bg-[#121212] border-zinc-800 p-0 overflow-hidden shadow-2xl rounded-xl" align="end" sideOffset={8}>
-                            <div className="p-4 space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm font-bold text-white">Show Archived</span>
-                                    <Switch checked={perfShowArchived} onCheckedChange={setPerfShowArchived} className="data-[state=checked]:bg-white data-[state=unchecked]:bg-zinc-700 [&>span]:bg-zinc-900" />
-                                </div>
-
-                                <div className="space-y-3">
-                                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">QUICK FILTERS</span>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (!perfDateFilter.start && !perfDateFilter.end) && "bg-zinc-800 text-white")}
-                                            onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
-                                        >
-                                            All Time
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isToday(perfDateFilter.start) && !perfDateFilter.end) && "bg-zinc-800 text-white")}
-                                            onClick={() => setPerfDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
-                                        >
-                                            Today
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfWeek(new Date()))) && "bg-zinc-800 text-white")}
-                                            onClick={() => setPerfDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
-                                        >
-                                            This Week
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isSameMonth(perfDateFilter.start, new Date()) && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfMonth(new Date()))) && "bg-zinc-800 text-white")}
-                                            onClick={() => setPerfDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
-                                        >
-                                            This Month
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">CUSTOM RANGE</span>
-                                    <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#1a1a1a]">
-                                        <Calendar
-                                            mode="range"
-                                            selected={{ from: perfDateFilter.start, to: perfDateFilter.end }}
-                                            onSelect={(range) => setPerfDateFilter({ start: range?.from, end: range?.to })}
-                                            initialFocus
-                                            className="bg-transparent text-zinc-300"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="p-3 border-t border-zinc-800/50 bg-[#121212] flex justify-end">
-                                <Button 
-                                    className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-6 gap-2 shadow-lg rounded-md"
-                                    onClick={() => setIsProfitabilityFilterOpen(false)}
-                                >
-                                    <Filter className="w-3.5 h-3.5" />
-                                {getFilterLabel(snapshotDateFilter)}
-                                </Button>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                
-
-                {/* Stat Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card className="bg-zinc-900 border-zinc-800 flex flex-col justify-between">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-zinc-200">Revenue & Profit Per Hour</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col h-full justify-between">
-                            <div>
-                                {profitabilityData.totalHours > 0 ? (
-                                    <div className="text-3xl font-black text-emerald-400 font-mono">
-                                        ${profitabilityData.revPerHour.toFixed(2)} <span className="text-sm text-zinc-500">Rev/hr</span>
-                                    </div>
-                                ) : (
-                                    <div className="text-sm text-zinc-500 italic">Insufficient time data logged for standard bookings.</div>
-                                )}
-                            </div>
-                            <Button 
-                                variant="outline" 
-                                className="w-full mt-4 bg-emerald-900/20 hover:bg-emerald-900/40 text-emerald-400 border-emerald-900/50 flex items-center justify-center gap-2"
-                                onClick={() => navigate('/time-profitability')}
-                            >
-                                <BarChart3 className="w-4 h-4" />
-                                View Full Time & Profitability Dashboard
-                            </Button>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="bg-zinc-900 border-zinc-800">
-                        <CardHeader>
-                            <CardTitle className="text-zinc-200">Mobile vs Shop Cost Delta</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-zinc-400 uppercase tracking-wider">Avg Shop Cost</span>
-                                    <span className="font-mono text-zinc-300">
-                                        {profitabilityData.shopJobs > 0 ? `$${profitabilityData.avgShopCost.toFixed(2)}` : 'No shop jobs'}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-zinc-400 uppercase tracking-wider">Avg Mobile Cost <span className="text-[9px] text-zinc-600">(Est. Drive Cost IRS rate)</span></span>
-                                    <span className="font-mono text-zinc-300">
-                                        {profitabilityData.mobileJobs > 0 
-                                            ? (profitabilityData.hasMileageData ? `$${profitabilityData.avgMobileCost.toFixed(2)}` : <span className="text-sm text-zinc-500 italic">No mileage data</span>) 
-                                            : 'No mobile jobs'}
-                                    </span>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Table */}
-                <Card className="bg-zinc-900 border-zinc-800">
-                    <CardHeader>
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div>
-                                <CardTitle className="text-zinc-200">Cost Per Job</CardTitle>
-                                <CardDescription>Breakdown of revenue, costs, and margins for each job</CardDescription>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Sort Revenue:</span>
-                                <button
-                                    onClick={() => setProfTableSort('high')}
-                                    className={`px-2.5 py-1 rounded text-xs font-semibold border flex items-center gap-1 transition-colors ${profTableSort === 'high' ? 'bg-emerald-700/40 border-emerald-600 text-emerald-300' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white'}`}
-                                    title="Sort highest revenue first"
-                                >
-                                    ↓ High
-                                </button>
-                                <button
-                                    onClick={() => setProfTableSort('low')}
-                                    className={`px-2.5 py-1 rounded text-xs font-semibold border flex items-center gap-1 transition-colors ${profTableSort === 'low' ? 'bg-blue-700/40 border-blue-600 text-blue-300' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white'}`}
-                                    title="Sort lowest revenue first"
-                                >
-                                    ↑ Low
-                                </button>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="bg-zinc-950/50 border-zinc-800">
-                                    <TableRow className="border-zinc-800 hover:bg-transparent">
-                                        <TableHead>Date</TableHead>
-                                        <TableHead>Customer</TableHead>
-                                        <TableHead>Service</TableHead>
-                                        <TableHead className="text-right">Revenue</TableHead>
-                                        <TableHead className="text-right">Cost</TableHead>
-                                        <TableHead className="text-right">Margin</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {[...profitabilityData.tableData].sort((a, b) => {
-                                        if (profTableSort === 'high') return (b.revenue || 0) - (a.revenue || 0);
-                                        if (profTableSort === 'low') return (a.revenue || 0) - (b.revenue || 0);
-                                        return 0;
-                                    }).map(row => (
-                                        <TableRow key={row.id} className="border-zinc-800 hover:bg-zinc-800/30">
-                                            <TableCell className="text-xs text-zinc-400 font-mono">{row.date ? format(parseISO(row.date), "MMM d") : "N/A"}</TableCell>
-                                            <TableCell className="text-zinc-200 font-medium">{row.customer}</TableCell>
-                                            <TableCell className="text-zinc-400 text-xs">{row.service}</TableCell>
-                                            <TableCell className="text-right text-emerald-400 font-mono">${row.revenue.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right text-red-400 font-mono">
-                                                {row.cost > 0 ? `$${row.cost.toFixed(2)}` : <span className="text-[10px] text-zinc-600 italic">No cost data logged</span>}
-                                            </TableCell>
-                                            <TableCell className="text-right font-mono font-bold text-zinc-300">
-                                                {row.cost > 0 ? `${row.margin.toFixed(1)}%` : "N/A"}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Market Pricing Analysis has been moved to Business Intelligence Tab */}
-            </div>
-        );
-    }
-
     const handleVisualReport = async (type: 'pdf' | 'print', rangeName: string) => {
         if (rangeName === 'current') {
             setPendingReportConfig({ type, start: undefined, end: undefined, preserveFilters: true });
@@ -2602,8 +2381,6 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             setIsVisualExportMode(false);
         }
     };
-
-
 
     const scrollToSection = (id: string) => {
         const executeScroll = () => {
@@ -2844,6 +2621,221 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </div>
         </div>
     );
+
+    if (showEmployeeAnalytics) {
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
+                {portalTarget ? createPortal(businessIntelligenceHeader, portalTarget) : businessIntelligenceHeader}
+                <EmployeeCompensationAnalytics bookings={bookings} employees={employees} />
+            </div>
+        );
+    }
+
+    if (showProfitability) {
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden">
+                {portalTarget ? createPortal(businessIntelligenceHeader, portalTarget) : businessIntelligenceHeader}
+                <div className="flex justify-end items-center mb-4">
+                    <Popover open={isProfitabilityFilterOpen} onOpenChange={setIsProfitabilityFilterOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-700 font-bold h-8 text-[11px] hover:bg-zinc-800 transition-all shadow-xl", (perfDateFilter.start || perfDateFilter.end) && "bg-zinc-800 text-white hover:bg-zinc-700")}>
+                                <Filter className="h-3.5 w-3.5" />
+                                {getFilterLabel(perfDateFilter, "Filter Data")}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 bg-[#121212] border-zinc-800 p-0 overflow-hidden shadow-2xl rounded-xl" align="end" sideOffset={8}>
+                            <div className="p-4 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-bold text-white">Show Archived</span>
+                                    <Switch checked={perfShowArchived} onCheckedChange={setPerfShowArchived} className="data-[state=checked]:bg-white data-[state=unchecked]:bg-zinc-700 [&>span]:bg-zinc-900" />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">QUICK FILTERS</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (!perfDateFilter.start && !perfDateFilter.end) && "bg-zinc-800 text-white")}
+                                            onClick={() => setPerfDateFilter({ start: undefined, end: undefined })}
+                                        >
+                                            All Time
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isToday(perfDateFilter.start) && !perfDateFilter.end) && "bg-zinc-800 text-white")}
+                                            onClick={() => setPerfDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) })}
+                                        >
+                                            Today
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfWeek(new Date()))) && "bg-zinc-800 text-white")}
+                                            onClick={() => setPerfDateFilter({ start: startOfWeek(new Date()), end: endOfWeek(new Date()) })}
+                                        >
+                                            This Week
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className={cn("h-9 text-[11px] font-semibold border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-lg", (perfDateFilter.start && isSameMonth(perfDateFilter.start, new Date()) && perfDateFilter.end && isSameDay(perfDateFilter.start, startOfMonth(new Date()))) && "bg-zinc-800 text-white")}
+                                            onClick={() => setPerfDateFilter({ start: startOfMonth(new Date()), end: endOfMonth(new Date()) })}
+                                        >
+                                            This Month
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest">CUSTOM RANGE</span>
+                                    <div className="rounded-xl overflow-hidden border border-zinc-800 bg-[#1a1a1a]">
+                                        <Calendar
+                                            mode="range"
+                                            selected={{ from: perfDateFilter.start, to: perfDateFilter.end }}
+                                            onSelect={(range) => setPerfDateFilter({ start: range?.from, end: range?.to })}
+                                            initialFocus
+                                            className="bg-transparent text-zinc-300"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-3 border-t border-zinc-800/50 bg-[#121212] flex justify-end">
+                                <Button 
+                                    className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-6 gap-2 shadow-lg rounded-md"
+                                    onClick={() => setIsProfitabilityFilterOpen(false)}
+                                >
+                                    <Filter className="w-3.5 h-3.5" />
+                                {getFilterLabel(snapshotDateFilter)}
+                                </Button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                
+
+                {/* Stat Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="bg-zinc-900 border-zinc-800 flex flex-col justify-between">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-zinc-200">Revenue & Profit Per Hour</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-col h-full justify-between">
+                            <div>
+                                {profitabilityData.totalHours > 0 ? (
+                                    <div className="text-3xl font-black text-emerald-400 font-mono">
+                                        ${profitabilityData.revPerHour.toFixed(2)} <span className="text-sm text-zinc-500">Rev/hr</span>
+                                    </div>
+                                ) : (
+                                    <div className="text-sm text-zinc-500 italic">Insufficient time data logged for standard bookings.</div>
+                                )}
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                className="w-full mt-4 bg-emerald-900/20 hover:bg-emerald-900/40 text-emerald-400 border-emerald-900/50 flex items-center justify-center gap-2"
+                                onClick={() => navigate('/time-profitability')}
+                            >
+                                <BarChart3 className="w-4 h-4" />
+                                View Full Time & Profitability Dashboard
+                            </Button>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-zinc-900 border-zinc-800">
+                        <CardHeader>
+                            <CardTitle className="text-zinc-200">Mobile vs Shop Cost Delta</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-zinc-400 uppercase tracking-wider">Avg Shop Cost</span>
+                                    <span className="font-mono text-zinc-300">
+                                        {profitabilityData.shopJobs > 0 ? `$${profitabilityData.avgShopCost.toFixed(2)}` : 'No shop jobs'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-zinc-400 uppercase tracking-wider">Avg Mobile Cost <span className="text-[9px] text-zinc-600">(Est. Drive Cost IRS rate)</span></span>
+                                    <span className="font-mono text-zinc-300">
+                                        {profitabilityData.mobileJobs > 0 
+                                            ? (profitabilityData.hasMileageData ? `$${profitabilityData.avgMobileCost.toFixed(2)}` : <span className="text-sm text-zinc-500 italic">No mileage data</span>) 
+                                            : 'No mobile jobs'}
+                                    </span>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Table */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                    <CardHeader>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div>
+                                <CardTitle className="text-zinc-200">Cost Per Job</CardTitle>
+                                <CardDescription>Breakdown of revenue, costs, and margins for each job</CardDescription>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Sort Revenue:</span>
+                                <button
+                                    onClick={() => setProfTableSort('high')}
+                                    className={`px-2.5 py-1 rounded text-xs font-semibold border flex items-center gap-1 transition-colors ${profTableSort === 'high' ? 'bg-emerald-700/40 border-emerald-600 text-emerald-300' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white'}`}
+                                    title="Sort highest revenue first"
+                                >
+                                    ↓ High
+                                </button>
+                                <button
+                                    onClick={() => setProfTableSort('low')}
+                                    className={`px-2.5 py-1 rounded text-xs font-semibold border flex items-center gap-1 transition-colors ${profTableSort === 'low' ? 'bg-blue-700/40 border-blue-600 text-blue-300' : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-white'}`}
+                                    title="Sort lowest revenue first"
+                                >
+                                    ↑ Low
+                                </button>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader className="bg-zinc-950/50 border-zinc-800">
+                                    <TableRow className="border-zinc-800 hover:bg-transparent">
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Service</TableHead>
+                                        <TableHead className="text-right">Revenue</TableHead>
+                                        <TableHead className="text-right">Cost</TableHead>
+                                        <TableHead className="text-right">Margin</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {[...profitabilityData.tableData].sort((a, b) => {
+                                        if (profTableSort === 'high') return (b.revenue || 0) - (a.revenue || 0);
+                                        if (profTableSort === 'low') return (a.revenue || 0) - (b.revenue || 0);
+                                        return 0;
+                                    }).map(row => (
+                                        <TableRow key={row.id} className="border-zinc-800 hover:bg-zinc-800/30">
+                                            <TableCell className="text-xs text-zinc-400 font-mono">{row.date ? format(parseISO(row.date), "MMM d") : "N/A"}</TableCell>
+                                            <TableCell className="text-zinc-200 font-medium">{row.customer}</TableCell>
+                                            <TableCell className="text-zinc-400 text-xs">{row.service}</TableCell>
+                                            <TableCell className="text-right text-emerald-400 font-mono">${row.revenue.toFixed(2)}</TableCell>
+                                            <TableCell className="text-right text-red-400 font-mono">
+                                                {row.cost > 0 ? `$${row.cost.toFixed(2)}` : <span className="text-[10px] text-zinc-600 italic">No cost data logged</span>}
+                                            </TableCell>
+                                            <TableCell className="text-right font-mono font-bold text-zinc-300">
+                                                {row.cost > 0 ? `${row.margin.toFixed(1)}%` : "N/A"}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Market Pricing Analysis has been moved to Business Intelligence Tab */}
+            </div>
+        );
+    }
 
     const PrintTemplate = () => {
         const totalRevenue = filteredPerfBookings.reduce((sum, b) => sum + (Number(b.price) || 0), 0);
