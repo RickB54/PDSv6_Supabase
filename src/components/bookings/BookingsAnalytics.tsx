@@ -2628,12 +2628,20 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         }
     };
 
+    const handleJumpTo = (id: string) => {
+        setShowProfitability(false);
+        setShowEmployeeAnalytics(false);
+        setActiveSection(id);
+        window.dispatchEvent(new CustomEvent('switch-analytics-tab', { detail: { tab: 'crm', section: id } }));
+        scrollToSection(id);
+    };
+
     const portalTarget = document.getElementById('crm-sticky-header-portal');
     const businessIntelligenceHeader = (
         <div className="flex flex-col gap-1.5 p-2 sm:px-4 sm:py-2 bg-zinc-950/60 transition-all duration-300">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5 md:gap-2">
-                {/* Bookmarks Bar: horizontal scroll on mobile, clean wrap on desktop */}
-                <div className="flex items-center gap-1.5 overflow-x-auto md:overflow-x-visible flex-nowrap md:flex-wrap no-scrollbar scroll-smooth flex-1 min-w-0 py-0.5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-1.5 md:gap-2 w-full">
+                {/* Bookmarks Bar: fully wrapped multi-row layout on mobile, zero horizontal scrolling */}
+                <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 w-full flex-1 py-0.5">
                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mr-1 flex items-center gap-1 shrink-0 select-none">
                         <BookOpen className="w-3 h-3 text-zinc-400"/> Jump To:
                     </span>
@@ -2646,12 +2654,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-violet-500/20 border-violet-500/60 text-violet-300 font-bold shadow-sm shadow-violet-950/50 ring-1 ring-violet-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('revenue-performance');
-                            scrollToSection('revenue-performance');
-                        }}
+                        onClick={() => handleJumpTo('revenue-performance')}
                     >
                         Revenue & Pipeline
                     </Button>
@@ -2664,12 +2667,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-amber-500/20 border-amber-500/60 text-amber-300 font-bold shadow-sm shadow-amber-950/50 ring-1 ring-amber-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('services-to-be-done');
-                            scrollToSection('services-to-be-done');
-                        }}
+                        onClick={() => handleJumpTo('services-to-be-done')}
                     >
                         Services To Be Done
                     </Button>
@@ -2682,12 +2680,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('service-detail');
-                            scrollToSection('service-detail');
-                        }}
+                        onClick={() => handleJumpTo('service-detail')}
                     >
                         Service Logs
                     </Button>
@@ -2700,12 +2693,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-indigo-500/20 border-indigo-500/60 text-indigo-300 font-bold shadow-sm shadow-indigo-950/50 ring-1 ring-indigo-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('invoices-tracker');
-                            scrollToSection('invoices-tracker');
-                        }}
+                        onClick={() => handleJumpTo('invoices-tracker')}
                     >
                         Invoices
                     </Button>
@@ -2718,12 +2706,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('estimates-tracker');
-                            scrollToSection('estimates-tracker');
-                        }}
+                        onClick={() => handleJumpTo('estimates-tracker')}
                     >
                         Estimates & Quotes
                     </Button>
@@ -2736,12 +2719,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-teal-500/20 border-teal-500/60 text-teal-300 font-bold shadow-sm shadow-teal-950/50 ring-1 ring-teal-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('addon-performance');
-                            scrollToSection('addon-performance');
-                        }}
+                        onClick={() => handleJumpTo('addon-performance')}
                     >
                         Add-on Performance
                     </Button>
@@ -2754,12 +2732,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-pink-500/20 border-pink-500/60 text-pink-300 font-bold shadow-sm shadow-pink-950/50 ring-1 ring-pink-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('probono-tracker');
-                            scrollToSection('probono-tracker');
-                        }}
+                        onClick={() => handleJumpTo('probono-tracker')}
                     >
                         Probono Jobs
                     </Button>
@@ -2772,12 +2745,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-blue-500/20 border-blue-500/60 text-blue-300 font-bold shadow-sm shadow-blue-950/50 ring-1 ring-blue-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('customer-insights');
-                            scrollToSection('customer-insights');
-                        }}
+                        onClick={() => handleJumpTo('customer-insights')}
                     >
                         Customer Insights
                     </Button>
@@ -2790,12 +2758,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-cyan-500/20 border-cyan-500/60 text-cyan-300 font-bold shadow-sm shadow-cyan-950/50 ring-1 ring-cyan-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('acquisition-intake');
-                            scrollToSection('acquisition-intake');
-                        }}
+                        onClick={() => handleJumpTo('acquisition-intake')}
                     >
                         Acquisition & Intake
                     </Button>
@@ -2808,19 +2771,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 ? "bg-violet-500/20 border-violet-500/60 text-violet-300 font-bold shadow-sm shadow-violet-950/50 ring-1 ring-violet-500/30"
                                 : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
                         )} 
-                        onClick={() => {
-                            setShowProfitability(false);
-                            setShowEmployeeAnalytics(false);
-                            setActiveSection('operational-quality');
-                            scrollToSection('operational-quality');
-                        }}
+                        onClick={() => handleJumpTo('operational-quality')}
                     >
                         Quality Review
                     </Button>
                 </div>
 
                 {/* Utility Actions Bar: neatly aligned on mobile, pinned inline on desktop */}
-                <div className="flex items-center justify-between md:justify-end gap-1 shrink-0 border-t md:border-t-0 md:border-l border-zinc-800/60 pt-1.5 md:pt-0 md:pl-2.5">
+                <div className="flex items-center justify-between md:justify-end gap-1 shrink-0 border-t md:border-t-0 md:border-l border-zinc-800/60 pt-1.5 md:pt-0 md:pl-2.5 w-full md:w-auto">
                     <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest md:hidden">Tools & Reports</span>
                     <div className="flex items-center gap-1">
                         <CustomerIntelligence360Modal 

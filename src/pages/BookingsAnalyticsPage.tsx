@@ -124,6 +124,15 @@ export default function BookingsAnalyticsPage() {
         tabRefs.current[activeTab]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }, [activeTab]);
 
+    useEffect(() => {
+        const handleSwitch = (e: any) => {
+            const targetTab = e.detail?.tab || 'crm';
+            handleTabChange(targetTab);
+        };
+        window.addEventListener('switch-analytics-tab', handleSwitch);
+        return () => window.removeEventListener('switch-analytics-tab', handleSwitch);
+    }, []);
+
     return (
         <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw]">
             <PageHeader title="Analytics & CRM" subtitle="Booking insights and customer follow-up tracking" />
@@ -222,7 +231,7 @@ export default function BookingsAnalyticsPage() {
             </div>
 
             <div className="p-4 sm:p-6 space-y-6">
-                {activeTab === 'crm' && (
+                <div className={(activeTab === 'crm' || activeTab === 'profitability' || activeTab === 'compensation') ? 'block' : 'hidden'}>
                     <BookingsAnalytics 
                         bookings={items} 
                         customers={customers} 
@@ -230,9 +239,9 @@ export default function BookingsAnalyticsPage() {
                         estimates={estimates} 
                         onRefresh={handleFullRefresh} 
                         isRefreshing={isRefreshing}
-                        view="crm"
+                        view={activeTab === 'profitability' ? 'profitability' : activeTab === 'compensation' ? 'compensation' : 'crm'}
                     />
-                )}
+                </div>
                 {activeTab === 'bi' && !isDemoMode && (
                     <BusinessIntelligencePanel bookings={items} customers={customers} invoices={invoices} estimates={estimates} />
                 )}
@@ -241,28 +250,6 @@ export default function BookingsAnalyticsPage() {
                 )}
                 {activeTab === 'employees' && (
                     <EmployeeAnalyticsPanel />
-                )}
-                {activeTab === 'profitability' && (
-                    <BookingsAnalytics 
-                        bookings={items} 
-                        customers={customers} 
-                        invoices={invoices} 
-                        estimates={estimates} 
-                        onRefresh={handleFullRefresh} 
-                        isRefreshing={isRefreshing}
-                        view="profitability"
-                    />
-                )}
-                {activeTab === 'compensation' && !isDemoMode && (
-                    <BookingsAnalytics 
-                        bookings={items} 
-                        customers={customers} 
-                        invoices={invoices} 
-                        estimates={estimates} 
-                        onRefresh={handleFullRefresh} 
-                        isRefreshing={isRefreshing}
-                        view="compensation"
-                    />
                 )}
             </div>
         </div>
