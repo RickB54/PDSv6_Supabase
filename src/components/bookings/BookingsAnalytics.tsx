@@ -1181,6 +1181,12 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     };
 
     // --- Helper to filter data ---
+    // Resolves the best available date string from a record, trying multiple field names
+    // in priority order so that both camelCase and snake_case DB records work correctly.
+    const resolveItemDateStr = (b: any, dateKey: string): string | null => {
+        return b[dateKey] || b.estimateDate || b.estimate_date || b.date || b.createdAt || b.created_at || b.finishedAt || null;
+    };
+
     const getFiltered = (data: any[], showArchived: boolean, dateFilter: { start: Date | undefined; end: Date | undefined }, dateKey: string = 'date') => {
         let result = data;
         if (!showArchived) {
@@ -1189,14 +1195,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
         if (dateFilter.start && dateFilter.end) {
             result = result.filter(b => {
-                const val = b[dateKey] || b.createdAt;
+                const val = resolveItemDateStr(b, dateKey);
                 if (!val) return true;
                 const d = typeof val === 'string' ? parseISO(val) : val;
                 return isWithinInterval(d, { start: startOfDay(dateFilter.start!), end: endOfDay(dateFilter.end!) });
             });
         } else if (dateFilter.start) {
             result = result.filter(b => {
-                const val = b[dateKey] || b.createdAt;
+                const val = resolveItemDateStr(b, dateKey);
                 if (!val) return true;
                 const d = typeof val === 'string' ? parseISO(val) : val;
                 return isSameDay(d, dateFilter.start!);
@@ -1225,7 +1231,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                    .replace(/о/g, 'o');
     };
 
-    const filteredQuotes = useMemo(() => getFiltered(estimates.map((e: any) => ({...e, status: sanitizeStatus(e.status)})), quotesShowArchived, quotesDateFilter, 'createdAt'), [estimates, quotesShowArchived, quotesDateFilter]);
+    const filteredQuotes = useMemo(() => getFiltered(estimates.map((e: any) => ({...e, status: sanitizeStatus(e.status)})), quotesShowArchived, quotesDateFilter, 'estimateDate'), [estimates, quotesShowArchived, quotesDateFilter]);
     const filteredQualBookings = useMemo(() => getFiltered(bookings, qualShowArchived, qualDateFilter), [bookings, qualShowArchived, qualDateFilter]);
     const filteredInvoices = useMemo(() => getFiltered(invoices, invShowArchived, invDateFilter, 'createdAt'), [invoices, invShowArchived, invDateFilter]);
 
@@ -4303,7 +4309,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="flex-1 min-w-0">
                                                     <span className="font-semibold text-zinc-100 text-sm block truncate">{q.customerName || q.customer}</span>
-                                                    <span className="text-zinc-500 text-xs block">{q.createdAt ? format(parseISO(q.createdAt), "MMM d, yy") : "N/A"}</span>
+                                                    <span className="text-zinc-500 text-xs block">{(q.estimateDate || q.estimate_date || q.date || q.created_at) ? format(parseISO(q.estimateDate || q.estimate_date || q.date || q.created_at), "MMM d, yy") : "N/A"}</span>
                                                 </div>
                                                 <div className="text-right shrink-0 flex flex-col items-end gap-1">
                                                     <span className="text-emerald-400 font-mono text-sm font-bold block">${(q.total || 0).toFixed(2)}</span>
@@ -4385,7 +4391,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                             return (
                                                 <TableRow key={q.id} className="hover:bg-zinc-900/30 border-zinc-800 transition-colors cursor-pointer" onClick={() => navigate(`/estimates?editId=${q.id}`)}>
                                                     <TableCell className="text-zinc-400 text-xs font-mono">
-                                                        {q.createdAt ? format(parseISO(q.createdAt), "MMM d, yyyy") : "N/A"}
+                                                        {(q.estimateDate || q.estimate_date || q.date || q.created_at) ? format(parseISO(q.estimateDate || q.estimate_date || q.date || q.created_at), "MMM d, yyyy") : "N/A"}
                                                     </TableCell>
                                                     <TableCell className="font-semibold text-zinc-200">{q.customerName || q.customer}</TableCell>
                                                     <TableCell>
