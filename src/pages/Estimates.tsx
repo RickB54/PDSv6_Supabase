@@ -1152,9 +1152,47 @@ const Estimates = () => {
     const openCount = filteredEstimates.filter(e => (e.status || 'open') === 'open').length;
     const acceptedCount = filteredEstimates.filter(e => (e.status || 'open') === 'accepted').length;
 
+    const resolveCustomerForEstimate = (est?: Estimate | null): Customer | null => {
+        if (!est) return null;
+        if (est.customerId) {
+            const foundById = customers.find(c => c.id === est.customerId);
+            if (foundById) return foundById;
+        }
+        if (est.customerName && est.customerName.trim()) {
+            const estName = est.customerName.toLowerCase().trim();
+            const foundByName = customers.find(c => c.name && c.name.toLowerCase().trim() === estName);
+            if (foundByName) return foundByName;
+
+            const partialMatch = customers.find(c => {
+                if (!c.name) return false;
+                const cName = c.name.toLowerCase().trim();
+                return cName.includes(estName) || estName.includes(cName);
+            });
+            if (partialMatch) return partialMatch;
+        }
+        return null;
+    };
+
+    const resolveCustomerEmail = (est?: Estimate | null): string => {
+        if (!est) return "";
+        const directEmail = (est as any).email || (est as any).customerEmail || (est as any).customer?.email;
+        if (directEmail && typeof directEmail === 'string' && directEmail.trim() && directEmail.includes('@')) {
+            return directEmail.trim();
+        }
+        const cust = resolveCustomerForEstimate(est);
+        if (cust) {
+            const custEmail = cust.email || (cust as any).customerEmail;
+            if (custEmail && typeof custEmail === 'string' && custEmail.trim() && custEmail.includes('@')) {
+                return custEmail.trim();
+            }
+        }
+        return "";
+    };
+
     const openEmailModal = (est: Estimate) => {
-        const customer = customers.find(c => c.id === est.customerId);
-        const firstName = customer?.name?.split(' ')[0] || 'Customer';
+        const customer = resolveCustomerForEstimate(est);
+        const recipientEmail = resolveCustomerEmail(est);
+        const firstName = customer?.name?.split(' ')[0] || est.customerName?.split(' ')[0] || 'Customer';
         
         const isMenuMode = (est.notes || '').includes('[MENU_MODE]');
         let summaryText = isMenuMode
@@ -1179,7 +1217,7 @@ Prime Auto Detail
 Precision. Protection. Perfection.`;
 
         setEmailSubject(`Service Estimate #${est.estimateNumber || 'N/A'} from Prime Auto Detail`);
-        setEmailRecipient(customer?.email || "");
+        setEmailRecipient(recipientEmail);
         setEmailBody(draft);
         setEmailEstimateId(est.id || null);
         setIsEmailModalOpen(true);
@@ -1217,7 +1255,7 @@ Precision. Protection. Perfection.`;
                             </div>
                         </div>
                     `,
-                    customerName: customers.find(c => c.id === selectedEst?.customerId)?.name || 'Customer',
+                    customerName: (selectedEst ? (resolveCustomerForEstimate(selectedEst)?.name || selectedEst.customerName) : '') || 'Customer',
                     price: selectedEst?.total || 0,
                     date: selectedEst?.date || new Date().toLocaleDateString(),
                     service: 'Service Estimate'
@@ -2601,11 +2639,13 @@ Precision. Protection. Perfection.`;
                                                 <Mail className="h-4 w-4" />
                                             </Button>
                                             <Button size="icon" variant="ghost" className="h-9 w-9 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 border border-blue-500/20" onClick={() => {
-                                                const cust = customers.find(c => c.id === est.customerId);
-                                                if (cust && cust.email) {
+                                                const recipientEmail = resolveCustomerEmail(est);
+                                                const cust = resolveCustomerForEstimate(est);
+                                                if (recipientEmail) {
+                                                    const custName = cust?.name || est.customerName || 'Customer';
                                                     const subject = encodeURIComponent(`Estimate #${est.estimateNumber} - Prime Auto Detail`);
-                                                    const body = encodeURIComponent(`Hi ${est.customerName},\n\nHere is a link to your estimate: https://primeautodetail.net/estimate/${est.id}\n\n(Please note: You may need to check your Spam or Junk folder to find our automated emails if you do not see them in your inbox.)\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
-                                                    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(cust.email)}&su=${subject}&body=${body}`, '_blank');
+                                                    const body = encodeURIComponent(`Hi ${custName},\n\nHere is a link to your estimate: https://primeautodetail.net/estimate/${est.id}\n\n(Please note: You may need to check your Spam or Junk folder to find our automated emails if you do not see them in your inbox.)\n\nThank you,\nRick Berube\nPrime Auto Detail\n(978) 566-1008\nPrimeAutoDetail.net`);
+                                                    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipientEmail)}&su=${subject}&body=${body}`, '_blank');
                                                 } else {
                                                     toast({ title: "No Email Found", description: "This customer does not have an email address on file.", variant: "destructive" });
                                                 }
