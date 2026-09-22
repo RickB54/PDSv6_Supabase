@@ -2606,15 +2606,26 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
 
     const scrollToSection = (id: string) => {
+        const executeScroll = () => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const stickyBar = (document.getElementById('crm-sticky-header-portal')?.parentElement || document.querySelector('.sticky')) as HTMLElement | null;
+            const totalTopHeaderHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-total-height')) || 64;
+            const stickyHeight = stickyBar ? stickyBar.getBoundingClientRect().height : 100;
+            const headerOffset = stickyHeight + totalTopHeaderHeight + 8;
+            const elementPosition = el.getBoundingClientRect().top + window.pageYOffset;
+            window.scrollTo({
+                top: Math.max(0, elementPosition - headerOffset),
+                behavior: 'smooth'
+            });
+        };
+
         const el = document.getElementById(id);
-        if (!el) return;
-        const stickyBar = (document.getElementById('crm-sticky-header-portal')?.parentElement || document.querySelector('.sticky')) as HTMLElement | null;
-        const headerOffset = (stickyBar?.getBoundingClientRect().height || 110) + 76;
-        const elementPosition = el.getBoundingClientRect().top + window.pageYOffset;
-        window.scrollTo({
-            top: Math.max(0, elementPosition - headerOffset),
-            behavior: 'smooth'
-        });
+        if (el) {
+            executeScroll();
+        } else {
+            setTimeout(executeScroll, 120);
+        }
     };
 
     const portalTarget = document.getElementById('crm-sticky-header-portal');
@@ -2674,8 +2685,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         onClick={() => {
                             setShowProfitability(false);
                             setShowEmployeeAnalytics(false);
-                            setActiveSection('services-to-be-done');
-                            scrollToSection('services-to-be-done');
+                            setActiveSection('service-detail');
+                            scrollToSection('service-detail');
                         }}
                     >
                         Service Logs

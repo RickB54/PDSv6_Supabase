@@ -119,86 +119,99 @@ export default function BookingsAnalyticsPage() {
         window.history.replaceState({}, '', url.toString());
     };
 
+    const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+    useEffect(() => {
+        tabRefs.current[activeTab]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, [activeTab]);
+
     return (
         <div className="min-h-screen bg-background text-foreground w-full max-w-[100vw]">
             <PageHeader title="Analytics & CRM" subtitle="Booking insights and customer follow-up tracking" />
             
             <div className="sticky top-[var(--header-total-height,64px)] z-40 bg-zinc-950/95 backdrop-blur-xl shadow-2xl flex flex-col transition-all">
                 {/* Tab Switcher */}
-                <div className="px-2 sm:px-6 flex gap-1 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth touch-pan-x">
+                <div className="px-2 sm:px-4 flex gap-1 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth touch-pan-x">
                     <button
+                        ref={(el) => { tabRefs.current['crm'] = el; }}
                         onClick={() => handleTabChange('crm')}
-                        className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 ${
+                        className={`px-2 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'crm'
                                 ? 'border-indigo-500 text-white font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
-                        <span className="hidden sm:inline">CRM &amp; Analytics</span>
-                        <span className="sm:hidden">CRM</span>
+                        <FileBarChart className="w-3.5 h-3.5" />
+                        <span className="hidden md:inline">CRM &amp; Analytics</span>
+                        <span className="md:hidden">CRM</span>
                     </button>
                     {!isDemoMode && (
                         <button
+                            ref={(el) => { tabRefs.current['bi'] = el; }}
                             onClick={() => handleTabChange('bi')}
-                            className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                            className={`px-2 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                                 activeTab === 'bi'
                                     ? 'border-emerald-500 text-emerald-400 font-bold'
                                     : 'border-transparent text-zinc-500 hover:text-zinc-300'
                             }`}
                         >
                             <Target className="w-3.5 h-3.5" />
-                            <span className="hidden lg:inline">Business Intelligence</span>
-                            <span className="lg:hidden">BI</span>
+                            <span className="hidden xl:inline">Business Intelligence</span>
+                            <span className="xl:hidden">BI</span>
                         </button>
                     )}
                     <button
+                        ref={(el) => { tabRefs.current['reviews'] = el; }}
                         onClick={() => handleTabChange('reviews')}
-                        className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                        className={`px-2 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'reviews'
                                 ? 'border-amber-500 text-amber-400 font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
                         <Star className="w-3.5 h-3.5" />
-                        <span className="hidden lg:inline">Review Intelligence</span>
-                        <span className="lg:hidden">Reviews</span>
+                        <span className="hidden xl:inline">Review Intelligence</span>
+                        <span className="xl:hidden">Reviews</span>
                     </button>
                     <button
+                        ref={(el) => { tabRefs.current['employees'] = el; }}
                         onClick={() => handleTabChange('employees')}
-                        className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                        className={`px-2 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'employees'
                                 ? 'border-indigo-500 text-white font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
                         <Users className="h-3.5 w-3.5" />
-                        <span>Employees</span>
+                        <span className="hidden md:inline">Employees</span>
+                        <span className="md:hidden">Staff</span>
                     </button>
                     <button
+                        ref={(el) => { tabRefs.current['profitability'] = el; }}
                         onClick={() => handleTabChange('profitability')}
-                        className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                        className={`px-2 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                             activeTab === 'profitability'
                                 ? 'border-emerald-500 text-emerald-400 font-bold'
                                 : 'border-transparent text-zinc-500 hover:text-zinc-300'
                         }`}
                     >
                         <TrendingUp className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Profitability</span>
-                        <span className="sm:hidden">Profits</span>
+                        <span className="hidden md:inline">Profitability</span>
+                        <span className="md:hidden">Profits</span>
                     </button>
                     {!isDemoMode && (
                         <button
+                            ref={(el) => { tabRefs.current['compensation'] = el; }}
                             onClick={() => handleTabChange('compensation')}
-                            className={`px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
+                            className={`px-2 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                                 activeTab === 'compensation'
                                     ? 'border-purple-500 text-purple-400 font-bold'
                                     : 'border-transparent text-zinc-500 hover:text-zinc-300'
                             }`}
                         >
                             <Calculator className="w-3.5 h-3.5" />
-                            <span className="hidden lg:inline">Compensation Calculator</span>
-                            <span className="lg:hidden sm:inline hidden">Compensation</span>
-                            <span className="sm:hidden">Comp</span>
+                            <span className="hidden xl:inline">Compensation Calculator</span>
+                            <span className="hidden md:inline xl:hidden">Compensation</span>
+                            <span className="md:hidden">Comp</span>
                         </button>
                     )}
                 </div>
