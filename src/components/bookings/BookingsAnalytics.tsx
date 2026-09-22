@@ -2384,6 +2384,13 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     const scrollToSection = (id: string) => {
         const executeScroll = () => {
+            if (id === 'revenue-performance') {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+                return;
+            }
             const el = document.getElementById(id);
             if (!el) return;
             const stickyBar = (document.getElementById('crm-sticky-header-portal')?.parentElement || document.querySelector('.sticky')) as HTMLElement | null;
@@ -2397,12 +2404,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             });
         };
 
-        const el = document.getElementById(id);
-        if (el) {
-            executeScroll();
-        } else {
-            setTimeout(executeScroll, 120);
-        }
+        executeScroll();
+        setTimeout(executeScroll, 120);
+        setTimeout(executeScroll, 350);
     };
 
     const handleJumpTo = (id: string) => {
@@ -3258,7 +3262,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         <div id="analytics-report-container" className="space-y-6 animate-in fade-in duration-500 w-full overflow-x-hidden pt-2 bg-[#09090b]">
             {portalTarget ? createPortal(businessIntelligenceHeader, portalTarget) : businessIntelligenceHeader}
 
-            <div className="border border-zinc-700 rounded-xl p-6 bg-zinc-900/20 shadow-2xl">
+            <div id="revenue-performance" className="border border-zinc-700 rounded-xl p-6 bg-zinc-900/20 shadow-2xl scroll-mt-48">
             {/* Dynamic Operational Snapshot */}
             <section className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -3426,7 +3430,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 {/* Goals & Performance Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Bookings */}
-                    <div className="group cursor-pointer" onClick={() => document.getElementById('revenue-performance')?.scrollIntoView({ behavior: 'smooth' })}>
+                    <div className="group cursor-pointer" onClick={() => document.getElementById('performance-graphs')?.scrollIntoView({ behavior: 'smooth' })}>
                         <Card className="p-5 bg-zinc-900/40 border-zinc-800 hover:border-blue-500/30 transition-all h-full">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="p-2 bg-blue-500/10 rounded-lg">
@@ -3537,7 +3541,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-widest mt-8 mb-4 border-b border-zinc-800 pb-2">Performance Graphs</h3>
 
             {/* Charts Row */}
-            <div id="revenue-performance" className="grid grid-cols-1 xl:grid-cols-3 gap-6 scroll-mt-48">
+            <div id="performance-graphs" className="grid grid-cols-1 xl:grid-cols-3 gap-6 scroll-mt-48">
                 {/* Booking Volume Chart */}
                 <Card ref={volumeChartRef} className="bg-zinc-900/50 border-zinc-800 w-full overflow-hidden backdrop-blur-sm shadow-xl">
                     <CardHeader>
