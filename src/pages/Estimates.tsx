@@ -677,12 +677,15 @@ const Estimates = () => {
 
             if (newStatus && estimate.customerId) {
                 try {
-                    await logUniqueEngagement({
-                        customer_id: estimate.customerId,
-                        customer_name: estimate.customerName,
-                        type: 'correspondence',
-                        note: `Estimate Sent: #${estimate.estimateNumber}\nTotal: $${(estimate.total || 0).toFixed(2)}\nServices: ${estimate.services?.map(s => s.name).join(', ') || 'N/A'}`
-                    });
+                    const isValidUUID = typeof estimate.customerId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(estimate.customerId.trim());
+                    if (isValidUUID) {
+                        await logUniqueEngagement({
+                            customer_id: estimate.customerId,
+                            customer_name: estimate.customerName,
+                            type: 'correspondence',
+                            note: `Estimate Sent: #${estimate.estimateNumber}\nTotal: $${(estimate.total || 0).toFixed(2)}\nServices: ${estimate.services?.map(s => s.name).join(', ') || 'N/A'}`
+                        });
+                    }
                 } catch (e) {
                     console.warn("Could not log estimate to engagements:", e);
                 }
@@ -693,8 +696,9 @@ const Estimates = () => {
                 description: newStatus ? `Estimate #${estimate.estimateNumber} recorded as sent.` : `Estimate #${estimate.estimateNumber} status cleared.`
             });
             loadData();
-        } catch (err) {
-            toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+        } catch (err: any) {
+            console.error("toggleSentStatus error:", err);
+            toast({ title: "Error", description: err?.message || "Failed to update status", variant: "destructive" });
         }
     };
 

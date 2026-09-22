@@ -1692,10 +1692,16 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
     }
 
     // 2. Prepare Estimate Payload
+    const isValidUUID = (str?: string) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim());
+    const validCustomerId = isValidUUID(customerId) ? customerId : null;
+    const validVehicleId = isValidUUID(vehicleId) ? vehicleId : null;
+    const validDate = p.date || p.estimateDate || new Date().toISOString().split('T')[0];
+    const validEstimateDate = p.estimateDate || p.date || new Date().toISOString().split('T')[0];
+
     const cleanServices = (p.services || []).filter((s: any) => s.name && !s.name.startsWith('VIRTUAL_'));
     const payload = {
-        customer_id: customerId,
-        vehicle_id: vehicleId,
+        customer_id: validCustomerId,
+        vehicle_id: validVehicleId,
         services: [
             ...cleanServices,
             ...(p.isSent !== undefined ? [{ name: `VIRTUAL_SENT:${p.isSent}`, price: 0 }] : []),
@@ -1704,15 +1710,15 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
             ...(p.placeOfService ? [{ name: `VIRTUAL_PLACE_OF_SERVICE:${p.placeOfService}`, price: 0 }] : []),
             ...((p.customerName || (p.customer as any)?.full_name) ? [{ name: `VIRTUAL_CUSTOMER:${p.customerName || (p.customer as any)?.full_name}`, price: 0 }] : [])
         ],
-        total: p.total,
-        date: p.date,
+        total: p.total || 0,
+        date: validDate,
         status: p.status || 'open',
         notes: p.notes,
         vehicle_type: p.vehicleType,
         package_id: p.packageId,
         discount: p.discount || 0,
         estimate_number: p.estimateNumber,
-        estimate_date: p.estimateDate,
+        estimate_date: validEstimateDate,
         discount_type: p.discountType,
         place_of_service: p.placeOfService
     };

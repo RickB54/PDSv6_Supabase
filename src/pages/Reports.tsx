@@ -163,11 +163,30 @@ const Reports = () => {
     sessionStorage.setItem('reports-loaded', 'true');
   }, [tab]);
 
+  const getValidItemDate = (item: any, dateField?: string): Date | null => {
+    if (!item) return null;
+    const raw = (dateField && item[dateField]) 
+      || item.estimateDate 
+      || item.estimate_date 
+      || item.date 
+      || item.createdAt 
+      || item.created_at 
+      || item.finishedAt;
+    if (!raw) return null;
+    
+    if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.trim())) {
+      const parts = raw.trim().split('-').map(Number);
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
   const filterByDate = (items: any[], dateField = "createdAt") => {
     const now = new Date();
     return (items || []).filter(item => {
-      const itemDate = new Date(item[dateField] || item.date || item.createdAt || item.finishedAt || item.created_at);
-      const isInvalidDate = !itemDate || isNaN(itemDate.getTime());
+      const itemDate = getValidItemDate(item, dateField);
+      const isInvalidDate = !itemDate;
 
       // If "All Time" and no custom range, show everything (even items with invalid dates)
       if (dateFilter === "all" && !dateRange.from && !dateRange.to) return true;
@@ -543,7 +562,7 @@ const Reports = () => {
       Array.isArray(est.services) ? est.services.map((s: any) => s.name).join(', ') : (est.service || 'N/A'),
       `$${(est.total || 0).toFixed(2)}`,
       est.status || 'Draft',
-      est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'
+      (() => { const dt = getValidItemDate(est); return dt ? dt.toLocaleDateString() : 'N/A'; })()
     ]);
 
     autoTable(doc, {
@@ -1916,7 +1935,7 @@ const Reports = () => {
                             {est.status || 'Draft'}
                           </span>
                         </TableCell>
-                        <TableCell className="text-zinc-400 whitespace-nowrap">{est.createdAt ? new Date(est.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell className="text-zinc-400 whitespace-nowrap">{(() => { const dt = getValidItemDate(est); return dt ? dt.toLocaleDateString() : 'N/A'; })()}</TableCell>
                       </TableRow>
                     ))}
                     {filterByDate(estimates).length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-zinc-500 py-8">No estimates found.</TableCell></TableRow>}
