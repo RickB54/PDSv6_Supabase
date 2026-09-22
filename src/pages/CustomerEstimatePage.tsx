@@ -95,9 +95,9 @@ export default function CustomerEstimatePage() {
 
     const fetchAddOns = async () => {
         try {
-            const { data, error } = await supabase.from('add_ons').select('*').eq('is_active', true);
-            if (error) throw error;
-            setDbAddOns(data || []);
+            const { getAll } = await import('@/services/supabase/addOns');
+            const allAddons = await getAll();
+            setDbAddOns(allAddons.filter((a: any) => a.is_active !== false));
         } catch (err) {
             console.error("Failed to fetch add-ons", err);
         }
