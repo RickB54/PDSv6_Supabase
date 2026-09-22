@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { makeToc, HelpTopic } from './helpData';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, Zap, Printer, X, Book } from 'lucide-react';
+import { Search, ChevronRight, Zap, Printer, X, Book, FileDown, Download } from 'lucide-react';
 import { exportHelpTopicPDF } from '@/lib/help-pdf';
 
 type HelpModalProps = {
@@ -185,20 +185,29 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
 
 
 
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {/* Procedures Manual Shortcut */}
-            {(role === 'admin' || role === 'employee') && (
-              <Button 
-                onClick={() => {
-                  onOpenChange(false);
-                  navigate('/app-manual');
-                }}
-                className="w-full bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-400 font-black text-xs uppercase tracking-widest py-6 flex items-center justify-center gap-3 rounded-xl transition-all hover:scale-[1.01]"
-              >
-                <Book className="w-5 h-5" />
-                View Full Procedures Manual
-              </Button>
-            )}
+            <Button 
+              onClick={() => {
+                onOpenChange(false);
+                navigate('/app-manual');
+              }}
+              className="w-full bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-bold text-xs uppercase tracking-wider py-4 flex items-center justify-center gap-2 rounded-xl transition-all hover:scale-[1.01]"
+            >
+              <Book className="w-4 h-4 text-blue-400" />
+              View Full Manual (Book View)
+            </Button>
+
+            {/* Direct PDF Download / Export */}
+            <Button 
+              onClick={() => {
+                window.open('/manuals/Prime_Auto_Detail_App_Manual.pdf', '_blank');
+              }}
+              className="w-full bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs uppercase tracking-wider py-4 flex items-center justify-center gap-2 rounded-xl transition-all hover:scale-[1.01]"
+            >
+              <FileDown className="w-4 h-4 text-emerald-400" />
+              Export Full Manual (PDF)
+            </Button>
           </div>
 
             {/* Navigation Selector */}
@@ -280,6 +289,15 @@ export default function HelpModal({ open, onOpenChange, role, initialTopicId }: 
                       className="h-7 px-3 text-[10px] font-bold border-slate-700 hover:bg-slate-800 text-slate-300 rounded-full uppercase tracking-wider"
                     >
                        <Printer className="w-3 h-3 mr-1.5" /> Save as PDF
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => window.open('/manuals/Prime_Auto_Detail_App_Manual.pdf', '_blank')}
+                      className="h-7 px-3 text-[10px] font-bold border-amber-500/40 hover:bg-amber-500/10 text-amber-300 rounded-full uppercase tracking-wider"
+                      title="Download the complete 167-page App Manual PDF"
+                    >
+                       <FileDown className="w-3 h-3 mr-1.5 text-amber-400" /> Export Full Manual (PDF)
                     </Button>
                   </div>
                 </div>
