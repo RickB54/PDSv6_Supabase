@@ -994,6 +994,43 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         localStorage.setItem('analytics_quotes_dateFilter', JSON.stringify(quotesDateFilter));
     }, [quotesShowArchived, quotesDateFilter]);
 
+    // Probono Jobs Filter
+    const [probonoShowArchived, setProbonoShowArchived] = useState(() => localStorage.getItem('analytics_probono_showArchived') === 'true');
+    const [probonoDateFilter, setProbonoDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+        try {
+            const saved = localStorage.getItem('analytics_probono_dateFilter');
+            if (saved) {
+                const p = JSON.parse(saved);
+                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+            }
+        } catch (e) {}
+        return { start: undefined, end: undefined };
+    });
+
+    useEffect(() => {
+        localStorage.setItem('analytics_probono_showArchived', String(probonoShowArchived));
+        localStorage.setItem('analytics_probono_dateFilter', JSON.stringify(probonoDateFilter));
+    }, [probonoShowArchived, probonoDateFilter]);
+
+    // Add-on Performance Filter
+    const [addonShowArchived, setAddonShowArchived] = useState(() => localStorage.getItem('analytics_addon_showArchived') === 'true');
+    const [addonFilterOpen, setAddonFilterOpen] = useState(false);
+    const [addonDateFilter, setAddonDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
+        try {
+            const saved = localStorage.getItem('analytics_addon_dateFilter');
+            if (saved) {
+                const p = JSON.parse(saved);
+                return { start: p.start ? new Date(p.start) : undefined, end: p.end ? new Date(p.end) : undefined };
+            }
+        } catch (e) {}
+        return { start: undefined, end: undefined };
+    });
+
+    useEffect(() => {
+        localStorage.setItem('analytics_addon_showArchived', String(addonShowArchived));
+        localStorage.setItem('analytics_addon_dateFilter', JSON.stringify(addonDateFilter));
+    }, [addonShowArchived, addonDateFilter]);
+
     // Quality Review Filter
     const [qualShowArchived, setQualShowArchived] = useState(() => localStorage.getItem('analytics_qual_showArchived') === 'true');
     const [qualDateFilter, setQualDateFilter] = useState<{ start: Date | undefined; end: Date | undefined }>(() => {
@@ -1184,9 +1221,11 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
         const sectionIds = [
             'revenue-performance',
+            'services-to-be-done',
             'service-detail',
             'invoices-tracker',
             'estimates-tracker',
+            'addon-performance',
             'probono-tracker',
             'customer-insights',
             'acquisition-intake',
@@ -1339,6 +1378,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }, [filteredQuotes, quotesStatusFilter]);
 
     const filteredQualBookings = useMemo(() => getFiltered(bookings, qualShowArchived, qualDateFilter), [bookings, qualShowArchived, qualDateFilter]);
+    const filteredProbonoBookings = useMemo(() => getFiltered(bookings, probonoShowArchived, probonoDateFilter), [bookings, probonoShowArchived, probonoDateFilter]);
     const filteredInvoices = useMemo(() => getFiltered(invoices, invShowArchived, invDateFilter, 'createdAt'), [invoices, invShowArchived, invDateFilter]);
 
     const displayedInvoices = useMemo(() => {
@@ -1542,7 +1582,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
 
     
     const mapBookingToServiceDetail = (b: any, customers: any[], invoices: any[]) => {
-        const customer = customers.find(c => c.name === b.customer || c.id === b.customerId);
+        const bCustTrimmed = (b.customer || '').trim().toLowerCase();
+        const customer = customers.find(c => (c.name && c.name.trim().toLowerCase() === bCustTrimmed) || (c.full_name && c.full_name.trim().toLowerCase() === bCustTrimmed) || c.id === b.customerId);
         const address = b.address || customer?.address || "N/A";
         const pos = b.placeOfService || "";
         const isShop = pos.toLowerCase().includes("shop") || (!pos && (!address || address === "N/A" || address.toLowerCase().includes("shop") || address.toLowerCase().includes("prime auto detail")));
@@ -1557,8 +1598,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             const bDate = b.date?.split('T')[0];
             const match = invoices.find(inv => {
                 const invDate = inv.serviceDate || inv.date || inv.createdAt?.split('T')[0];
+                const invCust = (inv.customerName || '').trim().toLowerCase();
                 const isCustMatch = (inv.customerId && inv.customerId === b.customerId) || 
-                                    (inv.customerName && b.customer && inv.customerName.toLowerCase() === b.customer.toLowerCase());
+                                    (invCust && bCustTrimmed && invCust === bCustTrimmed);
                 return isCustMatch && (invDate === bDate || (Math.abs(new Date(invDate).getTime() - new Date(bDate).getTime()) < 86400000 * 2));
             });
             if (match) {
@@ -1606,6 +1648,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     const qualServiceDetailsData = useMemo(() => {
         return filteredQualBookings.map(b => mapBookingToServiceDetail(b, customers, invoices)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [filteredQualBookings, customers, invoices]);
+
+    const probonoServiceDetailsData = useMemo(() => {
+        return filteredProbonoBookings.map(b => mapBookingToServiceDetail(b, customers, invoices)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [filteredProbonoBookings, customers, invoices]);
 
     const doneServices = useMemo(() => {
         return serviceDetailsData.filter(s => (s.status === 'done' || s.status === 'completed'));
@@ -1696,18 +1742,19 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
     }, [qualServiceDetailsData, qualReviewFilter, bookingReviews]);
 
     const probonoJobs = useMemo(() => {
-        return qualServiceDetailsData
-            .filter(s => s.revenue === 0)
+        return probonoServiceDetailsData
+            .filter(s => s.revenue === 0 || Boolean(s.probonoReason) || Boolean(s.probonoPrimaryReason) || (Array.isArray(s.probonoReasons) && s.probonoReasons.length > 0) || Number((s as any).price || 0) === 0)
             .map(s => {
                 // We already matched the invoice in mapBookingToServiceDetail, but we can do a robust fallback just in case
                 let invId = (s as any).invoiceId;
                 if (!invId) {
                     const sDate = s.date?.split('T')[0];
+                    const sCust = (s.customer || '').trim().toLowerCase();
                     const matchedInv = invoices.find(inv => {
                         const invDate = (inv.serviceDate || inv.date || inv.createdAt || '').split('T')[0];
-                        // FIXED: Compare with s.customerId instead of s.id (which was the booking ID)
+                        const invCust = (inv.customerName || '').trim().toLowerCase();
                         const isCustMatch = (inv.customerId && inv.customerId === (s as any).customerId) || 
-                                            (inv.customerName && s.customer && inv.customerName.toLowerCase() === s.customer.toLowerCase());
+                                            (invCust && sCust && invCust === sCust);
                         
                         if (!isCustMatch) return false;
                         if (!sDate || !invDate) return true; // match loosely if dates are missing
@@ -1717,7 +1764,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                 }
                 return { ...s, invoiceId: invId };
             });
-    }, [qualServiceDetailsData, invoices]);
+    }, [probonoServiceDetailsData, invoices]);
 
     const freeVsPaidPieData = useMemo(() => {
         const freeDone = probonoJobs.filter(j => j.status === 'done' || j.status === 'completed').length;
@@ -1728,9 +1775,13 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         ].filter(d => d.value > 0);
     }, [doneServices, probonoJobs]);
 
-    const toDoServices = useMemo(() => 
-        serviceDetailsData.filter(s => s.status !== 'done' && s.status !== 'completed'),
-    [serviceDetailsData]);
+    const toDoServices = useMemo(() => {
+        const baseBookings = bookings.filter(b => !perfShowArchived ? (!b.isArchived && !(b as any).archived) : true);
+        return baseBookings
+            .filter(b => (b.status || '').toLowerCase() !== 'done' && (b.status || '').toLowerCase() !== 'completed')
+            .map(b => mapBookingToServiceDetail(b, customers, invoices))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }, [bookings, perfShowArchived, customers, invoices]);
 
     // --- Price Chart Data ---
     const priceChartData = useMemo(() => {
@@ -1916,6 +1967,21 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         
         return details.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [invoices]);
+
+    const filteredAddons = useMemo(() => {
+        if (!addonDateFilter.start && !addonDateFilter.end) return addonsData;
+        return addonsData.filter(addon => {
+            if (!addon.date) return true;
+            const d = parseISO(addon.date);
+            if (addonDateFilter.start && addonDateFilter.end) {
+                return isWithinInterval(d, { start: startOfDay(addonDateFilter.start), end: endOfDay(addonDateFilter.end) });
+            }
+            if (addonDateFilter.start) {
+                return isSameDay(d, addonDateFilter.start);
+            }
+            return true;
+        });
+    }, [addonsData, addonDateFilter]);
 
     const handleCreateReminder = async () => {
         if (!selectedCustomerForReminder || !reminderDate) return;
@@ -2160,6 +2226,10 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
         setQuotesStatusFilter('all');
         setQualShowArchived(false);
         setQualDateFilter({ start: undefined, end: undefined });
+        setProbonoShowArchived(false);
+        setProbonoDateFilter({ start: undefined, end: undefined });
+        setAddonShowArchived(false);
+        setAddonDateFilter({ start: undefined, end: undefined });
         setAcqShowArchived(false);
         setAcqDateFilter({ start: undefined, end: undefined });
         setAcqStageFilter('all');
@@ -2173,6 +2243,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             'analytics_inv_showArchived', 'analytics_inv_dateFilter',
             'analytics_quotes_showArchived', 'analytics_quotes_dateFilter',
             'analytics_qual_showArchived', 'analytics_qual_dateFilter',
+            'analytics_probono_showArchived', 'analytics_probono_dateFilter',
+            'analytics_addon_showArchived', 'analytics_addon_dateFilter',
             'analytics_acq_showArchived', 'analytics_acq_dateFilter'
         ];
         keysToRemove.forEach(key => localStorage.removeItem(key));
@@ -2504,6 +2576,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             setInvDateFilter({ start: config.start, end: config.end });
             setQuotesDateFilter({ start: config.start, end: config.end });
             setQualDateFilter({ start: config.start, end: config.end });
+            setProbonoDateFilter({ start: config.start, end: config.end });
+            setAddonDateFilter({ start: config.start, end: config.end });
             setAcqDateFilter({ start: config.start, end: config.end });
             setSearchQuery("");
         }
@@ -2574,6 +2648,24 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     size="sm" 
                     className={cn(
                         "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'services-to-be-done' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-amber-500/20 border-amber-500/60 text-amber-300 font-bold shadow-sm shadow-amber-950/50 ring-1 ring-amber-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('services-to-be-done');
+                        scrollToSection('services-to-be-done');
+                    }}
+                >
+                    Services To Be Done
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
                         (activeSection === 'service-detail' && !showProfitability && !showEmployeeAnalytics)
                             ? "bg-emerald-500/20 border-emerald-500/60 text-emerald-300 font-bold shadow-sm shadow-emerald-950/50 ring-1 ring-emerald-500/30"
                             : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
@@ -2581,8 +2673,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     onClick={() => {
                         setShowProfitability(false);
                         setShowEmployeeAnalytics(false);
-                        setActiveSection('service-detail');
-                        scrollToSection('service-detail');
+                        setActiveSection('services-to-be-done');
+                        scrollToSection('services-to-be-done');
                     }}
                 >
                     Service Logs
@@ -2622,6 +2714,24 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     }}
                 >
                     Estimates & Quotes
+                </Button>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className={cn(
+                        "h-6 px-2 text-[10px] transition-all duration-200",
+                        (activeSection === 'addon-performance' && !showProfitability && !showEmployeeAnalytics)
+                            ? "bg-teal-500/20 border-teal-500/60 text-teal-300 font-bold shadow-sm shadow-teal-950/50 ring-1 ring-teal-500/30"
+                            : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                    )} 
+                    onClick={() => {
+                        setShowProfitability(false);
+                        setShowEmployeeAnalytics(false);
+                        setActiveSection('addon-performance');
+                        scrollToSection('addon-performance');
+                    }}
+                >
+                    Add-on Performance
                 </Button>
                 <Button 
                     variant="outline" 
@@ -3715,7 +3825,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </div>
 
             {/* Services To Be Done - UPCOMING/IN PROGRESS */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl">
+            <Card id="services-to-be-done" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl scroll-mt-48">
                 <CardHeader className="border-b border-zinc-800 bg-zinc-950/30">
                     <div className="flex items-center gap-2">
                         <Clock className="w-5 h-5 text-amber-400" />
@@ -4813,8 +4923,8 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
             </Card>
 
             {/* Add-on Performance Section */}
-            <Card className="bg-zinc-900 border-zinc-800 w-full overflow-hidden">
-                <CardHeader>
+            <Card id="addon-performance" className="bg-zinc-900 border-zinc-800 w-full overflow-hidden shadow-xl border-t-2 border-t-emerald-500/30 mt-6 scroll-mt-48">
+                <CardHeader className="border-b border-zinc-800 bg-zinc-950/30 flex flex-row items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-emerald-400" />
                         <div>
@@ -4822,38 +4932,80 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                             <CardDescription>Revenue tracking for specialized service add-ons</CardDescription>
                         </div>
                     </div>
+                    <div className="flex items-center gap-2">
+                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20">
+                            {filteredAddons.length} ADD-ONS
+                        </Badge>
+                        <div className="flex items-center gap-1">
+                            <Popover open={addonFilterOpen} onOpenChange={setAddonFilterOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (addonDateFilter.start || addonDateFilter.end) && "bg-zinc-800 text-white")}>
+                                        <Filter className="h-4 w-4" />
+                                        {getFilterLabel(addonDateFilter, "Filter")}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
+                                    <div className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                    onClick={() => { setAddonDateFilter({ start: undefined, end: undefined }); setAddonFilterOpen(false); }}>All Time</Button>
+                                                <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                    onClick={() => { setAddonDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setAddonFilterOpen(false); }}>Today</Button>
+                                                <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                    onClick={() => { const d = new Date(); setAddonDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) }); setAddonFilterOpen(false); }}>This Week</Button>
+                                                <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                    onClick={() => { const d = new Date(); setAddonDateFilter({ start: startOfMonth(d), end: endOfMonth(d) }); setAddonFilterOpen(false); }}>This Month</Button>
+                                                <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
+                                                    onClick={() => { setAddonDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) }); setAddonFilterOpen(false); }}>This Year</Button>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
+                                            <Calendar
+                                                mode="range"
+                                                selected={{ from: addonDateFilter.start, to: addonDateFilter.end }}
+                                                onSelect={(range) => setAddonDateFilter({ start: range?.from, end: range?.to })}
+                                                className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
+                                            />
+                                            <div className="flex gap-2 mt-2">
+                                                <Button variant="outline" size="sm" onClick={() => { setAddonDateFilter({ start: undefined, end: undefined }); setAddonFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
+                                                <Button size="sm" onClick={() => setAddonFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            {(addonDateFilter.start || addonDateFilter.end) && (
+                                <Button variant="ghost" size="icon" onClick={() => setAddonDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            )}
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {/* Mobile cards */}
                     <div className="md:hidden divide-y divide-zinc-800/60">
-                        {customerStats.length === 0 ? (
-                            <div className="text-center text-zinc-500 py-10 italic text-sm">No customer data found.</div>
+                        {filteredAddons.length === 0 ? (
+                            <div className="text-center text-zinc-500 py-10 italic text-sm">No add-on revenue recorded for this period.</div>
                         ) : (
-                            customerStats.map((cust) => (
-                                <div key={cust.name} className="p-3 hover:bg-zinc-800/20 space-y-1">
+                            filteredAddons.map((addon) => (
+                                <div key={addon.id} className="p-3 hover:bg-zinc-800/20 space-y-1">
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="flex-1 min-w-0">
-                                            <span className="font-semibold text-zinc-100 text-sm block truncate">{cust.name}</span>
-                                            <span className="text-zinc-500 text-xs">{new Date(cust.lastService).toLocaleDateString()}</span>
+                                            <span className="font-semibold text-zinc-100 text-sm block truncate">{addon.customer}</span>
+                                            <span className="text-zinc-500 text-xs">{addon.date ? format(parseISO(addon.date), "MMM d, yyyy") : "N/A"}</span>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <span className="text-emerald-400 font-mono text-sm font-bold block">${(cust.totalSpent || 0).toLocaleString()}</span>
-                                            <span className="text-zinc-500 text-xs">{cust.count} Jobs</span>
+                                            <span className="text-emerald-400 font-mono text-sm font-bold block">
+                                                ${addon.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="flex flex-wrap gap-2 text-xs text-zinc-500">
-                                        {cust.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{cust.email}</span>}
-                                        {cust.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{cust.phone}</span>}
-                                    </div>
-                                    <div className="flex gap-2 pt-1">
-                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-400 hover:text-blue-300 px-2"
-                                            onClick={() => navigate(`/search-customer?customerId=${cust.id || ''}&search=${encodeURIComponent(cust.name)}`)}>
-                                            <Edit className="w-3 h-3 mr-1" />Edit
-                                        </Button>
-                                        <Button size="sm" variant="ghost" className="h-7 text-xs text-blue-400 hover:text-blue-300 px-2"
-                                            onClick={() => { setSelectedCustomerForReminder(cust); setReminderFrequency("3"); const d = new Date(); d.setMonth(d.getMonth() + 3); setReminderDate(d.toISOString().split('T')[0]); setReminderOpen(true); }}>
-                                            <Bell className="w-3 h-3 mr-1" />Remind
-                                        </Button>
+                                    <div className="text-xs text-emerald-400/80 font-medium truncate">
+                                        {addon.name}
                                     </div>
                                 </div>
                             ))
@@ -4871,14 +5023,14 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {addonsData.length === 0 ? (
+                                {filteredAddons.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center text-zinc-500 py-10 italic">
-                                            No add-on revenue recorded yet.
+                                            No add-on revenue recorded for this period.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    addonsData.map((addon) => (
+                                    filteredAddons.map((addon) => (
                                         <TableRow key={addon.id} className="hover:bg-zinc-950/50">
                                             <TableCell className="text-zinc-400 text-xs">
                                                 {addon.date ? format(parseISO(addon.date), "MMM d, yyyy") : "N/A"}
@@ -4916,9 +5068,9 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                         <div className="flex items-center gap-1">
                         <Popover open={probonoFilterOpen} onOpenChange={setProbonoFilterOpen}>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (qualDateFilter.start || qualDateFilter.end) && "bg-zinc-800 text-white")}>
+                                <Button variant="outline" size="sm" className={cn("gap-2 border-zinc-800 bg-zinc-900/50 font-bold", (probonoDateFilter.start || probonoDateFilter.end) && "bg-zinc-800 text-white")}>
                                     <Filter className="h-4 w-4" />
-                                    {getFilterLabel(qualDateFilter, "Filter")}
+                                    {getFilterLabel(probonoDateFilter, "Filter")}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-80 bg-zinc-950 border-zinc-800 p-4" align="end">
@@ -4927,35 +5079,35 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                                         <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Quick Filters</Label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setProbonoFilterOpen(false); }}>All Time</Button>
+                                                onClick={() => { setProbonoDateFilter({ start: undefined, end: undefined }); setProbonoFilterOpen(false); }}>All Time</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { setQualDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setProbonoFilterOpen(false); }}>Today</Button>
+                                                onClick={() => { setProbonoDateFilter({ start: startOfDay(new Date()), end: endOfDay(new Date()) }); setProbonoFilterOpen(false); }}>Today</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) }); setProbonoFilterOpen(false); }}>This Week</Button>
+                                                onClick={() => { const d = new Date(); setProbonoDateFilter({ start: startOfWeek(d, { weekStartsOn: 1 }), end: endOfWeek(d, { weekStartsOn: 1 }) }); setProbonoFilterOpen(false); }}>This Week</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { const d = new Date(); setQualDateFilter({ start: startOfMonth(d), end: endOfMonth(d) }); setProbonoFilterOpen(false); }}>This Month</Button>
+                                                onClick={() => { const d = new Date(); setProbonoDateFilter({ start: startOfMonth(d), end: endOfMonth(d) }); setProbonoFilterOpen(false); }}>This Month</Button>
                                             <Button variant="outline" size="sm" className="text-[10px] h-8 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-700"
-                                                onClick={() => { setQualDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) }); setProbonoFilterOpen(false); }}>This Year</Button>
+                                                onClick={() => { setProbonoDateFilter({ start: startOfYear(new Date()), end: endOfYear(new Date()) }); setProbonoFilterOpen(false); }}>This Year</Button>
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-xs font-bold uppercase tracking-wider text-zinc-400">Custom Range</Label>
                                         <Calendar
                                             mode="range"
-                                            selected={{ from: qualDateFilter.start, to: qualDateFilter.end }}
-                                            onSelect={(range) => setQualDateFilter({ start: range?.from, end: range?.to })}
+                                            selected={{ from: probonoDateFilter.start, to: probonoDateFilter.end }}
+                                            onSelect={(range) => setProbonoDateFilter({ start: range?.from, end: range?.to })}
                                             className="rounded-md border border-zinc-800 bg-zinc-900 text-zinc-200"
                                         />
                                         <div className="flex gap-2 mt-2">
-                                            <Button variant="outline" size="sm" onClick={() => { setQualDateFilter({ start: undefined, end: undefined }); setProbonoFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
+                                            <Button variant="outline" size="sm" onClick={() => { setProbonoDateFilter({ start: undefined, end: undefined }); setProbonoFilterOpen(false); }} className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white">Clear</Button>
                                             <Button size="sm" onClick={() => setProbonoFilterOpen(false)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Save Filter</Button>
                                         </div>
                                     </div>
                                 </div>
                             </PopoverContent>
                         </Popover>
-                        {(qualDateFilter.start || qualDateFilter.end) && (
-                            <Button variant="ghost" size="icon" onClick={() => setQualDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
+                        {(probonoDateFilter.start || probonoDateFilter.end) && (
+                            <Button variant="ghost" size="icon" onClick={() => setProbonoDateFilter({ start: undefined, end: undefined })} className="h-8 w-8 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-full" title="Reset Filter">
                                 <X className="h-4 w-4" />
                             </Button>
                         )}

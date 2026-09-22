@@ -2863,7 +2863,7 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                         return [];
                       }
                     })(),
-                    price: b.service_price || b.price || meta.price,
+                    price: (b.service_price !== undefined && b.service_price !== null) ? Number(b.service_price) : (b.price ?? meta.price ?? 0),
                     createdAt: b.created_at || meta.created_at,
 
                     hasReminder: b.has_reminder || meta.has_reminder,
