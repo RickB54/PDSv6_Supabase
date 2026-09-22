@@ -1630,7 +1630,8 @@ export const getSupabaseEstimates = async (filterByCurrentUser = false): Promise
                     estimateNumber: e.estimate_number || `EST-${e.id.slice(0, 4).toUpperCase()}`,
                     estimateDate: e.estimate_date || e.date,
                     discount: e.discount || 0,
-                    discountType: e.discount_type || 'fixed'
+                    discountType: e.discount_type || 'fixed',
+                    placeOfService: e.place_of_service || (e as any).placeOfService
                 };
             });
 
@@ -1691,11 +1692,12 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
     }
 
     // 2. Prepare Estimate Payload
+    const cleanServices = (p.services || []).filter((s: any) => s.name && !s.name.startsWith('VIRTUAL_'));
     const payload = {
         customer_id: customerId,
         vehicle_id: vehicleId,
         services: [
-            ...(p.services || []),
+            ...cleanServices,
             ...(p.isSent !== undefined ? [{ name: `VIRTUAL_SENT:${p.isSent}`, price: 0 }] : []),
             ...(p.sentDate ? [{ name: `VIRTUAL_SENT_DATE:${p.sentDate}`, price: 0 }] : []),
             ...(p.vehicle ? [{ name: `VIRTUAL_VEHICLE:${p.vehicle}`, price: 0 }] : []),
@@ -1711,7 +1713,8 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
         discount: p.discount || 0,
         estimate_number: p.estimateNumber,
         estimate_date: p.estimateDate,
-        discount_type: p.discountType
+        discount_type: p.discountType,
+        place_of_service: p.placeOfService
     };
 
     // HANDLE LOCAL MOCK ESTIMATES
@@ -1726,6 +1729,7 @@ export const upsertSupabaseEstimate = async (p: Partial<Estimate> & {
             id: p.id || `est_${Date.now()}`,
             customerName: p.customerName || p.customer?.name || 'Mock Customer', // Persist UI Helpers
             vehicle: p.vehicle || 'Mock Vehicle',
+            placeOfService: p.placeOfService,
             isStaticMock: true,
             updatedAt: new Date().toISOString()
         };

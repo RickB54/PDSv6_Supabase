@@ -541,6 +541,7 @@ const Estimates = () => {
             const savedEstimate: Estimate = {
                 ...estimateData,
                 id: saved?.id || estimateData.id || `est_${Date.now()}`,
+                placeOfService: selectedPlaceOfService
             };
             setEstimates(prev => {
                 if (isEditing) {
@@ -549,6 +550,10 @@ const Estimates = () => {
                     return [savedEstimate, ...prev];
                 }
             });
+
+            if (selectedEstimate && (selectedEstimate.id === editingEstimateId || selectedEstimate.id === savedEstimate.id)) {
+                setSelectedEstimate(savedEstimate);
+            }
 
             toast({ title: "Success", description: isEditing ? "Estimate updated successfully!" : "Estimate created successfully!" });
 
