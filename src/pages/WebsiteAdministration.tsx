@@ -305,7 +305,10 @@ export default function WebsiteAdministration() {
     brandName: 'Prime Auto Detail',
     marqueeText: 'Precision. Protection. Perfection.',
     copyrightText: `© ${new Date().getFullYear()} Prime Auto Detail. All Rights Reserved.`,
-    facebookUrl: 'https://www.facebook.com/PrimeAutoDetail.net'
+    facebookUrl: 'https://www.facebook.com/PrimeAutoDetail.net',
+    crmShowcaseText: 'CRM Platform Showcase',
+    crmShowcaseUrl: '/manuals/PAD_CRM_Showcase.pdf',
+    showCrmShowcase: true
   };
 
   const [footerData, setFooterData] = useState<any>(DEFAULT_FOOTER_DATA);
@@ -2432,6 +2435,32 @@ export default function WebsiteAdministration() {
                   <div className="space-y-2 md:col-span-2">
                     <Label className="text-zinc-500 text-[10px] uppercase font-bold">Facebook Page URL</Label>
                     <Input className="bg-zinc-950 border-zinc-800 text-white" value={footerData.facebookUrl} onChange={(e) => setFooterData({ ...footerData, facebookUrl: e.target.value })} placeholder="https://www.facebook.com/PrimeAutoDetail.net" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2 pt-2 border-t border-zinc-800/60">
+                    <div className="flex items-center justify-between pb-1">
+                      <div>
+                        <Label className="text-zinc-300 text-[11px] uppercase font-bold block">CRM Platform Showcase PDF Link</Label>
+                        <p className="text-[10px] text-zinc-500">Display a direct link in the footer to the CRM Showcase PDF.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="showCrmShowcase" className="text-zinc-400 text-[10px] uppercase font-bold cursor-pointer">
+                          {footerData.showCrmShowcase !== false ? 'Enabled' : 'Disabled'}
+                        </Label>
+                        <Switch
+                          id="showCrmShowcase"
+                          checked={footerData.showCrmShowcase !== false}
+                          onCheckedChange={(checked) => setFooterData({ ...footerData, showCrmShowcase: checked })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">CRM Showcase Link Text</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={footerData.crmShowcaseText ?? 'CRM Platform Showcase'} onChange={(e) => setFooterData({ ...footerData, crmShowcaseText: e.target.value })} placeholder="CRM Platform Showcase" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-zinc-500 text-[10px] uppercase font-bold">CRM Showcase PDF URL</Label>
+                    <Input className="bg-zinc-950 border-zinc-800 text-white" value={footerData.crmShowcaseUrl ?? '/manuals/PAD_CRM_Showcase.pdf'} onChange={(e) => setFooterData({ ...footerData, crmShowcaseUrl: e.target.value })} placeholder="/manuals/PAD_CRM_Showcase.pdf" />
                   </div>
                 </div>
                 <div className="flex justify-end gap-3">

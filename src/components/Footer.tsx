@@ -1,14 +1,17 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { contentService, type SupaContact } from "@/lib/content";
-import { Facebook } from "lucide-react";
+import { Facebook, FileText, ExternalLink } from "lucide-react";
 
 export const Footer = () => {
     const [contact, setContact] = useState<SupaContact | null>(null);
     const [footerData, setFooterData] = useState<any>({
         brandName: 'Prime Auto Detail',
         marqueeText: 'Precision. Protection. Perfection.',
-        copyrightText: `© ${new Date().getFullYear()} Prime Auto Detail. All Rights Reserved.`
+        copyrightText: `© ${new Date().getFullYear()} Prime Auto Detail. All Rights Reserved.`,
+        crmShowcaseText: 'CRM Platform Showcase',
+        crmShowcaseUrl: '/manuals/PAD_CRM_Showcase.pdf',
+        showCrmShowcase: true
     });
 
     const loadData = async () => {
@@ -18,7 +21,7 @@ export const Footer = () => {
 
             const meta = await contentService.getServiceMeta('footer_content');
             if (meta && meta.meta) {
-                setFooterData(meta.meta);
+                setFooterData((prev: any) => ({ ...prev, ...meta.meta }));
             }
         } catch { }
     };
@@ -96,11 +99,26 @@ export const Footer = () => {
                     </div>
 
                     {/* Navigation */}
-                    <div className="flex flex-wrap justify-center gap-8 text-[11px] font-black uppercase tracking-widest text-zinc-400">
-                        <Link to="/about" className="hover:text-red-600 transition-all hover:translate-y-[-1px]">Our Story</Link>
-                        <Link to="/services" className="hover:text-red-600 transition-all hover:translate-y-[-1px]">Services</Link>
-                        <Link to="/availability" className="hover:text-red-600 transition-all hover:translate-y-[-1px]">Availability</Link>
-                        <Link to="/contact" className="hover:text-red-600 transition-all hover:translate-y-[-1px]">Contact</Link>
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="flex flex-wrap justify-center gap-8 text-[11px] font-black uppercase tracking-widest text-zinc-400">
+                            <Link to="/about" className="hover:text-red-600 transition-all hover:translate-y-[-1px]">Our Story</Link>
+                            <Link to="/services" className="hover:text-red-600 transition-all hover:translate-y-[-1px]">Services</Link>
+                            <Link to="/availability" className="hover:text-red-600 transition-all hover:translate-y-[-1px]">Availability</Link>
+                            <Link to="/contact" className="hover:text-red-600 transition-all hover:translate-y-[-1px]">Contact</Link>
+                        </div>
+                        {footerData?.showCrmShowcase !== false && (
+                            <a
+                                href={footerData?.crmShowcaseUrl || '/manuals/PAD_CRM_Showcase.pdf'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 hover:border-amber-500/60 text-zinc-300 hover:text-amber-400 text-[10px] font-black uppercase tracking-wider transition-all duration-200 hover:bg-zinc-850 hover:scale-[1.02] shadow-sm group"
+                                title="Open CRM Platform Showcase PDF"
+                            >
+                                <FileText className="h-3.5 w-3.5 text-amber-500 group-hover:text-amber-400 transition-colors" />
+                                <span>{footerData?.crmShowcaseText || 'CRM Platform Showcase'}</span>
+                                <ExternalLink className="h-3 w-3 text-zinc-500 group-hover:text-amber-400 transition-colors" />
+                            </a>
+                        )}
                     </div>
 
                     {/* Copyright & Info */}
