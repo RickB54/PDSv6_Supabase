@@ -126,7 +126,7 @@ const Reports = () => {
           getSupabaseBookings(),
           getSupabaseEmployees()
         ]);
-        const activeJobs = (bookingsData || []).filter(b => b.status !== 'cancelled');
+        const activeJobs = (bookingsData || []).filter(b => b.status !== 'cancelled' && b.status !== 'canceled');
         setJobs(activeJobs);
         setEmployees(allEmps || []);
       } else if (currentTab === 'estimates') {

@@ -1101,7 +1101,7 @@ export function BookingsAnalytics({ bookings, customers, invoices = [], estimate
                     (matchedCust as any)?.status === 'lost' ||
                     (matchedCust?.type === 'prospect' && matchedCust?.is_archived) ||
                     (b.status || '').toLowerCase() === 'lost' ||
-                    ((b.status || '').toLowerCase() === 'cancelled' && matchedCust?.type === 'prospect')
+                    (((b.status || '').toLowerCase() === 'cancelled' || (b.status || '').toLowerCase() === 'canceled') && matchedCust?.type === 'prospect')
                 );
 
                 if (acqStageFilter === 'lost') {

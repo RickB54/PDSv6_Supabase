@@ -1181,6 +1181,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         return 'bg-green-500/20 border-green-500 text-green-200';
       case 'rescheduled':
         return 'bg-cyan-500/10 border-cyan-500/50 border-dashed text-cyan-200';
+      case 'cancelled':
+      case 'canceled':
+        return 'bg-red-500/10 border-red-500/40 border-dashed text-red-300';
       default:
         return 'bg-primary/20 border-primary text-primary-foreground';
     }
@@ -1195,6 +1198,8 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       case 'in_progress': return '🔄';
       case 'done': return '✅';
       case 'rescheduled': return '🔄';
+      case 'cancelled':
+      case 'canceled': return '🚫';
       default: return '✓';
     }
   };
@@ -1844,7 +1849,13 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     if (!selectedBooking) return;
     
     try {
-      update(selectedBooking.id, { status: 'cancelled' as any, notes: `${formData.notes}\n\n[CANCELLED]: ${cancelReason}` });
+      const now = new Date().toISOString();
+      update(selectedBooking.id, {
+        status: 'cancelled' as any,
+        notes: `${formData.notes}\n\n[CANCELLED]: ${cancelReason}`,
+        canceledAt: now,
+        canceledReason: cancelReason,
+      });
       
       // Trigger sync logic for cancellation email
       const { onBookingCancelled } = await import("@/lib/bookingsSync");
@@ -3466,6 +3477,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                         <option value="in_progress">🔄 In Progress</option>
                         <option value="done">✅ Done</option>
                         <option value="rescheduled">🔄 Rescheduled</option>
+                        <option value="cancelled">🚫 Canceled</option>
                       </select>
                     </div>
                   </div>
@@ -3922,7 +3934,18 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                   </Button>
                 )}
 
-                {formData.status !== 'cancelled' && isAdmin && (
+                {selectedBooking && formData.status !== 'cancelled' && formData.status !== 'canceled' && isAdmin && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsCancelConfirmOpen(true); }}
+                    className="bg-orange-950/40 hover:bg-orange-900 text-orange-200 border border-orange-900/50 h-8 px-2 text-xs"
+                  >
+                    <X className="mr-1.5 h-3.5 w-3.5" /> Cancel Appt
+                  </Button>
+                )}
+
+                {formData.status !== 'cancelled' && formData.status !== 'canceled' && isAdmin && (
                   <Button 
                     variant="secondary" 
                     size="sm" 

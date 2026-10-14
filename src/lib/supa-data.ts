@@ -2883,6 +2883,8 @@ export const getSupabaseBookings = async (filterByCurrentUser = false): Promise<
                     probonoReason: b.probono_reason || meta.probonoReason || meta.probono_reason || '',
                     probonoReasons: meta.probonoReasons || meta.probono_reasons || [],
                     probonoPrimaryReason: b.probono_primary_reason || meta.probonoPrimaryReason || meta.probono_primary_reason || '',
+                    canceledAt: meta.canceled_at || meta.canceledAt || b.canceled_at,
+                    canceledReason: meta.cancel_reason || meta.canceledReason || b.cancel_reason,
                     booking_vehicle: meta
                 };
             });
@@ -2945,6 +2947,8 @@ export const upsertSupabaseBooking = async (booking: any) => {
               probonoPrimaryReason: booking.probonoPrimaryReason || '',
               bookedBy: booking.bookedBy || booking.source || 'Manual Entry',
               howFound: booking.howFound || '',
+              canceled_at: booking.canceledAt || booking.canceled_at || (booking.booking_vehicle?.canceled_at) || undefined,
+              cancel_reason: booking.canceledReason || booking.cancel_reason || (booking.booking_vehicle?.cancel_reason) || undefined,
               is_archived: Boolean(booking.isArchived || (booking as any).is_archived || false),
               isArchived: Boolean(booking.isArchived || (booking as any).is_archived || false)
             },

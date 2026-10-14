@@ -285,7 +285,7 @@ export default function Goals() {
 
                 // Exclude cancelled, deleted, or tentative bookings from core goals
                 const status = String(b.status || '').toLowerCase();
-                if (status === 'cancelled' || status === 'deleted' || status === 'tentative') return false;
+                if (status === 'cancelled' || status === 'canceled' || status === 'deleted' || status === 'tentative') return false;
 
                 const d = parseISO(b.date);
                 const from = filterRange.from ? new Date(new Date(filterRange.from).setHours(0,0,0,0)) : null;

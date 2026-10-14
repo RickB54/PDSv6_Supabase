@@ -324,12 +324,14 @@ const BookNow = () => {
   };
 
   // Map bookings for AvailabilityPicker
-  const mappedBookings = allBookings.map(b => ({
-    scheduled_at: b.date,
-    estimated_duration: b.endTime
-      ? Math.max(1, (safeParse(b.endTime).getTime() - safeParse(b.date).getTime()) / (1000 * 60 * 60))
-      : 1
-  }));
+  const mappedBookings = allBookings
+    .filter(b => b.status !== 'cancelled' && (b.status as string) !== 'canceled')
+    .map(b => ({
+      scheduled_at: b.date,
+      estimated_duration: b.endTime
+        ? Math.max(1, (safeParse(b.endTime).getTime() - safeParse(b.date).getTime()) / (1000 * 60 * 60))
+        : 1
+    }));
 
   // Live pricing + meta state
   const [savedPricesLive, setSavedPricesLive] = useState<Record<string, string>>({});

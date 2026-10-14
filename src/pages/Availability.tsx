@@ -116,12 +116,14 @@ const Availability = () => {
         }
     };
 
-    const mappedBookings = (allBookings || []).map(b => ({
-        scheduled_at: b.date,
-        estimated_duration: b.endTime
-            ? (safeParse(b.endTime).getTime() - safeParse(b.date).getTime()) / (1000 * 60 * 60)
-            : getServiceDuration('') || 3
-    }));
+    const mappedBookings = (allBookings || [])
+        .filter(b => b.status !== 'cancelled' && (b.status as string) !== 'canceled')
+        .map(b => ({
+            scheduled_at: b.date,
+            estimated_duration: b.endTime
+                ? (safeParse(b.endTime).getTime() - safeParse(b.date).getTime()) / (1000 * 60 * 60)
+                : getServiceDuration('') || 3
+        }));
 
     const loadAvailability = async () => {
         setLoading(true);

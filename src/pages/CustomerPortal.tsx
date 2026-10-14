@@ -1083,12 +1083,14 @@ const CustomerPortal = () => {
                 selectedTime={availTime}
                 onDateChange={setAvailDate}
                 onTimeChange={setAvailTime}
-                existingBookings={allBookings.map(b => ({
-                  scheduled_at: b.date,
-                  estimated_duration: b.endTime
-                    ? (new Date(b.endTime).getTime() - new Date(b.date).getTime()) / (1000 * 60 * 60)
-                    : 3
-                }))}
+                existingBookings={allBookings
+                  .filter(b => b.status !== 'cancelled' && (b.status as string) !== 'canceled')
+                  .map(b => ({
+                    scheduled_at: b.date,
+                    estimated_duration: b.endTime
+                      ? (new Date(b.endTime).getTime() - new Date(b.date).getTime()) / (1000 * 60 * 60)
+                      : 3
+                  }))}
                 serviceDuration={learnMorePackage ? getServiceDuration(learnMorePackage.id) : 1}
               />
               <p className="text-xs text-zinc-500 italic mt-3 text-center">

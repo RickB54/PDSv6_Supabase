@@ -10,7 +10,7 @@ import { supabase } from "@/lib/supabase";
 
 const b_import = { supabase };
 
-export type BookingStatus = "pending" | "confirmed" | "in_progress" | "done" | "tentative" | "blocked" | "completed" | "cancelled" | "rescheduled";
+export type BookingStatus = "pending" | "confirmed" | "in_progress" | "done" | "tentative" | "blocked" | "completed" | "cancelled" | "canceled" | "rescheduled";
 
 export interface Booking {
   id: string;
@@ -54,6 +54,8 @@ export interface Booking {
   probonoReason?: string; // Legacy
   probonoReasons?: string[];
   probonoPrimaryReason?: string;
+  canceledAt?: string;
+  canceledReason?: string;
 }
 
 const STORAGE_KEY = "bookings";

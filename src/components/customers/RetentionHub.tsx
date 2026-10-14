@@ -81,6 +81,7 @@ export function RetentionHub({ customer, onRefresh, onOpenEstimate, refreshTrigg
 
   const relatedBookings = allBookings
     .filter(b => {
+      if (b.status === 'cancelled' || (b.status as string) === 'canceled') return false;
       if (customer.id) return b.customerId === customer.id;
       return (customer.email && b.customerEmail?.toLowerCase() === customer.email.toLowerCase()) ||
              (b.customer?.toLowerCase() === customer.name?.toLowerCase());
