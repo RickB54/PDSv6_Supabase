@@ -281,7 +281,7 @@ export async function getDayAvailability(
 
         // 2. Check if booked by customer (Half-Day Slot Logic)
         const isBooked = existingBookings.some(booking => {
-            if ((booking as any).status === 'cancelled' || (booking as any).status === 'canceled') return false;
+            if ((booking as any).isArchived || (booking as any).is_archived || (booking as any).status === 'cancelled' || (booking as any).status === 'canceled') return false;
             const bookingDate = safeParse(booking.scheduled_at);
             // Check if booking is on the exact same date
             if (format(bookingDate, 'yyyy-MM-dd') !== date) return false;

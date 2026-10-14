@@ -67,7 +67,7 @@ export async function getUnifiedCalendarEvents(
 
     // 1. Add real bookings
     realBookings.forEach(booking => {
-        if (booking.status === 'cancelled' || (booking.status as string) === 'canceled') return;
+        if (booking.isArchived || (booking as any).is_archived || (booking as any).booking_vehicle?.is_archived) return;
         const bookingDate = parseISO(booking.date);
         if (isWithinInterval(bookingDate, interval)) {
             events.push({

@@ -654,8 +654,21 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   }, [items, allServices, allAddons, coupons]);
 
   const handleArchiveToggle = (booking: Booking) => {
-    update(booking.id, { isArchived: !booking.isArchived });
-    toast.success(booking.isArchived ? "Booking restored" : "Booking archived");
+    if (!booking.isArchived) {
+      update(booking.id, { isArchived: true });
+      toast.success("Booking archived");
+    } else {
+      const customer = customers.find(c => 
+        (booking.customerId && c.id === booking.customerId) ||
+        ((c.full_name || c.name || '').trim().toLowerCase() === (booking.customer || '').trim().toLowerCase())
+      );
+      if (customer?.is_archived) {
+        toast.error("Customer is archived. Restore the customer first.");
+        return;
+      }
+      update(booking.id, { isArchived: false });
+      toast.success("Booking restored");
+    }
   };
 
   // Handlers
@@ -1141,10 +1154,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
     // Get unified events for this day
     return unifiedEvents.filter(event => {
       const isArchived = Boolean((event as any).isArchived || (event as any).is_archived || (event as any).booking_vehicle?.is_archived);
-      const isArchiveVisible = 
-        archiveFilter === 'all' ? true : 
-        archiveFilter === 'archived' ? isArchived : !isArchived;
-      if (!isArchiveVisible) return false;
+      if (isArchived) return false;
       return isSameDay(parseISO(event.date), day);
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
@@ -1153,10 +1163,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
   const getRealBookingsForDay = (day: Date) => {
     return items.filter(b => {
       const isArchived = Boolean(b.isArchived || (b as any).is_archived || (b as any).booking_vehicle?.is_archived);
-      const isArchiveVisible = 
-        archiveFilter === 'all' ? true : 
-        archiveFilter === 'archived' ? isArchived : !isArchived;
-      if (!isArchiveVisible) return false;
+      if (isArchived) return false;
       return isSameDay(parseISO(b.date), day);
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   };
@@ -1517,7 +1524,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
         }]
       };
 
-      if (!isDemoMode) {
+      const isCanceledStatus = formData.status === 'cancelled' || (formData.status as string) === 'canceled';
+
+      if (!isDemoMode && !isCanceledStatus) {
         try {
           const savedCust = await upsertSupabaseCustomer(custPayload);
           if (savedCust?.id) {
@@ -1530,7 +1539,9 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
       }
 
       // Also sync locally for legacy fallback / offline support
-      upsertCustomer({ ...custPayload, id: finalCustomerId }).catch(e => console.error('Local customer sync failed', e)); 
+      if (!isCanceledStatus) {
+        upsertCustomer({ ...custPayload, id: finalCustomerId }).catch(e => console.error('Local customer sync failed', e)); 
+      }
 
       // 2. Prepare Date Objects
       const dateBase = selectedDate || new Date();
@@ -2771,7 +2782,7 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                               title="Click to quick-change status"
                             >
                               <span>{getStatusIcon(formData.status as any)}</span>
-                              <span>{formData.status.replace(/_/g, ' ')}</span>
+                              <span>{(formData.status === 'cancelled' || (formData.status as string) === 'canceled') ? 'Canceled' : formData.status.replace(/_/g, ' ')}</span>
                               <ChevronDown className="w-2.5 h-2.5 opacity-60" />
                             </Badge>
                           </DropdownMenuTrigger>
@@ -2784,13 +2795,24 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                               { val: 'pending', label: '⏳ Pending' },
                               { val: 'in_progress', label: '🔄 In Progress' },
                               { val: 'done', label: '✅ Done' },
-                              { val: 'rescheduled', label: '🔄 Rescheduled' }
+                              { val: 'rescheduled', label: '🔄 Rescheduled' },
+                              { val: 'cancelled', label: '🚫 Canceled' }
                             ].map(st => (
                               <DropdownMenuItem
                                 key={st.val}
-                                className={cn("text-xs cursor-pointer focus:bg-zinc-800", formData.status === st.val && "font-bold text-blue-400")}
-                                onSelect={() => setFormData(prev => ({ ...prev, status: st.val as any }))}
-                                onClick={() => setFormData(prev => ({ ...prev, status: st.val as any }))}
+                                className={cn("text-xs cursor-pointer focus:bg-zinc-800", (formData.status === st.val || (st.val === 'cancelled' && (formData.status as string) === 'canceled')) && "font-bold text-blue-400")}
+                                onSelect={() => {
+                                  setFormData(prev => ({ ...prev, status: st.val as any }));
+                                  if (selectedBooking) {
+                                    update(selectedBooking.id, { status: st.val as any });
+                                  }
+                                }}
+                                onClick={() => {
+                                  setFormData(prev => ({ ...prev, status: st.val as any }));
+                                  if (selectedBooking) {
+                                    update(selectedBooking.id, { status: st.val as any });
+                                  }
+                                }}
                               >
                                 {st.label}
                               </DropdownMenuItem>
@@ -4924,14 +4946,19 @@ export default function BookingsPage({ onModalClose }: { onModalClose?: () => vo
                                               <Button
                                                 size="sm"
                                                 variant="ghost"
-                                                className={cn("h-6 text-[10px] gap-1 ml-1", items.find(i => i.id === event.id)?.isArchived ? "text-green-400 hover:text-green-300" : "text-zinc-500 hover:text-zinc-300")}
+                                                className={cn("h-6 text-[10px] gap-1 ml-1", items.find(i => i.id === event.id)?.isArchived ? "text-amber-500 bg-amber-500/10 hover:bg-amber-500/20" : "text-zinc-500 hover:text-zinc-300")}
                                                 onClick={async (e) => {
                                                   e.stopPropagation();
                                                   const booking = items.find(i => i.id === event.id);
                                                   if (booking) handleArchiveToggle(booking);
                                                 }}
+                                                title={items.find(i => i.id === event.id)?.isArchived ? "Restore" : "Archive"}
                                               >
-                                                <Archive className="h-2.5 w-2.5" /> {items.find(i => i.id === event.id)?.isArchived ? "Restore" : "Archive"}
+                                                {items.find(i => i.id === event.id)?.isArchived ? (
+                                                  <><RotateCcw className="h-2.5 w-2.5" /> Restore</>
+                                                ) : (
+                                                  <><Archive className="h-2.5 w-2.5" /> Archive</>
+                                                )}
                                               </Button>
                                               <Button
                                                 size="sm"

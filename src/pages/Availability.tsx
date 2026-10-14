@@ -117,7 +117,7 @@ const Availability = () => {
     };
 
     const mappedBookings = (allBookings || [])
-        .filter(b => b.status !== 'cancelled' && (b.status as string) !== 'canceled')
+        .filter(b => !b.isArchived && !(b as any).is_archived && b.status !== 'cancelled' && (b.status as string) !== 'canceled')
         .map(b => ({
             scheduled_at: b.date,
             estimated_duration: b.endTime
