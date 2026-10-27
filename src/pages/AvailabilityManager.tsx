@@ -53,7 +53,7 @@ import {
     CalendarConfig
 } from '@/lib/googleCalendar';
 import { getAvailabilityStatus } from '@/lib/hybridAvailability';
-import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, CheckCircle, RefreshCw, Zap, CalendarCheck, HelpCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, X, Plus, Trash2, AlertCircle, Shield, CheckCircle, RefreshCw, Zap, CalendarCheck, HelpCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, parseISO } from 'date-fns';
 import { useBookingsStore } from '@/store/bookings';
 import * as bookingsSvc from '@/services/supabase/bookings';
@@ -153,6 +153,11 @@ export default function AvailabilityManager() {
     const [plannerStartDate, setPlannerStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [plannerDays, setPlannerDays] = useState<Array<{ date: string; morningOpen: boolean; afternoonOpen: boolean }>>([]);
     const [isSavingPlanner, setIsSavingPlanner] = useState(false);
+
+    // Block History filter
+    const [historyFilter, setHistoryFilter] = useState<'this-month' | 'last-month' | 'this-year' | 'all' | 'custom'>('this-month');
+    const [historyCustomStart, setHistoryCustomStart] = useState('');
+    const [historyCustomEnd, setHistoryCustomEnd] = useState('');
 
     // Google Config
     // Calendar navigation
@@ -1041,6 +1046,46 @@ export default function AvailabilityManager() {
 
                                     {/* Custom Multi-Select Calendar */}
                                     <div className="border border-zinc-800 rounded-md p-4 bg-zinc-950">
+                                        {/* Month Navigation Header */}
+                                        <div className="flex items-center justify-between mb-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const prev = new Date(currentDate);
+                                                    prev.setDate(1);
+                                                    prev.setMonth(prev.getMonth() - 1);
+                                                    const thisYear = new Date().getFullYear();
+                                                    if (prev.getFullYear() >= thisYear && prev.getMonth() >= 0) {
+                                                        setCurrentDate(prev);
+                                                    }
+                                                }}
+                                                disabled={currentDate.getMonth() === 0 && currentDate.getFullYear() <= new Date().getFullYear()}
+                                                className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                title="Previous month"
+                                            >
+                                                <ChevronLeft className="w-4 h-4" />
+                                            </button>
+                                            <span className="text-sm font-bold text-white tracking-wide">
+                                                {format(currentDate, 'MMMM yyyy')}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = new Date(currentDate);
+                                                    next.setDate(1);
+                                                    next.setMonth(next.getMonth() + 1);
+                                                    const thisYear = new Date().getFullYear();
+                                                    if (next.getFullYear() <= thisYear && next.getMonth() <= 11) {
+                                                        setCurrentDate(next);
+                                                    }
+                                                }}
+                                                disabled={currentDate.getMonth() === 11 && currentDate.getFullYear() >= new Date().getFullYear()}
+                                                className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                title="Next month"
+                                            >
+                                                <ChevronRight className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                         <div className="grid grid-cols-7 gap-2 mb-2">
                                             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                                                 <div key={day} className="text-center text-xs font-bold text-zinc-500">
@@ -1369,10 +1414,39 @@ export default function AvailabilityManager() {
                             </div>
                         </div>
 
-                        {/* Blocked Slots List */}
+                        {/* Block History */}
                         <Card className="p-6 bg-zinc-900 border-zinc-800">
+                            {/* Header */}
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-black text-white uppercase tracking-tight">Current Blocks ({blockedSlots.length})</h3>
+                                <div className="flex items-center gap-3">
+                                    <h3 className="font-black text-white uppercase tracking-tight">Block History</h3>
+                                    <span className="text-xs text-zinc-500 font-medium">
+                                        {(() => {
+                                            const now = new Date();
+                                            if (historyFilter === 'this-month') {
+                                                const start = format(startOfMonth(now), 'yyyy-MM-dd');
+                                                const end = format(endOfMonth(now), 'yyyy-MM-dd');
+                                                return blockedSlots.filter(s => s.date >= start && s.date <= end).length;
+                                            } else if (historyFilter === 'last-month') {
+                                                const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                                const start = format(startOfMonth(lm), 'yyyy-MM-dd');
+                                                const end = format(endOfMonth(lm), 'yyyy-MM-dd');
+                                                return blockedSlots.filter(s => s.date >= start && s.date <= end).length;
+                                            } else if (historyFilter === 'this-year') {
+                                                const start = `${now.getFullYear()}-01-01`;
+                                                const end = `${now.getFullYear()}-12-31`;
+                                                return blockedSlots.filter(s => s.date >= start && s.date <= end).length;
+                                            } else if (historyFilter === 'custom') {
+                                                return blockedSlots.filter(s => {
+                                                    if (historyCustomStart && s.date < historyCustomStart) return false;
+                                                    if (historyCustomEnd && s.date > historyCustomEnd) return false;
+                                                    return true;
+                                                }).length;
+                                            }
+                                            return blockedSlots.length;
+                                        })()} shown
+                                    </span>
+                                </div>
                                 <Button
                                     size="sm"
                                     variant="outline"
@@ -1385,42 +1459,123 @@ export default function AvailabilityManager() {
                                 </Button>
                             </div>
 
-                            {blockedSlots.length === 0 ? (
-                                <p className="text-zinc-500 text-center py-8">No blocked time slots</p>
-                            ) : (
-                                <div className="space-y-2 max-h-96 overflow-y-auto">
-                                    {blockedSlots.map((slot) => (
-                                        <div
-                                            key={slot.id}
-                                            className="flex items-center justify-between p-3 bg-zinc-950 rounded-lg border border-zinc-800"
+                            {/* Filter Bar */}
+                            <div className="mb-4 space-y-3">
+                                <div className="flex flex-wrap gap-2">
+                                    {([
+                                        { key: 'this-month', label: `${format(new Date(), 'MMMM')}` },
+                                        { key: 'last-month', label: `${format(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1), 'MMMM')}` },
+                                        { key: 'this-year', label: `${new Date().getFullYear()}` },
+                                        { key: 'all', label: 'All Time' },
+                                        { key: 'custom', label: 'Custom Range' },
+                                    ] as const).map(({ key, label }) => (
+                                        <button
+                                            key={key}
+                                            type="button"
+                                            onClick={() => setHistoryFilter(key)}
+                                            className={cn(
+                                                'px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all border',
+                                                historyFilter === key
+                                                    ? 'bg-red-700 border-red-600 text-white'
+                                                    : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600'
+                                            )}
                                         >
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="font-bold text-white">{slot.date}</span>
-                                                    {slot.startTime && slot.endTime ? (
-                                                        <span className="text-sm text-zinc-400">
-                                                            {formatTimeAMPM(slot.startTime)} - {formatTimeAMPM(slot.endTime)}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-sm text-blue-400 font-bold">FULL DAY</span>
-                                                    )}
-                                                </div>
-                                                {slot.reason && (
-                                                    <p className="text-xs text-zinc-500 mt-1">{slot.reason}</p>
-                                                )}
-                                            </div>
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="text-zinc-500 hover:text-red-500"
-                                                onClick={() => handleUnblockSlot(slot.id)}
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </Button>
-                                        </div>
+                                            {label}
+                                        </button>
                                     ))}
                                 </div>
-                            )}
+                                {historyFilter === 'custom' && (
+                                    <div className="flex items-center gap-3 animate-in slide-in-from-top-1 duration-200">
+                                        <div className="flex-1 space-y-1">
+                                            <label className="text-[10px] text-zinc-500 uppercase font-bold">From</label>
+                                            <Input
+                                                type="date"
+                                                className="bg-zinc-950 border-zinc-800 text-white text-xs h-8"
+                                                value={historyCustomStart}
+                                                onChange={e => setHistoryCustomStart(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="flex-1 space-y-1">
+                                            <label className="text-[10px] text-zinc-500 uppercase font-bold">To</label>
+                                            <Input
+                                                type="date"
+                                                className="bg-zinc-950 border-zinc-800 text-white text-xs h-8"
+                                                value={historyCustomEnd}
+                                                onChange={e => setHistoryCustomEnd(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Filtered Slot List */}
+                            {(() => {
+                                const now = new Date();
+                                let filtered = blockedSlots;
+                                if (historyFilter === 'this-month') {
+                                    const start = format(startOfMonth(now), 'yyyy-MM-dd');
+                                    const end = format(endOfMonth(now), 'yyyy-MM-dd');
+                                    filtered = blockedSlots.filter(s => s.date >= start && s.date <= end);
+                                } else if (historyFilter === 'last-month') {
+                                    const lm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                                    const start = format(startOfMonth(lm), 'yyyy-MM-dd');
+                                    const end = format(endOfMonth(lm), 'yyyy-MM-dd');
+                                    filtered = blockedSlots.filter(s => s.date >= start && s.date <= end);
+                                } else if (historyFilter === 'this-year') {
+                                    const start = `${now.getFullYear()}-01-01`;
+                                    const end = `${now.getFullYear()}-12-31`;
+                                    filtered = blockedSlots.filter(s => s.date >= start && s.date <= end);
+                                } else if (historyFilter === 'custom') {
+                                    filtered = blockedSlots.filter(s => {
+                                        if (historyCustomStart && s.date < historyCustomStart) return false;
+                                        if (historyCustomEnd && s.date > historyCustomEnd) return false;
+                                        return true;
+                                    });
+                                }
+
+                                if (filtered.length === 0) {
+                                    return (
+                                        <p className="text-zinc-500 text-center py-8">
+                                            {blockedSlots.length === 0 ? 'No blocked time slots' : 'No blocks found for this period'}
+                                        </p>
+                                    );
+                                }
+
+                                return (
+                                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                                        {filtered.map((slot) => (
+                                            <div
+                                                key={slot.id}
+                                                className="flex items-center justify-between p-3 bg-zinc-950 rounded-lg border border-zinc-800"
+                                            >
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="font-bold text-white">{slot.date}</span>
+                                                        {slot.startTime && slot.endTime ? (
+                                                            <span className="text-sm text-zinc-400">
+                                                                {formatTimeAMPM(slot.startTime)} - {formatTimeAMPM(slot.endTime)}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-sm text-blue-400 font-bold">FULL DAY</span>
+                                                        )}
+                                                    </div>
+                                                    {slot.reason && (
+                                                        <p className="text-xs text-zinc-500 mt-1">{slot.reason}</p>
+                                                    )}
+                                                </div>
+                                                <Button
+                                                    size="icon"
+                                                    variant="ghost"
+                                                    className="text-zinc-500 hover:text-red-500"
+                                                    onClick={() => handleUnblockSlot(slot.id)}
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
                         </Card>
                     </TabsContent>
 
