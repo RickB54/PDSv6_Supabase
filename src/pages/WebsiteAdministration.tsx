@@ -74,9 +74,9 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Eye, EyeOff } from 'lucide-react';
 
-function SortableTestimonialRow({ t, onEdit, onDelete }: any) {
+function SortableTestimonialRow({ t, onEdit, onDelete, onToggleHidden }: any) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: t.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -84,21 +84,55 @@ function SortableTestimonialRow({ t, onEdit, onDelete }: any) {
   };
 
   return (
-    <TableRow ref={setNodeRef} style={style} className="border-zinc-800 hover:bg-zinc-900/20 group">
+    <TableRow ref={setNodeRef} style={style} className={`border-zinc-800 group transition-all ${t.is_hidden ? 'opacity-40 bg-zinc-950/60 hover:opacity-75' : 'hover:bg-zinc-900/20'}`}>
       <TableCell className="w-10 px-2">
         <div {...attributes} {...listeners} className="cursor-grab hover:text-white text-zinc-600 active:cursor-grabbing p-1">
           <GripVertical className="h-4 w-4" />
         </div>
       </TableCell>
-      <TableCell className="text-white font-bold text-xs max-w-[150px] truncate">{t.name}</TableCell>
+      <TableCell className="text-white font-bold text-xs max-w-[150px]">
+        <div className="flex flex-col gap-1 items-start">
+          <span className="truncate w-full">{t.name}</span>
+          {t.is_hidden && (
+            <Badge variant="outline" className="border-amber-600/50 bg-amber-950/40 text-amber-400 text-[9px] font-black uppercase tracking-widest px-1.5 py-0">
+              Hidden
+            </Badge>
+          )}
+        </div>
+      </TableCell>
       <TableCell className="text-zinc-400 text-xs italic max-w-[300px] truncate">{t.quote}</TableCell>
-      <TableCell className="text-right flex justify-end gap-1">
-        <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-white hover:bg-zinc-800" onClick={() => onEdit(t)}>
-          <Pencil className="h-3 w-3" />
-        </Button>
-        <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-red-500 hover:bg-red-950/20" onClick={() => onDelete(t)}>
-          <Trash2 className="h-3 w-3" />
-        </Button>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            className={`h-7 px-2 text-[10px] font-bold uppercase transition-colors ${
+              t.is_hidden 
+                ? 'border-amber-600/50 text-amber-400 hover:bg-amber-950/30 hover:text-amber-300' 
+                : 'border-zinc-700 text-zinc-400 hover:bg-zinc-800 hover:text-white'
+            }`}
+            title={t.is_hidden ? 'Show testimonial on public website' : 'Hide testimonial from public website'}
+            onClick={() => onToggleHidden(t)}
+          >
+            {t.is_hidden ? (
+              <>
+                <Eye className="h-3 w-3 mr-1" />
+                Show
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-3 w-3 mr-1" />
+                Hide
+              </>
+            )}
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-white hover:bg-zinc-800" onClick={() => onEdit(t)}>
+            <Pencil className="h-3 w-3" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-500 hover:text-red-500 hover:bg-red-950/20" onClick={() => onDelete(t)}>
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -713,7 +747,7 @@ export default function WebsiteAdministration() {
 
     // 5. TESTIMONIALS
     try {
-      const supaTest = await contentService.getTestimonials();
+      const supaTest = await contentService.getAllTestimonials();
       if (supaTest.length > 0) {
         setTestimonials(supaTest);
       } else {
@@ -1066,7 +1100,7 @@ export default function WebsiteAdministration() {
                 <HelpCircle className="h-3 w-3 text-zinc-600 hover:text-blue-400 transition-colors" onClick={(e) => { e.stopPropagation(); window.dispatchEvent(new CustomEvent('open-help', { detail: { topicId: 'testimonials-management', role: 'admin' }})); }} />
               </div>
               <h3 className="text-lg font-black text-white uppercase italic tracking-tighter">
-                {homeData.showTestimonials ? `${testimonials.length} ACTIVE` : 'INACTIVE'}
+                {homeData.showTestimonials ? `${testimonials.filter((t: any) => !t.is_hidden).length} ACTIVE` : 'INACTIVE'}
               </h3>
             </div>
           </Card>
@@ -1895,7 +1929,7 @@ export default function WebsiteAdministration() {
                                 <TableHead className="w-10 px-2"></TableHead>
                                 <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Customer Name</TableHead>
                                 <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Review / Quote</TableHead>
-                                <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest w-20 text-right">Actions</TableHead>
+                                <TableHead className="text-[10px] text-zinc-500 uppercase font-black tracking-widest w-36 text-right">Actions</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody className="bg-zinc-950/40">
@@ -1905,11 +1939,20 @@ export default function WebsiteAdministration() {
                                     key={t.id} 
                                     t={t} 
                                     onEdit={(t: any) => setEditTestimonial(t)}
+                                    onToggleHidden={async (t: any) => {
+                                      if (!ensureNotDemo('visibility toggle')) return;
+                                      const next = !t.is_hidden;
+                                      await contentService.toggleTestimonialHidden(t.id, next);
+                                      const updated = await contentService.getAllTestimonials();
+                                      setTestimonials(Array.isArray(updated) ? updated : []);
+                                      notifyChange('home');
+                                      toast({ title: next ? 'Testimonial hidden' : 'Testimonial shown' });
+                                    }}
                                     onDelete={async (t: any) => {
                                       if (!ensureNotDemo("deletion")) return;
                                       if (!confirm(`Delete testimonial from ${t.name}?`)) return;
                                       await contentService.deleteTestimonial(t.id);
-                                      const updated = await contentService.getTestimonials();
+                                      const updated = await contentService.getAllTestimonials();
                                       setTestimonials(Array.isArray(updated) ? updated : []);
                                       notifyChange('home');
                                       toast({ title: 'Testimonial deleted' });

@@ -44,6 +44,7 @@ export interface SupaTestimonial {
     quote: string;
     role?: string;
     sort_order?: number;
+    is_hidden?: boolean;
 }
 
 export interface SupaAboutSection {
@@ -112,27 +113,100 @@ export const contentService = {
     },
 
     // TESTIMONIALS
+    // Public: returns only visible (non-hidden) testimonials
     getTestimonials: async (): Promise<SupaTestimonial[]> => {
+        const all = await contentService.getAllTestimonials();
+        return all.filter((t: SupaTestimonial) => !t.is_hidden);
+    },
+    // Admin: returns ALL testimonials including hidden ones, hydrating is_hidden from DB or fallback meta
+    getAllTestimonials: async (): Promise<SupaTestimonial[]> => {
         const { data, error } = await supabase.from('content_testimonials').select('*').order('sort_order', { ascending: true }).order('created_at', { ascending: false });
-        if (error) { console.error('contentService.getTestimonials', error); return []; }
-        return data || [];
+        if (error) { console.error('contentService.getAllTestimonials', error); return []; }
+        const list = data || [];
+        const hasColumnInDb = list.some((t: any) => t.is_hidden !== undefined);
+        if (hasColumnInDb) {
+            return list.map((t: any) => ({ ...t, is_hidden: Boolean(t.is_hidden) }));
+        }
+        try {
+            const meta = await contentService.getServiceMeta('testimonials_hidden_state');
+            const hiddenMap: Record<string, boolean> = meta?.meta?.hiddenMap || {};
+            return list.map((t: any) => ({
+                ...t,
+                is_hidden: Boolean(hiddenMap[t.id])
+            }));
+        } catch {
+            return list.map((t: any) => ({ ...t, is_hidden: false }));
+        }
     },
     upsertTestimonial: async (t: SupaTestimonial) => {
         if (blockDemo('testimonial update')) return null;
         if (!t.id) {
             const { id, ...rest } = t;
-            const { data, error } = await supabase.from('content_testimonials').insert(rest).select().single();
-            if (error) throw error;
+            const { data, error } = await supabase.from('content_testimonials').insert(t).select().single();
+            if (error) {
+                const { is_hidden, ...cleanRest } = rest as any;
+                const { data: retryData, error: retryErr } = await supabase.from('content_testimonials').insert(cleanRest).select().single();
+                if (retryErr) throw retryErr;
+                if (is_hidden && retryData?.id) {
+                    await contentService.toggleTestimonialHidden(retryData.id, true);
+                }
+                return retryData;
+            }
             return data;
         }
         const { data, error } = await supabase.from('content_testimonials').upsert(t).select().single();
-        if (error) throw error;
+        if (error) {
+            const { is_hidden, ...cleanT } = t as any;
+            const { data: retryData, error: retryErr } = await supabase.from('content_testimonials').upsert(cleanT).select().single();
+            if (retryErr) throw retryErr;
+            if (is_hidden !== undefined && t.id) {
+                await contentService.toggleTestimonialHidden(t.id, is_hidden);
+            }
+            return retryData;
+        }
         return data;
+    },
+    toggleTestimonialHidden: async (id: string, isHidden: boolean): Promise<void> => {
+        if (blockDemo('testimonial visibility toggle')) return;
+        const { error } = await supabase.from('content_testimonials').update({ is_hidden: isHidden }).eq('id', id);
+        if (!error) {
+            try {
+                const meta = await contentService.getServiceMeta('testimonials_hidden_state');
+                if (meta?.meta?.hiddenMap && meta.meta.hiddenMap[id] !== undefined) {
+                    delete meta.meta.hiddenMap[id];
+                    await contentService.upsertServiceMeta({ key: 'testimonials_hidden_state', title: 'Testimonials Hidden State', meta: meta.meta });
+                }
+            } catch {}
+            return;
+        }
+        const meta = await contentService.getServiceMeta('testimonials_hidden_state');
+        const hiddenMap: Record<string, boolean> = { ...(meta?.meta?.hiddenMap || {}) };
+        if (isHidden) {
+            hiddenMap[id] = true;
+        } else {
+            delete hiddenMap[id];
+        }
+        await contentService.upsertServiceMeta({
+            key: 'testimonials_hidden_state',
+            title: 'Testimonials Hidden State',
+            meta: { hiddenMap }
+        });
     },
     deleteTestimonial: async (id: string) => {
         if (blockDemo('testimonial deletion')) return;
         const { error } = await supabase.from('content_testimonials').delete().eq('id', id);
         if (error) throw error;
+        try {
+            const meta = await contentService.getServiceMeta('testimonials_hidden_state');
+            if (meta?.meta?.hiddenMap && meta.meta.hiddenMap[id]) {
+                delete meta.meta.hiddenMap[id];
+                await contentService.upsertServiceMeta({
+                    key: 'testimonials_hidden_state',
+                    title: 'Testimonials Hidden State',
+                    meta: meta.meta
+                });
+            }
+        } catch {}
     },
 
     // ABOUT SECTIONS

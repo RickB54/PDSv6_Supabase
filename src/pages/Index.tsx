@@ -69,6 +69,7 @@ import { contentService } from "@/lib/content";
 
 const Index = () => {
   const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [homeData, setHomeData] = useState<any>({
     heroTitle: 'PRIME AUTO DETAIL',
     heroSubtitle: 'Premium auto detailing services that exceed expectations',
@@ -105,7 +106,9 @@ const Index = () => {
     { name: "MICHAEL R.", quote: "Prime Auto Detail transformed my car! The attention to detail is incredible. My Tesla looks brand new again. Highly recommend!", rating: 5 }
   ];
 
-  const displayTestimonials = testimonials.length > 0 ? testimonials : DEFAULT_TESTIMONIALS;
+  const displayTestimonials = isLoaded 
+    ? testimonials 
+    : (testimonials.length > 0 ? testimonials : DEFAULT_TESTIMONIALS);
 
   useEffect(() => {
     const load = async () => {
@@ -115,6 +118,7 @@ const Index = () => {
           contentService.getServiceMeta('home_content')
         ]);
         setTestimonials(t);
+        setIsLoaded(true);
         if (meta && meta.meta) {
           setHomeData((prev: any) => ({ ...prev, ...meta.meta }));
         }
@@ -372,7 +376,7 @@ const Index = () => {
       </section>
 
       {/* SECTION 6: What Our Customers Say (Testimonials) */}
-      {homeData.showTestimonials !== false && (
+      {homeData.showTestimonials !== false && displayTestimonials.length > 0 && (
         <section className="py-24 bg-white border-t border-zinc-100">
           <div className="container mx-auto px-4 max-w-7xl">
             <div className="text-center space-y-8">
