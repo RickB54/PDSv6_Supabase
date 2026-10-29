@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { useBookingsStore } from "@/store/bookings";
@@ -236,6 +236,20 @@ export default function FollowUpCenter() {
 
   const filteredOverdue = applySort(followUpStatus.overdue.filter(c => matchSearch(c.customer)), sortOverdue);
   const filteredDueSoon = applySort([...followUpStatus.dueThisWeek, ...followUpStatus.dueThisMonth].filter(c => matchSearch(c.customer)), sortDueSoon);
+
+  const filteredOverview = useMemo(() => {
+    if (!followUpStatus.allWithStatus) return [];
+    return followUpStatus.allWithStatus
+      .filter((item: any) => {
+        const c = item.customer;
+        if (!c) return false;
+        if ((c.type || 'customer').toLowerCase() === 'prospect') return false;
+        if (c.is_archived) return false;
+        if ((c.notes || '').includes('[NO_FOLLOWUP]')) return false;
+        return matchSearch(c);
+      })
+      .sort((a: any, b: any) => a.daysUntilDue - b.daysUntilDue);
+  }, [followUpStatus.allWithStatus, searchLower]);
   
   let currentProspectsList = showLost ? lostProspects : prospects;
   const filteredProspects = applySort(currentProspectsList.filter(matchSearch).map(p => ({ customer: p, daysSince: 0 })), sortProspects);
@@ -348,6 +362,40 @@ export default function FollowUpCenter() {
                 <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Last Value</span>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs font-bold text-emerald-400">${item.lastServiceValue.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+
+            {!isProspect && item.thresholdDate && (
+              <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
+                <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Due Date</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <Clock className="h-3.5 w-3.5 text-amber-500" />
+                  <span className="text-xs font-bold text-zinc-300">{format(new Date(item.thresholdDate), 'MMM d, yyyy')}</span>
+                </div>
+              </div>
+            )}
+
+            {!isProspect && typeof item.daysUntilDue === 'number' && (
+              <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
+                <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Days Left / Overdue</span>
+                <div className="flex items-center gap-2 mt-1">
+                  {item.daysUntilDue < 0 ? (
+                    <span className="text-xs font-black text-red-400">{Math.abs(item.daysUntilDue)}d Overdue</span>
+                  ) : (
+                    <span className="text-xs font-black text-emerald-400">{item.daysUntilDue}d Left</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!isProspect && item.detectedTier && (
+              <div className="bg-zinc-950/50 px-4 py-2 rounded-xl border border-zinc-800/50 flex flex-col">
+                <span className="text-[9px] uppercase font-black text-zinc-600 tracking-widest">Tier</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-bold text-blue-400 uppercase">
+                    {item.detectedTier === 'ceramic' ? '12M Ceramic' : item.detectedTier === 'fullDetail' ? '6M Full Detail' : '3M Maint'}
+                  </span>
                 </div>
               </div>
             )}
@@ -659,7 +707,96 @@ export default function FollowUpCenter() {
           )}
         </div>
 
-        <Accordion type="multiple" defaultValue={["overdue", "dueSoon", "prospects", "abandoned"]} className="space-y-6">
+        <Accordion type="multiple" defaultValue={["overview", "overdue", "dueSoon", "prospects", "abandoned"]} className="space-y-6">
+          {/* Overview Section */}
+          <AccordionItem value="overview" className="border-none bg-transparent">
+            <AccordionTrigger className="hover:no-underline py-0 mb-4">
+              <div className="flex items-center justify-between w-full pr-4">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-black uppercase tracking-tighter text-blue-400 flex items-center gap-2">
+                    <Clock className="h-6 w-6 text-blue-400" />
+                    Follow-Up Timer Overview ({filteredOverview.length})
+                  </h2>
+                </div>
+                <Badge variant="outline" className="text-[9px] font-black uppercase text-blue-400 border-blue-500/30 bg-blue-500/10">
+                  Soonest-Due First
+                </Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-2 pb-6">
+              {filteredOverview.length > 0 ? (
+                <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-zinc-800 bg-zinc-950/70 text-[9px] font-black uppercase tracking-wider text-zinc-500">
+                          <th className="py-3 px-4">Customer Name</th>
+                          <th className="py-3 px-4">Tier</th>
+                          <th className="py-3 px-4">Last Counting Activity</th>
+                          <th className="py-3 px-4">Due Date</th>
+                          <th className="py-3 px-4">Days Left / Overdue</th>
+                          <th className="py-3 px-4 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-800/60 text-xs font-medium text-zinc-300">
+                        {filteredOverview.map((item: any) => {
+                          const cust = item.customer;
+                          const isOverdue = item.daysUntilDue < 0;
+                          const tierDisplay = item.detectedTier === 'ceramic' ? '12M Ceramic' 
+                            : item.detectedTier === 'fullDetail' ? '6M Full Detail' 
+                            : item.detectedTier === 'maintenance' ? '3M Maintenance' : 'None';
+                          
+                          return (
+                            <tr key={cust.id} className="hover:bg-zinc-800/30 transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-zinc-200">{cust.name}</div>
+                                <div className="text-[10px] text-zinc-500">{cust.phone || cust.email || '—'}</div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase">{tierDisplay}</span>
+                              </td>
+                              <td className="py-3 px-4 text-zinc-400">
+                                {item.lastActivityDate ? format(new Date(item.lastActivityDate), 'MMM d, yyyy') : '—'}
+                              </td>
+                              <td className="py-3 px-4 text-zinc-300 font-semibold">
+                                {item.thresholdDate ? format(new Date(item.thresholdDate), 'MMM d, yyyy') : '—'}
+                              </td>
+                              <td className="py-3 px-4">
+                                {isOverdue ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-500/10 text-red-400 border border-red-500/30">
+                                    {Math.abs(item.daysUntilDue)}d Overdue
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                                    {item.daysUntilDue}d Left
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleViewProfile(cust.id, cust.name)}
+                                  className="h-7 text-[10px] font-black uppercase text-blue-400 hover:text-white hover:bg-blue-600/20 px-2"
+                                >
+                                  Profile
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-zinc-900/20 rounded-2xl border border-zinc-800 border-dashed">
+                  <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">No customer follow-up timers found.</p>
+                </div>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+
           {/* Overdue Section */}
           <AccordionItem value="overdue" className="border-none bg-transparent">
             <AccordionTrigger className="hover:no-underline py-0 mb-4">

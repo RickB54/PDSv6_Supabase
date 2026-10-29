@@ -1563,6 +1563,185 @@ const SearchCustomer = () => {
                             </div>
 
                             <div className="space-y-6">
+                               {/* Follow-Up Timer Box (Customers Only) */}
+                               {customer.type !== 'prospect' && (() => {
+                                 const statusItem = followUpStatus.allWithStatus?.find((c: any) => c.customer.id === customer.id);
+                                 const alertsDisabled = (customer.notes || '').includes('[NO_FOLLOWUP]');
+                                 const curMonth = new Date().getMonth();
+                                 const isOffSeason = curMonth === 11 || curMonth === 0 || curMonth === 1;
+
+                                 const tierDisplay = statusItem?.detectedTier === 'ceramic' ? '12M Tier (Ceramic)'
+                                   : statusItem?.detectedTier === 'fullDetail' ? '6M Tier (Full Detail)'
+                                   : statusItem?.detectedTier === 'maintenance' ? '3M Tier (Maintenance)'
+                                   : 'None';
+
+                                 const dueDateStr = statusItem?.thresholdDate ? format(new Date(statusItem.thresholdDate), 'MMM d, yyyy') : 'N/A';
+
+                                 let countdownStr = 'N/A';
+                                 if (statusItem && typeof statusItem.daysUntilDue === 'number') {
+                                   if (statusItem.daysUntilDue < 0) {
+                                     const wks = Math.abs(Math.floor(statusItem.daysUntilDue / 7));
+                                     const days = Math.abs(statusItem.daysUntilDue);
+                                     countdownStr = wks > 0 ? `${wks} wk${wks === 1 ? '' : 's'} overdue` : `${days}d overdue`;
+                                   } else {
+                                     countdownStr = `${statusItem.daysUntilDue} day${statusItem.daysUntilDue === 1 ? '' : 's'} left`;
+                                   }
+                                 }
+
+                                 const targetTime = statusItem?.lastActivityDate ? new Date(statusItem.lastActivityDate).getTime() : 0;
+                                 let lastActivityType = 'Profile Inception';
+                                 if (targetTime > 0) {
+                                   const matchingBooking = allBookings.find(b => {
+                                     if (b.customerId !== customer.id && b.customerEmail?.toLowerCase() !== customer.email?.toLowerCase()) return false;
+                                     if (b.status !== 'completed' && b.status !== 'done') return false;
+                                     const bt = new Date(b.date || (b as any).createdAt || (b as any).created_at).getTime();
+                                     return Math.abs(bt - targetTime) < 120000;
+                                   });
+                                   if (matchingBooking) {
+                                     lastActivityType = `Booking: ${matchingBooking.title || 'Completed Detail'}`;
+                                   } else {
+                                     const matchingEng = (followUpStatus.engagements || []).find((e: any) => {
+                                       if (e.customer_id !== customer.id && e.customer_email?.toLowerCase() !== customer.email?.toLowerCase()) return false;
+                                       const et = new Date(e.created_at || e.timestamp).getTime();
+                                       return Math.abs(et - targetTime) < 120000;
+                                     });
+                                     if (matchingEng) {
+                                       lastActivityType = matchingEng.type === 'call_in' ? 'Incoming Call'
+                                         : matchingEng.type === 'call_out' ? 'Outgoing Call'
+                                         : matchingEng.type === 'text' ? 'Text Message'
+                                         : matchingEng.type === 'email' ? 'Email Sent'
+                                         : matchingEng.type === 'attempt' ? 'Contact Attempt'
+                                         : 'Activity Note';
+                                     } else if (customer.notes && customer.updated_at && Math.abs(new Date(customer.updated_at).getTime() - targetTime) < 120000) {
+                                       lastActivityType = 'Profile Note';
+                                     } else {
+                                       lastActivityType = 'Direct Contact / Record';
+                                     }
+                                   }
+                                 }
+
+                                 const lastActivityDateStr = statusItem?.lastActivityDate ? format(new Date(statusItem.lastActivityDate), 'MMM d, yyyy') : 'N/A';
+
+                                 const recentActivities = (followUpStatus.engagements || [])
+                                   .filter((e: any) => 
+                                     e.customer_id === customer.id ||
+                                     (customer.email && e.customer_email?.toLowerCase() === customer.email.toLowerCase()) ||
+                                     (customer.name && e.customer_name?.toLowerCase() === customer.name.toLowerCase())
+                                   )
+                                   .sort((a: any, b: any) => new Date(b.created_at || b.timestamp).getTime() - new Date(a.created_at || a.timestamp).getTime())
+                                   .slice(0, 3);
+
+                                 return (
+                                   <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4 h-fit">
+                                     <div className="flex items-center justify-between mb-1">
+                                       <h4 className="text-zinc-400 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                                         <Clock className="h-3.5 w-3.5 text-amber-400" /> Follow-Up Timer
+                                       </h4>
+                                       <div className="flex items-center gap-1.5">
+                                         <Badge 
+                                           variant="outline" 
+                                           className={cn(
+                                             "text-[9px] font-black uppercase tracking-tight px-2 py-0.5",
+                                             alertsDisabled 
+                                               ? "bg-zinc-900 text-zinc-400 border-zinc-700" 
+                                               : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                                           )}
+                                         >
+                                           <Bell className="w-2.5 h-2.5 mr-1" /> Alerts {alertsDisabled ? 'OFF' : 'ON'}
+                                         </Badge>
+                                         {isOffSeason && (
+                                           <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tight bg-blue-500/10 text-blue-400 border-blue-500/30 px-2 py-0.5">
+                                             Winter Silenced
+                                           </Badge>
+                                         )}
+                                       </div>
+                                     </div>
+
+                                     <div className="grid grid-cols-2 gap-2 text-xs">
+                                       <div className="bg-zinc-900/50 p-2.5 rounded-xl border border-zinc-800/50">
+                                         <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest block mb-0.5">Service Tier</span>
+                                         <span className="text-zinc-200 font-bold">{tierDisplay}</span>
+                                       </div>
+
+                                       <div className="bg-zinc-900/50 p-2.5 rounded-xl border border-zinc-800/50">
+                                         <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest block mb-0.5">Due Date</span>
+                                         <span className="text-zinc-200 font-bold">{dueDateStr}</span>
+                                       </div>
+
+                                       <div className="bg-zinc-900/50 p-2.5 rounded-xl border border-zinc-800/50">
+                                         <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest block mb-0.5">Days Left / Overdue</span>
+                                         <span className={cn(
+                                           "font-black text-xs",
+                                           statusItem && statusItem.daysUntilDue < 0 ? "text-red-400" : "text-emerald-400"
+                                         )}>
+                                           {countdownStr}
+                                         </span>
+                                       </div>
+
+                                       <div className="bg-zinc-900/50 p-2.5 rounded-xl border border-zinc-800/50">
+                                         <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest block mb-0.5">Seasonal Status</span>
+                                         <span className="text-zinc-300 font-bold text-[11px]">{isOffSeason ? 'Silenced (Dec–Feb)' : 'Active (Not Silenced)'}</span>
+                                       </div>
+
+                                       <div className="bg-zinc-900/50 p-2.5 rounded-xl border border-zinc-800/50 col-span-2">
+                                         <span className="text-[9px] text-zinc-500 font-black uppercase tracking-widest block mb-0.5">Last Counting Activity</span>
+                                         <div className="flex items-center justify-between text-zinc-200 font-bold">
+                                           <span>{lastActivityDateStr}</span>
+                                           <span className="text-[10px] text-blue-400 font-semibold">{lastActivityType}</span>
+                                         </div>
+                                       </div>
+                                     </div>
+
+                                     <div className="pt-2 border-t border-zinc-800/60">
+                                       <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500 block mb-2">
+                                         Recent Activities (Last 3)
+                                       </span>
+                                       {recentActivities.length > 0 ? (
+                                         <div className="space-y-1.5">
+                                           {recentActivities.map((act: any, aIdx: number) => {
+                                             const counts = act.resets_followup !== false && !(act.note || '').includes('[NO_TIMER_RESET]');
+                                             const clean = (act.note || '').replace(/\[NO_TIMER_RESET\]/g, '').trim();
+                                             const actTime = act.created_at || act.timestamp || new Date().toISOString();
+                                             const actTypeLabel = act.type === 'call_in' ? 'Call In'
+                                               : act.type === 'call_out' ? 'Call Out'
+                                               : act.type === 'text' ? 'Text'
+                                               : act.type === 'email' ? 'Email'
+                                               : 'Note';
+
+                                             return (
+                                               <div key={act.id || aIdx} className="bg-zinc-900/40 p-2 rounded-xl border border-zinc-800/40 flex items-center justify-between gap-2">
+                                                 <div className="min-w-0 flex-1">
+                                                   <div className="flex items-center gap-1.5 text-[10px]">
+                                                     <span className="font-bold text-zinc-300 uppercase">{actTypeLabel}</span>
+                                                     <span className="text-zinc-600">•</span>
+                                                     <span className="text-zinc-500 font-medium">{format(new Date(actTime), 'MMM d, yyyy')}</span>
+                                                   </div>
+                                                   {clean && (
+                                                     <p className="text-[10px] text-zinc-400 italic truncate mt-0.5">"{clean}"</p>
+                                                   )}
+                                                 </div>
+                                                 <span className={cn(
+                                                   "text-[8px] font-black uppercase px-2 py-0.5 rounded shrink-0 border",
+                                                   counts 
+                                                     ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" 
+                                                     : "bg-zinc-800 text-zinc-400 border-zinc-700/60"
+                                                 )}>
+                                                   {counts ? "Counts" : "Doesn't count"}
+                                                 </span>
+                                               </div>
+                                             );
+                                           })}
+                                         </div>
+                                       ) : (
+                                         <div className="py-2 text-center text-[10px] text-zinc-600 italic">
+                                           No recent activity logged.
+                                         </div>
+                                       )}
+                                     </div>
+                                   </section>
+                                 );
+                               })()}
+
                                {/* Booking Lifecycle Section relocated to side of timeline for wider utility */}
                                <section className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-800/50 space-y-4 h-fit">
                                   <div className="flex items-center justify-between mb-2">
