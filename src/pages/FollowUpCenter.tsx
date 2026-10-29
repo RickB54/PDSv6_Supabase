@@ -248,14 +248,14 @@ export default function FollowUpCenter() {
 
   const getLastJobInfo = (customerId?: string, customerName?: string, customerEmail?: string) => {
     const custBookings = allBookings
-      .filter(b => 
+      .filter(b =>
         (customerId && b.customerId === customerId) ||
         (customerEmail && b.customerEmail?.toLowerCase() === customerEmail.toLowerCase()) ||
         (customerName && b.customer?.toLowerCase() === customerName.toLowerCase())
       )
-      .filter(b => b.status === 'completed' || b.status === 'done')
+      .filter(b => b.status !== 'cancelled' && b.status !== 'canceled' && b.status !== 'blocked')
       .sort((a, b) => new Date(b.date || (b as any).created_at).getTime() - new Date(a.date || (a as any).created_at).getTime());
-    
+
     if (custBookings.length === 0) return { title: '—', value: 0 };
     const latest = custBookings[0];
     const priceNum = latest.price ? parseFloat(String(latest.price).replace(/[^0-9.]/g, '')) : 0;
