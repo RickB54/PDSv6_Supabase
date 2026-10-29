@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/PageHeader";
 import { useBookingsStore } from "@/store/bookings";
 import { useCouponsStore } from "@/store/coupons";
 import { getSupabaseCustomers, Customer, supabase, upsertSupabaseCustomer } from "@/lib/supa-data";
 import { RetentionHub } from "@/components/customers/RetentionHub";
-import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff, HelpCircle, PenTool, CheckCircle2, Ghost, Bell } from "lucide-react";
+import { Search, Clock, ArrowRight, Settings, X, ExternalLink, CalendarDays, Zap, FileText, CheckCircle, Ticket, Mail, Calendar, Trash2, UserPlus, EyeOff, HelpCircle, PenTool, CheckCircle2, Ghost, Bell, ArrowUpDown, ArrowUp, ArrowDown, RotateCcw, Star } from "lucide-react";
 import { format, isSameMonth } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,14 @@ export default function FollowUpCenter() {
   const [sortOverdue, setSortOverdue] = useState("most_overdue");
   const [sortDueSoon, setSortDueSoon] = useState("most_overdue");
   const [sortProspects, setSortProspects] = useState("alphabetical");
+
+  // Overview Table Filter & Sort States
+  const [overviewDueWindow, setOverviewDueWindow] = useState<string>("all");
+  const [overviewTier, setOverviewTier] = useState<string>("all");
+  const [overviewContact, setOverviewContact] = useState<string>("any");
+  const [overviewVipOnly, setOverviewVipOnly] = useState<boolean>(false);
+  const [overviewSortKey, setOverviewSortKey] = useState<string>("daysUntilDue");
+  const [overviewSortDir, setOverviewSortDir] = useState<"asc" | "desc">("asc");
 
   const [pageModal, setPageModal] = useState<{ isOpen: boolean; url: string; component: any; title: string; icon: any }>({ isOpen: false, url: '', component: null, title: '', icon: null });
 
@@ -237,19 +246,115 @@ export default function FollowUpCenter() {
   const filteredOverdue = applySort(followUpStatus.overdue.filter(c => matchSearch(c.customer)), sortOverdue);
   const filteredDueSoon = applySort([...followUpStatus.dueThisWeek, ...followUpStatus.dueThisMonth].filter(c => matchSearch(c.customer)), sortDueSoon);
 
-  const filteredOverview = useMemo(() => {
+  const getLastJobInfo = (customerId?: string, customerName?: string, customerEmail?: string) => {
+    const custBookings = allBookings
+      .filter(b => 
+        (customerId && b.customerId === customerId) ||
+        (customerEmail && b.customerEmail?.toLowerCase() === customerEmail.toLowerCase()) ||
+        (customerName && b.customer?.toLowerCase() === customerName.toLowerCase())
+      )
+      .filter(b => b.status === 'completed' || b.status === 'done')
+      .sort((a, b) => new Date(b.date || (b as any).created_at).getTime() - new Date(a.date || (a as any).created_at).getTime());
+    
+    if (custBookings.length === 0) return { title: '—', value: 0 };
+    const latest = custBookings[0];
+    const priceNum = latest.price ? parseFloat(String(latest.price).replace(/[^0-9.]/g, '')) : 0;
+    return {
+      title: latest.title || 'Detail Service',
+      value: isNaN(priceNum) ? 0 : priceNum
+    };
+  };
+
+  const isVipCustomer = (cust: Customer) => Boolean(cust.has_google_review || (cust as any).is_vip || (cust.notes || '').includes('[VIP]'));
+
+  const baseOverviewCustomers = useMemo(() => {
     if (!followUpStatus.allWithStatus) return [];
-    return followUpStatus.allWithStatus
-      .filter((item: any) => {
-        const c = item.customer;
-        if (!c) return false;
-        if ((c.type || 'customer').toLowerCase() === 'prospect') return false;
-        if (c.is_archived) return false;
-        if ((c.notes || '').includes('[NO_FOLLOWUP]')) return false;
-        return matchSearch(c);
-      })
-      .sort((a: any, b: any) => a.daysUntilDue - b.daysUntilDue);
+    return followUpStatus.allWithStatus.filter((item: any) => {
+      const c = item.customer;
+      if (!c) return false;
+      if ((c.type || 'customer').toLowerCase() === 'prospect') return false;
+      if (c.is_archived) return false;
+      if ((c.notes || '').includes('[NO_FOLLOWUP]')) return false;
+      return matchSearch(c);
+    });
   }, [followUpStatus.allWithStatus, searchLower]);
+
+  const filteredOverview = useMemo(() => {
+    const tierRank = (t: string) => t === 'maintenance' ? 1 : t === 'fullDetail' ? 2 : t === 'ceramic' ? 3 : 4;
+
+    const filtered = baseOverviewCustomers.filter((item: any) => {
+      const cust = item.customer;
+
+      // 1. Due window filter
+      if (overviewDueWindow === 'overdue' && !(item.daysUntilDue < 0)) return false;
+      if (overviewDueWindow === 'today' && item.daysUntilDue !== 0) return false;
+      if (overviewDueWindow === '7days' && !(item.daysUntilDue >= 0 && item.daysUntilDue <= 7)) return false;
+      if (overviewDueWindow === '30days' && !(item.daysUntilDue >= 0 && item.daysUntilDue <= 30)) return false;
+      if (overviewDueWindow === '90days' && !(item.daysUntilDue >= 0 && item.daysUntilDue <= 90)) return false;
+
+      // 2. Tier filter
+      if (overviewTier === 'maintenance' && item.detectedTier !== 'maintenance') return false;
+      if (overviewTier === 'fullDetail' && item.detectedTier !== 'fullDetail') return false;
+      if (overviewTier === 'ceramic' && item.detectedTier !== 'ceramic') return false;
+
+      // 3. Contact filter
+      if (overviewContact === 'phone' && (!cust.phone || !cust.phone.trim() || cust.phone === 'No phone')) return false;
+      if (overviewContact === 'email' && (!cust.email || !cust.email.trim() || cust.email === '—')) return false;
+
+      // 4. VIP filter
+      if (overviewVipOnly && !isVipCustomer(cust)) return false;
+
+      return true;
+    });
+
+    return filtered.sort((a: any, b: any) => {
+      let comparison = 0;
+      if (overviewSortKey === 'customerName') {
+        comparison = (a.customer.name || '').localeCompare(b.customer.name || '');
+      } else if (overviewSortKey === 'tier') {
+        comparison = tierRank(a.detectedTier) - tierRank(b.detectedTier);
+      } else if (overviewSortKey === 'lastJob') {
+        const jobA = getLastJobInfo(a.customer.id, a.customer.name, a.customer.email);
+        const jobB = getLastJobInfo(b.customer.id, b.customer.name, b.customer.email);
+        comparison = jobA.value - jobB.value || jobA.title.localeCompare(jobB.title);
+      } else if (overviewSortKey === 'lastActivityDate') {
+        comparison = new Date(a.lastActivityDate || 0).getTime() - new Date(b.lastActivityDate || 0).getTime();
+      } else if (overviewSortKey === 'dueDate') {
+        comparison = new Date(a.thresholdDate || 0).getTime() - new Date(b.thresholdDate || 0).getTime();
+      } else { // 'daysUntilDue'
+        comparison = (a.daysUntilDue ?? 0) - (b.daysUntilDue ?? 0);
+      }
+
+      return overviewSortDir === 'asc' ? comparison : -comparison;
+    });
+  }, [baseOverviewCustomers, overviewDueWindow, overviewTier, overviewContact, overviewVipOnly, overviewSortKey, overviewSortDir, allBookings]);
+
+  const handleResetOverviewFilters = () => {
+    setOverviewDueWindow("all");
+    setOverviewTier("all");
+    setOverviewContact("any");
+    setOverviewVipOnly(false);
+    setOverviewSortKey("daysUntilDue");
+    setOverviewSortDir("asc");
+  };
+
+  const handleHeaderSort = (key: string) => {
+    if (overviewSortKey === key) {
+      setOverviewSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setOverviewSortKey(key);
+      setOverviewSortDir('asc');
+    }
+  };
+
+  const renderSortIcon = (key: string) => {
+    if (overviewSortKey !== key) {
+      return <ArrowUpDown className="h-3 w-3 opacity-30 group-hover:opacity-70 transition-opacity ml-1 inline shrink-0" />;
+    }
+    return overviewSortDir === 'asc' 
+      ? <ArrowUp className="h-3 w-3 text-blue-400 ml-1 inline shrink-0" />
+      : <ArrowDown className="h-3 w-3 text-blue-400 ml-1 inline shrink-0" />;
+  };
   
   let currentProspectsList = showLost ? lostProspects : prospects;
   const filteredProspects = applySort(currentProspectsList.filter(matchSearch).map(p => ({ customer: p, daysSince: 0 })), sortProspects);
@@ -719,22 +824,159 @@ export default function FollowUpCenter() {
                   </h2>
                 </div>
                 <Badge variant="outline" className="text-[9px] font-black uppercase text-blue-400 border-blue-500/30 bg-blue-500/10">
-                  Soonest-Due First
+                  {overviewSortKey === 'daysUntilDue' && overviewSortDir === 'asc' ? 'Soonest-Due First' : `Sorted by ${overviewSortKey} (${overviewSortDir})`}
                 </Badge>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="pt-2 pb-6">
+            <AccordionContent className="pt-2 pb-6 space-y-4">
+              {/* Compact Filter Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-zinc-950/60 rounded-xl border border-zinc-800/80 text-xs">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* Due Window Filter */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider">Due:</span>
+                    <Select value={overviewDueWindow} onValueChange={setOverviewDueWindow}>
+                      <SelectTrigger className="h-8 bg-zinc-900 border-zinc-700 text-zinc-200 text-xs font-bold w-[125px] rounded-lg">
+                        <SelectValue placeholder="Due Window" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white z-[300]">
+                        <SelectItem value="all" className="text-xs">All Windows</SelectItem>
+                        <SelectItem value="overdue" className="text-xs text-red-400 font-semibold">Overdue</SelectItem>
+                        <SelectItem value="today" className="text-xs text-amber-400 font-semibold">Due Today</SelectItem>
+                        <SelectItem value="7days" className="text-xs">Next 7 Days</SelectItem>
+                        <SelectItem value="30days" className="text-xs">Next 30 Days</SelectItem>
+                        <SelectItem value="90days" className="text-xs">Next 90 Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Tier Filter */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider">Tier:</span>
+                    <Select value={overviewTier} onValueChange={setOverviewTier}>
+                      <SelectTrigger className="h-8 bg-zinc-900 border-zinc-700 text-zinc-200 text-xs font-bold w-[135px] rounded-lg">
+                        <SelectValue placeholder="Tier" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white z-[300]">
+                        <SelectItem value="all" className="text-xs">All Tiers</SelectItem>
+                        <SelectItem value="maintenance" className="text-xs">3M Maintenance</SelectItem>
+                        <SelectItem value="fullDetail" className="text-xs">6M Full Detail</SelectItem>
+                        <SelectItem value="ceramic" className="text-xs">12M Ceramic</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Contact Filter */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black uppercase text-zinc-500 tracking-wider">Contact:</span>
+                    <Select value={overviewContact} onValueChange={setOverviewContact}>
+                      <SelectTrigger className="h-8 bg-zinc-900 border-zinc-700 text-zinc-200 text-xs font-bold w-[110px] rounded-lg">
+                        <SelectValue placeholder="Contact" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-zinc-700 text-white z-[300]">
+                        <SelectItem value="any" className="text-xs">Any</SelectItem>
+                        <SelectItem value="phone" className="text-xs">Has Phone</SelectItem>
+                        <SelectItem value="email" className="text-xs">Has Email</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* VIP Only Toggle */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOverviewVipOnly(!overviewVipOnly)}
+                    className={cn(
+                      "h-8 text-xs font-bold gap-1 rounded-lg transition-all",
+                      overviewVipOnly 
+                        ? "bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30" 
+                        : "bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800"
+                    )}
+                  >
+                    <Star className={cn("h-3 w-3", overviewVipOnly ? "fill-amber-400 text-amber-400" : "text-zinc-500")} />
+                    VIP Only
+                  </Button>
+
+                  {/* Reset Button */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetOverviewFilters}
+                    className="h-8 text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg gap-1 px-2.5"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reset
+                  </Button>
+                </div>
+
+                {/* Showing X of Y */}
+                <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 whitespace-nowrap ml-auto">
+                  Showing <span className="text-blue-400 font-bold">{filteredOverview.length}</span> of {baseOverviewCustomers.length}
+                </div>
+              </div>
+
               {filteredOverview.length > 0 ? (
                 <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden shadow-lg">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-zinc-800 bg-zinc-950/70 text-[9px] font-black uppercase tracking-wider text-zinc-500">
-                          <th className="py-3 px-4">Customer Name</th>
-                          <th className="py-3 px-4">Tier</th>
-                          <th className="py-3 px-4">Last Counting Activity</th>
-                          <th className="py-3 px-4">Due Date</th>
-                          <th className="py-3 px-4">Days Left / Overdue</th>
+                          <th 
+                            className="py-3 px-4 cursor-pointer select-none hover:text-white transition-colors group"
+                            onClick={() => handleHeaderSort('customerName')}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Customer Name</span>
+                              {renderSortIcon('customerName')}
+                            </div>
+                          </th>
+                          <th 
+                            className="py-3 px-4 cursor-pointer select-none hover:text-white transition-colors group"
+                            onClick={() => handleHeaderSort('tier')}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Tier</span>
+                              {renderSortIcon('tier')}
+                            </div>
+                          </th>
+                          <th 
+                            className="py-3 px-4 cursor-pointer select-none hover:text-white transition-colors group"
+                            onClick={() => handleHeaderSort('lastJob')}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Last Job</span>
+                              {renderSortIcon('lastJob')}
+                            </div>
+                          </th>
+                          <th 
+                            className="py-3 px-4 cursor-pointer select-none hover:text-white transition-colors group"
+                            onClick={() => handleHeaderSort('lastActivityDate')}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Last Counting Activity</span>
+                              {renderSortIcon('lastActivityDate')}
+                            </div>
+                          </th>
+                          <th 
+                            className="py-3 px-4 cursor-pointer select-none hover:text-white transition-colors group"
+                            onClick={() => handleHeaderSort('dueDate')}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Due Date</span>
+                              {renderSortIcon('dueDate')}
+                            </div>
+                          </th>
+                          <th 
+                            className="py-3 px-4 cursor-pointer select-none hover:text-white transition-colors group"
+                            onClick={() => handleHeaderSort('daysUntilDue')}
+                          >
+                            <div className="flex items-center gap-1">
+                              <span>Days Left / Overdue</span>
+                              {renderSortIcon('daysUntilDue')}
+                            </div>
+                          </th>
                           <th className="py-3 px-4 text-right">Action</th>
                         </tr>
                       </thead>
@@ -745,15 +987,34 @@ export default function FollowUpCenter() {
                           const tierDisplay = item.detectedTier === 'ceramic' ? '12M Ceramic' 
                             : item.detectedTier === 'fullDetail' ? '6M Full Detail' 
                             : item.detectedTier === 'maintenance' ? '3M Maintenance' : 'None';
-                          
+                          const isVip = isVipCustomer(cust);
+                          const lastJob = getLastJobInfo(cust.id, cust.name, cust.email);
+
                           return (
                             <tr key={cust.id} className="hover:bg-zinc-800/30 transition-colors">
                               <td className="py-3 px-4">
-                                <div className="font-bold text-zinc-200">{cust.name}</div>
+                                <div className="font-bold text-zinc-200 flex items-center gap-1.5">
+                                  <span>{cust.name}</span>
+                                  {isVip && (
+                                    <span title="VIP Customer" className="inline-flex items-center">
+                                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-[10px] text-zinc-500">{cust.phone || cust.email || '—'}</div>
                               </td>
                               <td className="py-3 px-4">
                                 <span className="text-[10px] font-bold text-zinc-400 uppercase">{tierDisplay}</span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-zinc-200 text-xs truncate max-w-[140px]" title={lastJob.title}>
+                                  {lastJob.title}
+                                </div>
+                                {lastJob.value > 0 ? (
+                                  <div className="text-[10px] font-semibold text-emerald-400">${lastJob.value.toFixed(2)}</div>
+                                ) : (
+                                  <div className="text-[10px] text-zinc-600">—</div>
+                                )}
                               </td>
                               <td className="py-3 px-4 text-zinc-400">
                                 {item.lastActivityDate ? format(new Date(item.lastActivityDate), 'MMM d, yyyy') : '—'}
@@ -791,7 +1052,7 @@ export default function FollowUpCenter() {
                 </div>
               ) : (
                 <div className="text-center py-8 bg-zinc-900/20 rounded-2xl border border-zinc-800 border-dashed">
-                  <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">No customer follow-up timers found.</p>
+                  <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">No customer follow-up timers found matching filters.</p>
                 </div>
               )}
             </AccordionContent>
