@@ -59,6 +59,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { UnifiedCustomerTimeline } from "@/components/customers/UnifiedCustomerTimeline";
 import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
+import { HowFollowUpsWorkGuide } from "@/components/help/HowFollowUpsWorkGuide";
 import { PageModal } from "@/components/ui/PageModal";
 import LetterMaker from "@/pages/LetterMaker";
 import BookingsPage from "@/pages/BookingsPage";
@@ -1529,6 +1530,7 @@ const SearchCustomer = () => {
                                      <History className="h-3.5 w-3.5" /> Combined Session & Interaction Timeline
                                    </h4>
                                    <div className="flex items-center gap-2">
+                                     <HowFollowUpsWorkGuide />
                                      <Button
                                        variant="outline"
                                        size="sm"

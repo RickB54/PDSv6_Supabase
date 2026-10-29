@@ -36,6 +36,7 @@ import { EmailPreviewModal } from "@/components/email/EmailPreviewModal";
 import { onSendReminderEmail, onSendProspectEmail, onSendProspectEstimateEmail } from "@/lib/bookingsSync";
 import { parseISO } from "date-fns";
 import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
+import { HowFollowUpsWorkGuide } from "@/components/help/HowFollowUpsWorkGuide";
 import { PageModal } from "@/components/ui/PageModal";
 import LetterMaker from "@/pages/LetterMaker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -1646,6 +1647,7 @@ export default function Prospects() {
                                  </button>
                                </h4>
                                <div className="flex items-center gap-2">
+                                  <HowFollowUpsWorkGuide />
                                     <Button
                                    variant="outline"
                                    size="sm"

@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 import { RetentionHub } from "./RetentionHub";
 import { ActivityLog } from "./ActivityLog";
 import { CustomerCommunicationGuide } from "@/components/help/CustomerCommunicationGuide";
+import { HowFollowUpsWorkGuide } from "@/components/help/HowFollowUpsWorkGuide";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 interface Props {
@@ -938,14 +939,17 @@ export default function CustomerModal({ open, onOpenChange, initial, onSave, def
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-2 bg-zinc-900/80 px-3 py-1.5 rounded-xl border border-zinc-800 shrink-0">
-                          <Label className="text-[10px] text-zinc-400 uppercase font-black whitespace-nowrap">Date of Contact:</Label>
-                          <Input 
-                            type="date" 
-                            className="h-7 text-xs bg-zinc-950 border-zinc-800 text-white w-36" 
-                            value={form.date_of_contact || ""} 
-                            onChange={(e) => handleChange("date_of_contact", e.target.value)} 
-                          />
+                        <div className="flex items-center gap-2 flex-wrap shrink-0">
+                          <HowFollowUpsWorkGuide />
+                          <div className="flex items-center gap-2 bg-zinc-900/80 px-3 py-1.5 rounded-xl border border-zinc-800 shrink-0">
+                            <Label className="text-[10px] text-zinc-400 uppercase font-black whitespace-nowrap">Date of Contact:</Label>
+                            <Input 
+                              type="date" 
+                              className="h-7 text-xs bg-zinc-950 border-zinc-800 text-white w-36" 
+                              value={form.date_of_contact || ""} 
+                              onChange={(e) => handleChange("date_of_contact", e.target.value)} 
+                            />
+                          </div>
                         </div>
                       </div>
                       <ActivityLog 
