@@ -957,6 +957,7 @@ export const upsertSupabaseCustomer = async (customer: Partial<Customer> & { typ
     if (customer.conditionOutside) payload.condition_outside = customer.conditionOutside;
     if (customer.accountType) payload.account_type = customer.accountType;
     if (customer.companyName) payload.company_name = customer.companyName;
+    if (typeof customer.has_google_review === 'boolean') payload.has_google_review = customer.has_google_review;
 
     const customerId = (customer.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(customer.id)) ? customer.id : undefined;
 

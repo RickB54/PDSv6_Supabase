@@ -319,6 +319,17 @@ const SearchCustomer = () => {
     }
   };
 
+  const handleToggleVip = async (c: Customer) => {
+    const newVal = !c.has_google_review;
+    try {
+      await upsertSupabaseCustomer({ ...c, has_google_review: newVal });
+      await refresh();
+      toast({ title: newVal ? "⭐ VIP On" : "VIP Removed", description: `${c.name} ${newVal ? 'is now a VIP.' : 'is no longer VIP.'}` });
+    } catch (e) {
+      toast({ title: "Error", description: "Could not update VIP status.", variant: "destructive" });
+    }
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const cid = params.get('customerId');
@@ -1023,13 +1034,18 @@ const SearchCustomer = () => {
                                <EyeOff className="h-3 w-3" />
                                <span className="text-[9px] font-black uppercase tracking-tight">LOST</span>
                              </Badge>
-                           )}
-                           {customer.has_google_review && (
-                             <Badge variant="outline" className="h-5 bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1 px-1.5 ml-2">
-                               <Star className="h-3 w-3 fill-amber-500" />
-                               <span className="text-[9px] font-black uppercase tracking-tight">VIP</span>
-                             </Badge>
-                           )}
+                           )}                           <button
+                             title={customer.has_google_review ? 'VIP — click to remove' : 'Click to make VIP'}
+                             onClick={e => { e.stopPropagation(); handleToggleVip(customer); }}
+                             className={`inline-flex items-center gap-1 px-1.5 h-5 rounded border text-[9px] font-black uppercase tracking-tight transition-all ml-2 cursor-pointer ${
+                               customer.has_google_review
+                                 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20'
+                                 : 'bg-transparent text-zinc-600 border-zinc-800 opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20'
+                             }`}
+                           >
+                             <Star className={`h-3 w-3 ${customer.has_google_review ? 'fill-amber-500' : 'fill-none'}`} />
+                             {customer.has_google_review && <span>VIP</span>}
+                           </button>
                            {/* Dynamic Status Badge */}
                            {(() => {
                              const custBookings = allBookings.filter(b => 
