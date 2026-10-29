@@ -114,6 +114,8 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
       // 2. Activity Log
       const activityLog = (customer as any).activity_log || (customer as any).activityLog || [];
       activityLog.forEach((log: any) => {
+        const counts = log.resets_followup !== false && !(log.note || '').includes('[NO_TIMER_RESET]');
+        if (!counts) return;
         const logDate = new Date(log.timestamp || log.created_at);
         if (logDate > lastActivityDate) lastActivityDate = logDate;
       });
@@ -164,6 +166,8 @@ export function useFollowUpStatus(customers: Customer[], bookings: Booking[]) {
       );
 
       customerEngagements.forEach(e => {
+        const counts = e.resets_followup !== false && !(e.note || '').includes('[NO_TIMER_RESET]');
+        if (!counts) return;
         const eDate = new Date(e.created_at || e.timestamp);
         if (eDate > lastActivityDate) lastActivityDate = eDate;
       });

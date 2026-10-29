@@ -67,7 +67,7 @@ export function HowFollowUpsWorkGuide({
               • <strong className="text-white">Note:</strong> Enter details of what was discussed, promised, or quoted.
             </p>
             <p>
-              • <strong className="text-white">Saving:</strong> Saves immediately to the engagement log, updates the customer timeline, and <span className="text-blue-300 font-semibold">advances the customer's last-activity clock</span>.
+              • <strong className="text-white">Saving & Timer Prompt:</strong> When saving an activity on a customer, you'll be asked whether to count it toward the follow-up timer. Choose <span className="text-blue-300 font-semibold">"Yes, reset the timer"</span> to count the next reminder from this date, or <span className="text-zinc-400 font-semibold">"No, just log it"</span> to leave the timer unchanged.
             </p>
           </div>
         </div>
@@ -113,7 +113,7 @@ export function HowFollowUpsWorkGuide({
               • <strong className="text-white">Where They Show Up:</strong> In the Follow-Up Center under Overdue, Due This Week, and Due This Month tabs, as well as on Customer Cards.
             </p>
             <p>
-              • <strong className="text-white">Does Logging Reset the Clock?</strong> <span className="text-amber-300 font-bold">YES.</span> Any logged activity with a newer date pushes the last-activity timestamp forward and resets the due countdown.
+              • <strong className="text-white">Does Logging Reset the Clock?</strong> When prompted, selecting <span className="text-amber-300 font-semibold">"Yes, reset the timer"</span> pushes the last-activity timestamp forward and resets the countdown. Selecting <span className="text-zinc-400 font-semibold">"No, just log it"</span> keeps the due clock as it was.
             </p>
             <p>
               • <strong className="text-white">Background Execution:</strong> <span className="text-amber-200 bg-amber-500/10 px-1 py-0.5 rounded font-semibold">NOTHING runs in the background when the app is closed.</span> There are no background bots or closed-browser push alerts. Reminders calculate live inside the browser when you open the app.

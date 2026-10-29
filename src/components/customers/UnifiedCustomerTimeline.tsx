@@ -316,7 +316,13 @@ export const UnifiedCustomerTimeline = ({ customer, allBookings, handlePreviewEm
                     </div>
                   </div>
                   <div className="mt-3 p-3 bg-zinc-900/40 border border-zinc-800/40 rounded-xl text-xs text-zinc-400 italic">
-                    "{eng.note?.length > 150 ? eng.note.slice(0, 150).replace(/\n/g, ' ') + '...' : eng.note?.replace(/\n/g, ' ') || eng.body?.slice(0, 100) + '...'}"
+                    "{(() => {
+                      const clean = (eng.note || '').replace(/\[NO_TIMER_RESET\]/g, '').trim();
+                      if (clean) {
+                        return clean.length > 150 ? clean.slice(0, 150).replace(/\n/g, ' ') + '...' : clean.replace(/\n/g, ' ');
+                      }
+                      return eng.body ? (eng.body.slice(0, 100) + '...') : '';
+                    })()}"
                   </div>
                 </div>
               );

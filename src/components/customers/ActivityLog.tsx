@@ -60,6 +60,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
   const [isAdding, setIsAdding] = useState(false);
   const [note, setNote] = useState("");
   const [type, setType] = useState("note");
+  const [showTimerDialog, setShowTimerDialog] = useState(false);
   
   // Custom Interaction Timestamp (defaults to current local time, but editable)
   const [customDate, setCustomDate] = useState<string>(() => formatForDatetimeLocal(new Date().toISOString()));
@@ -95,23 +96,35 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
     }
   };
 
-  const handleAddActivity = async () => {
+  const handleAddActivity = () => {
     if (!note.trim()) {
       toast.error("Please enter a note");
       return;
     }
 
+    const isProspect = customer.type === 'prospect' || (customer as any).status === 'prospect';
+    if (isProspect) {
+      executeSaveActivity(false);
+    } else {
+      setShowTimerDialog(true);
+    }
+  };
+
+  const executeSaveActivity = async (resetsFollowup: boolean) => {
     setIsAdding(true);
     try {
       const interactionTime = customDate ? new Date(customDate).toISOString() : new Date().toISOString();
+      const rawNote = note.trim();
+      const finalNote = resetsFollowup ? rawNote : `${rawNote} [NO_TIMER_RESET]`;
 
       const payload: any = {
         customer_id: customer.id,
         customer_name: customer.name,
         customer_email: customer.email,
-        note: note.trim(),
+        note: finalNote,
         type: type,
-        created_at: interactionTime
+        created_at: interactionTime,
+        resets_followup: resetsFollowup
       };
 
       let newRecord: any = null;
@@ -125,8 +138,23 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
           .select()
           .single();
 
-        if (error) throw error;
-        newRecord = data;
+        if (error) {
+          // If column resets_followup does not exist yet in DB schema, retry without it
+          if (error.code === 'PGRST204' || (error.message && error.message.includes('resets_followup'))) {
+            const { resets_followup, ...fallbackPayload } = payload;
+            const fallbackRes = await supabase
+              .from('engagements')
+              .insert(fallbackPayload)
+              .select()
+              .single();
+            if (fallbackRes.error) throw fallbackRes.error;
+            newRecord = { ...fallbackRes.data, resets_followup: resetsFollowup };
+          } else {
+            throw error;
+          }
+        } else {
+          newRecord = data;
+        }
       }
 
       toast.success("Activity logged");
@@ -140,12 +168,15 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
     } catch (e: any) {
       console.error("Failed to log activity to Supabase", e);
       const interactionTime = customDate ? new Date(customDate).toISOString() : new Date().toISOString();
+      const rawNote = note.trim();
+      const finalNote = resetsFollowup ? rawNote : `${rawNote} [NO_TIMER_RESET]`;
       const localEntry = {
         id: 'local-' + Date.now(),
         type: type,
-        note: note.trim(),
+        note: finalNote,
         created_at: interactionTime,
-        date: interactionTime
+        date: interactionTime,
+        resets_followup: resetsFollowup
       };
       
       const currentLog = (customer as any).activity_log || (customer as any).activityLog || [];
@@ -162,7 +193,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
 
   const handleStartEdit = (act: any) => {
     setEditingActivity(act);
-    setEditNote(act.note || "");
+    setEditNote((act.note || "").replace(/\[NO_TIMER_RESET\]/g, '').trim());
     setEditType(act.type || "note");
     const timeStr = act.created_at || act.timestamp || act.date || new Date().toISOString();
     setEditDate(formatForDatetimeLocal(timeStr));
@@ -173,8 +204,11 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
     setIsSavingEdit(true);
     try {
       const newTimestamp = editDate ? new Date(editDate).toISOString() : new Date().toISOString();
-      const updatedFields = {
-        note: editNote.trim(),
+      const isNoTimer = editingActivity.resets_followup === false || (editingActivity.note || '').includes('[NO_TIMER_RESET]');
+      const finalNote = isNoTimer ? `${editNote.trim()} [NO_TIMER_RESET]` : editNote.trim();
+
+      const updatedFields: any = {
+        note: finalNote,
         type: editType,
         created_at: newTimestamp
       };
@@ -250,24 +284,27 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
   if (compact) {
     return (
       <div className="space-y-2">
-        {activities.slice(0, 2).map((act, idx) => (
-          <div key={act.id || idx} className="flex items-start gap-2 bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50">
-            <div className="mt-0.5">{getActivityIcon(act.type)}</div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-black uppercase tracking-tight text-zinc-400 truncate">
-                  {getActivityLabel(act.type)}
-                </span>
-                <span className="text-[9px] text-zinc-600 font-bold whitespace-nowrap">
-                  {format(new Date(act.created_at), 'MMM d')}
-                </span>
+        {activities.slice(0, 2).map((act, idx) => {
+          const cleanNote = (act.note || '').replace(/\[NO_TIMER_RESET\]/g, '').trim();
+          return (
+            <div key={act.id || idx} className="flex items-start gap-2 bg-zinc-950/50 p-2 rounded-lg border border-zinc-800/50">
+              <div className="mt-0.5">{getActivityIcon(act.type)}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-tight text-zinc-400 truncate">
+                    {getActivityLabel(act.type)}
+                  </span>
+                  <span className="text-[9px] text-zinc-600 font-bold whitespace-nowrap">
+                    {format(new Date(act.created_at), 'MMM d')}
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-300 leading-tight line-clamp-1 italic">
+                  "{cleanNote}"
+                </p>
               </div>
-              <p className="text-[11px] text-zinc-300 leading-tight line-clamp-1 italic">
-                "{act.note}"
-              </p>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {activities.length === 0 && (
           <div className="text-[10px] text-zinc-700 italic py-1">No recent activity recorded.</div>
         )}
@@ -362,8 +399,13 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
                       {getActivityIcon(act.type)}
                     </div>
                     <div>
-                      <div className="text-zinc-200 font-black uppercase tracking-tight leading-none mb-0.5">
-                        {getActivityLabel(act.type)}
+                      <div className="text-zinc-200 font-black uppercase tracking-tight leading-none mb-0.5 flex items-center gap-1.5">
+                        <span>{getActivityLabel(act.type)}</span>
+                        {(act.resets_followup === false || (act.note || '').includes('[NO_TIMER_RESET]')) && (
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60 uppercase tracking-wider">
+                            Timer Not Reset
+                          </span>
+                        )}
                       </div>
                       <div className="text-[9px] text-zinc-400 font-bold flex flex-wrap items-center gap-x-2">
                         <span>{format(new Date(displayTime), 'MMMM dd, yyyy · p')}</span>
@@ -392,7 +434,7 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
                   </div>
                 </div>
                 <div className="text-zinc-300 font-medium italic leading-relaxed pl-3 border-l-2 border-blue-500/20 py-1 ml-1 whitespace-pre-wrap">
-                  "{act.note}"
+                  "{(act.note || '').replace(/\[NO_TIMER_RESET\]/g, '').trim()}"
                 </div>
               </div>
             );
@@ -469,6 +511,47 @@ export function ActivityLog({ customer, onRefresh, compact = false }: Props) {
               <Save className="h-3.5 w-3.5" />
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Follow-Up Timer Confirm Dialog */}
+      <Dialog open={showTimerDialog} onOpenChange={setShowTimerDialog}>
+        <DialogContent className="bg-zinc-950 border border-zinc-800 text-white max-w-sm sm:max-w-md p-6 rounded-2xl shadow-2xl z-[350]">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-sm font-black tracking-tight text-white flex items-center gap-2">
+              <Clock className="h-4 w-4 text-amber-400" />
+              Does this contact count toward the follow-up timer?
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 py-3">
+            <Button
+              type="button"
+              onClick={() => {
+                setShowTimerDialog(false);
+                executeSaveActivity(true);
+              }}
+              disabled={isAdding}
+              className="w-full h-auto py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl flex flex-col items-start text-left gap-0.5 border border-blue-400/30 transition-all shadow-lg shadow-blue-900/20"
+            >
+              <span className="font-black text-xs uppercase tracking-wider">Yes, reset the timer</span>
+              <span className="text-[11px] font-normal text-blue-100/80">(next reminder is counted from this entry's date)</span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowTimerDialog(false);
+                executeSaveActivity(false);
+              }}
+              disabled={isAdding}
+              className="w-full h-auto py-3 px-4 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-700/80 rounded-xl flex flex-col items-start text-left gap-0.5 transition-all"
+            >
+              <span className="font-black text-xs uppercase tracking-wider text-zinc-100">No, just log it</span>
+              <span className="text-[11px] font-normal text-zinc-400">(timer stays as it was)</span>
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
