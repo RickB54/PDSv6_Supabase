@@ -319,13 +319,32 @@ const SearchCustomer = () => {
     }
   };
 
+  const isCustomerVip = (c: Customer) => Boolean(c.has_google_review || (c as any).is_vip || (c.notes || '').includes('[VIP]') || (c.notes || '').includes('[HAS_GOOGLE_REVIEW]'));
+
   const handleToggleVip = async (c: Customer) => {
-    const newVal = !c.has_google_review;
+    const isCurrentlyVip = isCustomerVip(c);
+    const newVal = !isCurrentlyVip;
+    let cleanNotes = (c.notes || '').replace(/\[VIP\]/gi, '').replace(/\[HAS_GOOGLE_REVIEW\]/gi, '').trim();
+    if (newVal) {
+      cleanNotes = cleanNotes ? `${cleanNotes}\n[VIP]` : '[VIP]';
+    }
     try {
-      await upsertSupabaseCustomer({ ...c, has_google_review: newVal });
+      await upsertSupabaseCustomer({
+        ...c,
+        notes: cleanNotes
+      });
+      await upsertCustomer({
+        ...(c as any),
+        notes: cleanNotes,
+        has_google_review: newVal
+      }).catch(() => {});
       await refresh();
-      toast({ title: newVal ? "⭐ VIP On" : "VIP Removed", description: `${c.name} ${newVal ? 'is now a VIP.' : 'is no longer VIP.'}` });
+      toast({
+        title: newVal ? "⭐ VIP On" : "VIP Removed",
+        description: `${c.name} ${newVal ? 'is now marked as VIP.' : 'is no longer VIP.'}`
+      });
     } catch (e) {
+      console.error('Failed to toggle VIP status:', e);
       toast({ title: "Error", description: "Could not update VIP status.", variant: "destructive" });
     }
   };
@@ -1034,18 +1053,24 @@ const SearchCustomer = () => {
                                <EyeOff className="h-3 w-3" />
                                <span className="text-[9px] font-black uppercase tracking-tight">LOST</span>
                              </Badge>
-                           )}                           <button
-                             title={customer.has_google_review ? 'VIP — click to remove' : 'Click to make VIP'}
-                             onClick={e => { e.stopPropagation(); handleToggleVip(customer); }}
-                             className={`inline-flex items-center gap-1 px-1.5 h-5 rounded border text-[9px] font-black uppercase tracking-tight transition-all ml-2 cursor-pointer ${
-                               customer.has_google_review
-                                 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20'
-                                 : 'bg-transparent text-zinc-600 border-zinc-800 opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-amber-500/10 hover:text-amber-400 hover:border-amber-500/20'
-                             }`}
-                           >
-                             <Star className={`h-3 w-3 ${customer.has_google_review ? 'fill-amber-500' : 'fill-none'}`} />
-                             {customer.has_google_review && <span>VIP</span>}
-                           </button>
+                           )}                           {(() => {
+                             const isVip = isCustomerVip(customer);
+                             return (
+                               <button
+                                 type="button"
+                                 title={isVip ? 'VIP Customer — click to remove VIP' : 'Click to make VIP'}
+                                 onClick={e => { e.stopPropagation(); handleToggleVip(customer); }}
+                                 className={`inline-flex items-center gap-1 px-1.5 h-5 rounded border text-[9px] font-black uppercase tracking-tight transition-all ml-2 cursor-pointer ${
+                                   isVip
+                                     ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25 shadow-sm'
+                                     : 'bg-zinc-800/60 text-zinc-400 border-zinc-700/60 hover:text-amber-400 hover:border-amber-500/40 hover:bg-amber-500/10'
+                                 }`}
+                               >
+                                 <Star className={`h-3 w-3 ${isVip ? 'fill-amber-400 text-amber-400' : 'text-zinc-500 fill-none'}`} />
+                                 <span>VIP</span>
+                               </button>
+                             );
+                           })()}
                            {/* Dynamic Status Badge */}
                            {(() => {
                              const custBookings = allBookings.filter(b => 
